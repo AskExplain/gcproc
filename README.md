@@ -1,0 +1,2 @@
+# gcproc
+Generalised Canonical Procrustes
