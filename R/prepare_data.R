@@ -1,4 +1,4 @@
-prepare_data <- function(x, y, log = F, center = T, scale.z = F){
+prepare_data <- function(x, y, log = F, center = F, scale.z = F){
 
   n = dim(x)[1]
 
