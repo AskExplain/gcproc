@@ -4,10 +4,10 @@ gcproc <- function(x,
                    l_dim = 30,
                    eta=1e-1,
                    max_iter=250,
-                   min_iter = 30,
+                   min_iter = 5,
                    tol=1e-5,
                    log=F,
-                   center=T,
+                   center=F,
                    scale.z=F,
                    batches=2,
                    cores=2,
@@ -50,6 +50,7 @@ gcproc <- function(x,
     if (verbose){
       print("Initialising data")
     }
+
     u.beta.star.beta <- matrix(rnorm(dim(x)[2]*l_dim),nrow=dim(x)[2],ncol=l_dim)
     v.beta.star.beta <- matrix(rnorm(dim(y)[2]*l_dim),nrow=dim(y)[2],ncol=l_dim)
 
@@ -184,11 +185,11 @@ gcproc <- function(x,
 
 
 
-        a.star.beta = a0.beta + dim(x)[1]/2
+        a.star.beta = a0.beta + dim(y)[1]/2
         b.star.beta = b0.beta + (1/2)*((t(alpha.L.K.star.alpha.L.K%*%y%*%v.beta.star.beta)%*%(alpha.L.K.star.alpha.L.K%*%y%*%v.beta.star.beta)) - t(u.beta.star.beta)%*%t(alpha.L.J.star.alpha.L.J%*%x)%*%(alpha.L.J.star.alpha.L.J%*%x)%*%u.beta.star.beta)
-        c.star.beta = c0.beta + dim(x)[1]/2
+        c.star.beta = c0.beta + 1/2
 
-        v.E.beta.D.beta <- a.star.beta*(((v.beta.star.beta)%*%(MASS::ginv(b.star.beta))%*%t(v.beta.star.beta)))+1/sum(diag(v.V.star.inv.beta))
+        v.E.beta.D.beta <- a.star.beta*(((v.beta.star.beta)%*%(MASS::ginv(b.star.beta))%*%t(v.beta.star.beta)))+MASS::ginv(v.V.star.inv.beta)
         v.E.beta.D.beta <- p.y/min(dim(y)[2],length(y.v.ids))*v.E.beta.D.beta
 
         d.star.beta = d0.beta + (1/2)*(v.E.beta.D.beta)
@@ -200,7 +201,7 @@ gcproc <- function(x,
 
         a.star.beta = a0.beta + dim(x)[1]/2
         b.star.beta = b0.beta + (1/2)*((t(alpha.L.J.star.alpha.L.J%*%x%*%u.beta.star.beta)%*%(alpha.L.J.star.alpha.L.J%*%x%*%u.beta.star.beta)) - t(v.beta.star.beta)%*%t(alpha.L.K.star.alpha.L.K%*%y)%*%(alpha.L.K.star.alpha.L.K%*%y)%*%v.beta.star.beta)
-        c.star.beta = c0.beta + dim(x)[1]/2
+        c.star.beta = c0.beta + 1/2
 
         u.E.beta.D.beta <- a.star.beta*(((u.beta.star.beta)%*%MASS::ginv(b.star.beta)%*%t(u.beta.star.beta)))+(MASS::ginv(u.V.star.inv.beta))
         u.E.beta.D.beta <- p.x/min(dim(x)[2],length(x.v.ids))*u.E.beta.D.beta
@@ -213,9 +214,9 @@ gcproc <- function(x,
 
 
 
-        a.star.alpha.L.J = a0.alpha.L.J + dim(x)[1]/2
+        a.star.alpha.L.J = a0.alpha.L.J + dim(y)[2]/2
         b.star.alpha.L.J = b0.alpha.L.J + (1/2)*(((alpha.L.K.star.alpha.L.K%*%y%*%v.beta.star.beta)%*%t(alpha.L.K.star.alpha.L.K%*%y%*%v.beta.star.beta)) - (alpha.L.J.star.alpha.L.J)%*%V.star.inv.alpha.L.J%*%t(alpha.L.J.star.alpha.L.J))
-        c.star.alpha.L.J = c0.alpha.L.J + dim(x)[1]/2
+        c.star.alpha.L.J = c0.alpha.L.J + 1/2
 
         E.alpha.L.J.D.alpha.L.J <- a.star.alpha.L.J*((t(alpha.L.J.star.alpha.L.J)%*%(MASS::ginv(b.star.alpha.L.J))%*%(alpha.L.J.star.alpha.L.J)))+(MASS::ginv(V.star.inv.alpha.L.J))
         E.alpha.L.J.D.alpha.L.J <- n.x/min(dim(x)[1],length(x.g.ids))*E.alpha.L.J.D.alpha.L.J
@@ -227,9 +228,9 @@ gcproc <- function(x,
 
 
 
-        a.star.alpha.L.K = a0.alpha.L.K + dim(y)[1]/2
+        a.star.alpha.L.K = a0.alpha.L.K + dim(x)[2]/2
         b.star.alpha.L.K = b0.alpha.L.K + (1/2)*(((alpha.L.J.star.alpha.L.J%*%x%*%u.beta.star.beta)%*%t(alpha.L.J.star.alpha.L.J%*%x%*%u.beta.star.beta)) - (alpha.L.K.star.alpha.L.K)%*%V.star.inv.alpha.L.K%*%t(alpha.L.K.star.alpha.L.K))
-        c.star.alpha.L.K = c0.alpha.L.K + dim(y)[1]/2
+        c.star.alpha.L.K = c0.alpha.L.K + 1/2
 
         E.alpha.L.K.D.alpha.L.K <- a.star.alpha.L.K*((t(alpha.L.K.star.alpha.L.K)%*%(MASS::ginv(b.star.alpha.L.K))%*%(alpha.L.K.star.alpha.L.K)))+(MASS::ginv(V.star.inv.alpha.L.K))
         E.alpha.L.K.D.alpha.L.K <- n.y/min(dim(x)[1],length(x.g.ids))*E.alpha.L.K.D.alpha.L.K
@@ -238,6 +239,8 @@ gcproc <- function(x,
 
         E.diag.alpha.alpha.L.K = c.star.alpha.L.K*MASS::ginv(d.star.alpha.L.K)
         E.diag.alpha.alpha.L.K <- n.y/min(dim(x)[1],length(x.g.ids))*E.diag.alpha.alpha.L.K
+
+
 
 
         u.V.star.inv.beta = u.E.diag.alpha.beta + t(alpha.L.J.star.alpha.L.J%*%x)%*%(alpha.L.J.star.alpha.L.J%*%x)
