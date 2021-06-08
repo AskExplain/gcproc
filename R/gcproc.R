@@ -1,17 +1,18 @@
 gcproc <- function(x,
                    y,
-                   k_dim = 2,
+                   k_dim = 30,
                    l_dim = 30,
-                   eta=1e-1,
-                   max_iter=250,
-                   min_iter = 5,
-                   tol=1e-5,
+                   eta=1e-2,
+                   max_iter=1500,
+                   min_iter = 15,
+                   tol=1e-3,
                    log=F,
                    center=F,
                    scale.z=F,
                    batches=2,
                    cores=2,
-                   verbose=F){
+                   verbose=F,
+                   init="eigen"){
 
   if (verbose){
     print(paste("Using gcproc to dimensionally reduce both samples and features with following dimensions:   Sample dimension (k_dim): ",k_dim, "   Feature dimension (l_dim): ", l_dim,sep=""))
@@ -51,11 +52,30 @@ gcproc <- function(x,
       print("Initialising data")
     }
 
-    u.beta.svd <- irlba::irlba(t(x)%*%x,l_dim)
-    v.beta.svd <- irlba::irlba(t(y)%*%y,l_dim)
+    if (init == "eigen"){
 
-    u.beta.star.beta <- u.beta.svd$v
-    v.beta.star.beta <- v.beta.svd$v
+      u.beta.eigen <- RSpectra::eigs_sym(t(x)%*%x,l_dim)
+      v.beta.eigen <- RSpectra::eigs_sym(t(y)%*%y,l_dim)
+
+      u.beta.star.beta <- u.beta.eigen$vectors
+      v.beta.star.beta <- v.beta.eigen$vectors
+
+    }
+    if (init == "svd"){
+
+      u.beta.svd <- irlba::irlba(t(x)%*%x,l_dim)
+      v.beta.svd <- irlba::irlba(t(y)%*%y,l_dim)
+
+      u.beta.star.beta <- u.beta.svd$v
+      v.beta.star.beta <- v.beta.svd$v
+
+    }
+    if (init == "random"){
+
+      u.beta.star.beta <- matrix(rnorm(l_dim*dim(x)[2]),ncol = l_dim,nrow=dim(x)[2])
+      v.beta.star.beta <- matrix(rnorm(l_dim*dim(y)[2]),ncol = l_dim,nrow=dim(y)[2])
+
+    }
 
     a0.beta = 10e-2
     b0.beta = 10e-4
@@ -68,8 +88,34 @@ gcproc <- function(x,
     #Initialise u.beta
     u.V.star.inv.beta = t(x)%*%(x)
 
-    alpha.L.J.svd <- irlba::irlba(x%*%t(x),k_dim)
-    alpha.L.K.svd <- irlba::irlba(y%*%t(y),k_dim)
+    if (init == "eigen"){
+
+      alpha.L.J.eigen <- RSpectra::eigs_sym(x%*%t(x),k_dim)
+      alpha.L.K.eigen <- RSpectra::eigs_sym(y%*%t(y),k_dim)
+
+      alpha.L.J.star.alpha.L.J = t(alpha.L.J.eigen$vectors)
+      alpha.L.K.star.alpha.L.K = t(alpha.L.K.eigen$vectors)
+
+    }
+    if (init == "svd"){
+
+      alpha.L.J.svd <- irlba::irlba(x%*%t(x),k_dim)
+      alpha.L.K.svd <- irlba::irlba(y%*%t(y),k_dim)
+
+      alpha.L.J.star.alpha.L.J = t(alpha.L.J.svd$u)
+      alpha.L.K.star.alpha.L.K = t(alpha.L.K.svd$u)
+
+    }
+    if (init == "random"){
+
+      alpha.L.J.star.alpha.L.J <- matrix(rnorm(k_dim*dim(x)[1]),nrow = k_dim,ncol=dim(x)[1])
+      alpha.L.K.star.alpha.L.K <- matrix(rnorm(k_dim*dim(y)[1]),nrow = k_dim,ncol=dim(y)[1])
+
+    }
+
+    V.star.inv.alpha.L.K = (y%*%v.beta.star.beta)%*%t(y%*%v.beta.star.beta)
+    V.star.inv.alpha.L.J = (x%*%u.beta.star.beta)%*%t(x%*%u.beta.star.beta)
+
 
     # Initialise alpha.L.J
     a0.alpha.L.J = 10e-2
@@ -77,23 +123,11 @@ gcproc <- function(x,
     c0.alpha.L.J = 10e-2
     d0.alpha.L.J = 10e-4
 
-    V.star.inv.alpha.L.J = (x%*%u.beta.star.beta)%*%t(x%*%u.beta.star.beta)
-    alpha.L.J.star.alpha.L.J = t(alpha.L.J.svd$u)
-
-
     # Initialise alpha.L.K
     a0.alpha.L.K = 10e-2
     b0.alpha.L.K = 10e-4
     c0.alpha.L.K = 10e-2
     d0.alpha.L.K = 10e-4
-
-    V.star.inv.alpha.L.K = (y%*%v.beta.star.beta)%*%t(y%*%v.beta.star.beta)
-    alpha.L.K.star.alpha.L.K = t(alpha.L.K.svd$u)
-
-
-
-
-
 
     a.star.alpha.L.J = a0.alpha.L.J + dim(x)[1]/2
     b.star.alpha.L.J = b0.alpha.L.J + (1/2)*(((alpha.L.K.star.alpha.L.K%*%y%*%v.beta.star.beta)%*%t(alpha.L.K.star.alpha.L.K%*%y%*%v.beta.star.beta)) - (alpha.L.J.star.alpha.L.J)%*%V.star.inv.alpha.L.J%*%t(alpha.L.J.star.alpha.L.J))
@@ -278,7 +312,7 @@ gcproc <- function(x,
           x.v.ids = x.v.ids,
           y.v.ids = y.v.ids
         ))
-      },mc.cores = cores)
+      },mc.cores = cores,ignore.interactive=verbose)
 
 
     }
