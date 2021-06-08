@@ -51,8 +51,11 @@ gcproc <- function(x,
       print("Initialising data")
     }
 
-    u.beta.star.beta <- matrix(rnorm(dim(x)[2]*l_dim),nrow=dim(x)[2],ncol=l_dim)
-    v.beta.star.beta <- matrix(rnorm(dim(y)[2]*l_dim),nrow=dim(y)[2],ncol=l_dim)
+    u.beta.svd <- irlba::irlba(t(x)%*%x,l_dim)
+    v.beta.svd <- irlba::irlba(t(y)%*%y,l_dim)
+
+    u.beta.star.beta <- u.beta.svd$v
+    v.beta.star.beta <- v.beta.svd$v
 
     a0.beta = 10e-2
     b0.beta = 10e-4
@@ -65,6 +68,9 @@ gcproc <- function(x,
     #Initialise u.beta
     u.V.star.inv.beta = t(x)%*%(x)
 
+    alpha.L.J.svd <- irlba::irlba(x%*%t(x),k_dim)
+    alpha.L.K.svd <- irlba::irlba(y%*%t(y),k_dim)
+
     # Initialise alpha.L.J
     a0.alpha.L.J = 10e-2
     b0.alpha.L.J = 10e-4
@@ -72,7 +78,7 @@ gcproc <- function(x,
     d0.alpha.L.J = 10e-4
 
     V.star.inv.alpha.L.J = (x%*%u.beta.star.beta)%*%t(x%*%u.beta.star.beta)
-    alpha.L.J.star.alpha.L.J = matrix(rnorm(dim(x)[1]*k_dim),ncol=dim(x)[1],nrow=k_dim)
+    alpha.L.J.star.alpha.L.J = t(alpha.L.J.svd$u)
 
 
     # Initialise alpha.L.K
@@ -82,7 +88,7 @@ gcproc <- function(x,
     d0.alpha.L.K = 10e-4
 
     V.star.inv.alpha.L.K = (y%*%v.beta.star.beta)%*%t(y%*%v.beta.star.beta)
-    alpha.L.K.star.alpha.L.K = matrix(rnorm(dim(y)[1]*k_dim),ncol=dim(y)[1],nrow=k_dim)
+    alpha.L.K.star.alpha.L.K = t(alpha.L.K.svd$u)
 
 
 
@@ -121,9 +127,9 @@ gcproc <- function(x,
 
 
     count = 0
-    llik.vec <- tol.vec <- c()
+    llik.vec <- tol.vec <- reltol.vec <- c()
     prev.internal.score.vec <- rep(Inf,10)
-    score.vec <- Inf
+    score.vec <- 0
 
     X.x <- x
     Y.y <- y
@@ -184,7 +190,6 @@ gcproc <- function(x,
 
 
 
-
         a.star.beta = a0.beta + dim(y)[1]/2
         b.star.beta = b0.beta + (1/2)*((t(alpha.L.K.star.alpha.L.K%*%y%*%v.beta.star.beta)%*%(alpha.L.K.star.alpha.L.K%*%y%*%v.beta.star.beta)) - t(u.beta.star.beta)%*%t(alpha.L.J.star.alpha.L.J%*%x)%*%(alpha.L.J.star.alpha.L.J%*%x)%*%u.beta.star.beta)
         c.star.beta = c0.beta + 1/2
@@ -228,6 +233,7 @@ gcproc <- function(x,
 
 
 
+
         a.star.alpha.L.K = a0.alpha.L.K + dim(x)[2]/2
         b.star.alpha.L.K = b0.alpha.L.K + (1/2)*(((alpha.L.J.star.alpha.L.J%*%x%*%u.beta.star.beta)%*%t(alpha.L.J.star.alpha.L.J%*%x%*%u.beta.star.beta)) - (alpha.L.K.star.alpha.L.K)%*%V.star.inv.alpha.L.K%*%t(alpha.L.K.star.alpha.L.K))
         c.star.alpha.L.K = c0.alpha.L.K + 1/2
@@ -255,6 +261,7 @@ gcproc <- function(x,
 
         V.star.inv.alpha.L.K = E.diag.alpha.alpha.L.K + (y%*%v.beta.star.beta)%*%t(y%*%v.beta.star.beta)
         alpha.L.K.star.alpha.L.K = (alpha.L.J.star.alpha.L.J%*%x%*%u.beta.star.beta)%*%t(y%*%v.beta.star.beta)%*%MASS::ginv(V.star.inv.alpha.L.K)
+
 
 
         return(list(
@@ -312,16 +319,16 @@ gcproc <- function(x,
 
     }
 
-    matrix.residuals <- alpha.L.K.star.alpha.L.K.final%*%Y.y%*%v.beta.star.beta.final -
-      alpha.L.J.star.alpha.L.J.final%*%X.x%*%u.beta.star.beta.final
+    matrix.residuals <- alpha.L.K.star.alpha.L.K.final%*%Y.y%*%v.beta.star.beta.final - alpha.L.J.star.alpha.L.J.final%*%X.x%*%u.beta.star.beta.final
 
-    llik.vec <- c(llik.vec, sum(mclust::dmvnorm(matrix.residuals,sigma = t(matrix.residuals)%*%matrix.residuals/dim(matrix.residuals)[2],log = T)))
+    llik.vec <- c(llik.vec, sum(mclust::dmvnorm(matrix.residuals,sigma = diag(diag(t(matrix.residuals)%*%matrix.residuals/dim(matrix.residuals)[2])),log = T)))
     score.vec <- c(score.vec, (mean(abs(c(matrix.residuals)))))
     tol.vec <- c(tol.vec,abs(tail(score.vec,2)[1]-tail(score.vec,1)[1]))
+    reltol.vec <- c(reltol.vec,abs(tail(score.vec,2)[1]-tail(score.vec,1)[1])/tail(score.vec,1))
 
     # Check convergence
     if (count>min_iter){
-      if ((count>max_iter) | tail(tol.vec,1)<tol){
+      if ((count>max_iter) | tail(reltol.vec,1)<tol){
         break
       }
     }
@@ -330,7 +337,16 @@ gcproc <- function(x,
 
     if (verbose == T){
       print(paste("Iteration: ",count," with MSE of: ",tail(score.vec,1),sep=""))
+      print(paste("Iteration: ",count," with relative tolerance threshold of: ",tail(reltol.vec,1),sep=""))
     }
+
+
+    par(mfcol=c(4,1))
+    plot(llik.vec)
+    plot(score.vec)
+    plot(reltol.vec)
+    plot((alpha.L.J.star.alpha.L.J.final%*%X.x)[1,],(alpha.L.J.star.alpha.L.J.final%*%X.x)[2,],col=1)
+    points((alpha.L.K.star.alpha.L.K.final%*%Y.y)[1,],(alpha.L.K.star.alpha.L.K.final%*%Y.y)[2,],col=2)
 
   }
 
@@ -341,10 +357,10 @@ gcproc <- function(x,
     residuals = residuals,
 
     main.parameters = list(
-    alpha.L.J = alpha.L.J.star.alpha.L.J.final,
-    alpha.L.K = alpha.L.K.star.alpha.L.K.final,
-    u.beta = u.beta.star.beta.final,
-    v.beta = v.beta.star.beta.final
+      alpha.L.J = alpha.L.J.star.alpha.L.J.final,
+      alpha.L.K = alpha.L.K.star.alpha.L.K.final,
+      u.beta = u.beta.star.beta.final,
+      v.beta = v.beta.star.beta.final
     ),
 
     meta.parameters = list(
