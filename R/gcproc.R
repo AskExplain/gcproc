@@ -127,7 +127,7 @@ gcproc <- function(x,
 
 
     count = 0
-    llik.vec <- tol.vec <- reltol.vec <- c()
+    llik.vec <- c()
     prev.internal.score.vec <- rep(Inf,10)
     score.vec <- 0
 
@@ -323,12 +323,10 @@ gcproc <- function(x,
 
     llik.vec <- c(llik.vec, sum(mclust::dmvnorm(matrix.residuals,sigma = diag(diag(t(matrix.residuals)%*%matrix.residuals/dim(matrix.residuals)[2])),log = T)))
     score.vec <- c(score.vec, (mean(abs(c(matrix.residuals)))))
-    tol.vec <- c(tol.vec,abs(tail(score.vec,2)[1]-tail(score.vec,1)[1]))
-    reltol.vec <- c(reltol.vec,abs(tail(score.vec,2)[1]-tail(score.vec,1)[1])/tail(score.vec,1))
 
     # Check convergence
     if (count>min_iter){
-      if ((count>max_iter) | tail(reltol.vec,1)<tol){
+      if ((count>max_iter) | tail(score.vec,1)<tol){
         break
       }
     }
@@ -337,16 +335,14 @@ gcproc <- function(x,
 
     if (verbose == T){
       print(paste("Iteration: ",count," with MSE of: ",tail(score.vec,1),sep=""))
-      print(paste("Iteration: ",count," with relative tolerance threshold of: ",tail(reltol.vec,1),sep=""))
     }
 
 
-    par(mfcol=c(4,1))
+    par(mfcol=c(3,1))
     plot(llik.vec)
     plot(score.vec)
-    plot(reltol.vec)
-    plot((alpha.L.J.star.alpha.L.J.final%*%X.x)[1,],(alpha.L.J.star.alpha.L.J.final%*%X.x)[2,],col=1)
-    points((alpha.L.K.star.alpha.L.K.final%*%Y.y)[1,],(alpha.L.K.star.alpha.L.K.final%*%Y.y)[2,],col=2)
+    plot((alpha.L.K.star.alpha.L.K.final%*%X.x[1:dim(Y.y)[1],])[1,],(alpha.L.K.star.alpha.L.K.final%*%X.x[1:dim(Y.y)[1],])[2,],col=as.integer(as.factor(colnames(X.x))))
+    points((alpha.L.K.star.alpha.L.K.final%*%Y.y)[1,],(alpha.L.K.star.alpha.L.K.final%*%Y.y)[2,],col=as.integer(as.factor(colnames(Y.y))))
 
   }
 
@@ -380,8 +376,7 @@ gcproc <- function(x,
     convergence.parameters = list(
       iterations = count,
       score.vec = score.vec,
-      llik.vec = llik.vec,
-      tol.vec = tol.vec
+      llik.vec = llik.vec
     )
 
   ))
