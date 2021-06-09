@@ -129,36 +129,6 @@ gcproc <- function(x,
     c0.alpha.L.K = 10e-2
     d0.alpha.L.K = 10e-4
 
-    a.star.alpha.L.J = a0.alpha.L.J + dim(x)[1]/2
-    b.star.alpha.L.J = b0.alpha.L.J + (1/2)*(((alpha.L.K.star.alpha.L.K%*%y%*%v.beta.star.beta)%*%t(alpha.L.K.star.alpha.L.K%*%y%*%v.beta.star.beta)) - (alpha.L.J.star.alpha.L.J)%*%V.star.inv.alpha.L.J%*%t(alpha.L.J.star.alpha.L.J))
-    c.star.alpha.L.J = c0.alpha.L.J + dim(x)[1]/2
-
-    E.alpha.L.J.D.alpha.L.J <- a.star.alpha.L.J*sum(diag((alpha.L.J.star.alpha.L.J)%*%t(alpha.L.J.star.alpha.L.J))%*%(MASS::ginv(b.star.alpha.L.J)))+1/sum(diag(V.star.inv.alpha.L.J))
-
-    d.star.alpha.L.J = 0
-    for ( j in c(1:dim(x)[2]) ){
-      d.star.alpha.L.J = d.star.alpha.L.J + d0.alpha.L.J + (1/2)*(E.alpha.L.J.D.alpha.L.J)
-    }
-
-    E.diag.alpha.alpha.L.J = c.star.alpha.L.J*1/d.star.alpha.L.J
-
-
-
-
-    a.star.alpha.L.K = a0.alpha.L.K + dim(x)[1]/2
-    b.star.alpha.L.K = b0.alpha.L.K + (1/2)*(((alpha.L.J.star.alpha.L.J%*%x%*%u.beta.star.beta)%*%t(alpha.L.J.star.alpha.L.J%*%x%*%u.beta.star.beta)) - (alpha.L.K.star.alpha.L.K)%*%V.star.inv.alpha.L.K%*%t(alpha.L.K.star.alpha.L.K))
-    c.star.alpha.L.K = c0.alpha.L.K + dim(x)[1]/2
-
-    E.alpha.L.K.D.alpha.L.K <- a.star.alpha.L.K*sum(diag((alpha.L.K.star.alpha.L.K)%*%t(alpha.L.K.star.alpha.L.K))%*%(MASS::ginv(b.star.alpha.L.K)))+1/sum(diag(V.star.inv.alpha.L.K))
-
-    d.star.alpha.L.K = 0
-    for ( j in c(1:dim(x)[2]) ){
-      d.star.alpha.L.K = d.star.alpha.L.K + d0.alpha.L.K + (1/2)*(E.alpha.L.K.D.alpha.L.K)
-    }
-
-    E.diag.alpha.alpha.L.K = c.star.alpha.L.K*1/d.star.alpha.L.K
-
-
 
     count = 0
     llik.vec <- c()
@@ -355,7 +325,7 @@ gcproc <- function(x,
 
     matrix.residuals <- alpha.L.K.star.alpha.L.K.final%*%Y.y%*%v.beta.star.beta.final - alpha.L.J.star.alpha.L.J.final%*%X.x%*%u.beta.star.beta.final
 
-    llik.vec <- c(llik.vec, sum(mclust::dmvnorm(matrix.residuals,sigma = diag(diag(t(matrix.residuals)%*%matrix.residuals/dim(matrix.residuals)[2])),log = T)))
+    llik.vec <- c(llik.vec, mean(mclust::dmvnorm(matrix.residuals,sigma = diag(diag(t(matrix.residuals)%*%matrix.residuals/dim(matrix.residuals)[2])),log = T)))
     score.vec <- c(score.vec, (mean(abs(c(matrix.residuals)))))
 
     # Check convergence
@@ -370,13 +340,6 @@ gcproc <- function(x,
     if (verbose == T){
       print(paste("Iteration: ",count," with MSE of: ",tail(score.vec,1),sep=""))
     }
-
-
-    par(mfcol=c(3,1))
-    plot(llik.vec)
-    plot(score.vec)
-    plot((alpha.L.K.star.alpha.L.K.final%*%X.x[1:dim(Y.y)[1],])[1,],(alpha.L.K.star.alpha.L.K.final%*%X.x[1:dim(Y.y)[1],])[2,],col=as.integer(as.factor(colnames(X.x))))
-    points((alpha.L.K.star.alpha.L.K.final%*%Y.y)[1,],(alpha.L.K.star.alpha.L.K.final%*%Y.y)[2,],col=as.integer(as.factor(colnames(Y.y))))
 
   }
 
