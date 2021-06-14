@@ -1,5 +1,6 @@
 transfer.gcproc <- function(gcproc.model,y,x,anchor="y"){
 
+
   y <- as.matrix(y)
   x <- as.matrix(x)
 
@@ -30,7 +31,39 @@ transfer.gcproc <- function(gcproc.model,y,x,anchor="y"){
                     anchor_x.sample = anchor_x.sample,
                     anchor_x.feature = anchor_x.feature  )
 
+  main_llik <- c()
+  for (seed in c(1:gcproc.model$meta.parameters$seeds)){
+    print(paste("seed: ",seed))
+    set.seed(seed)
+    final.gcproc.model <- try(gcproc(x = x,
+                                     y = y,
+                                     k_dim = gcproc.model$meta.parameters$k_dim,
+                                     j_dim = gcproc.model$meta.parameters$j_dim,
+                                     eta = gcproc.model$meta.parameters$eta,
+                                     max_iter = 100,
+                                     min_iter = gcproc.model$meta.parameters$min_iter,
+                                     tol = gcproc.model$meta.parameters$tol,
+                                     batches = gcproc.model$meta.parameters$batches,
+                                     cores = gcproc.model$meta.parameters$cores,
+                                     verbose = F,
+                                     init=gcproc.model$meta.parameters$init,
+                                     log = gcproc.model$meta.parameters$log,
+                                     center = gcproc.model$meta.parameters$center,
+                                     scale.z = gcproc.model$meta.parameters$scale.z,
+                                     anchors = anchors),silent = F)
 
+    if (!is.character(final.gcproc.model)){
+      main_llik <- rbind(main_llik,c(seed,tail(final.gcproc.model$convergence.parameters$llik.vec,1)))
+    } else {
+      main_llik <- rbind(main_llik,c(-Inf))
+    }
+
+  }
+
+  main_dim <- main_llik[which(main_llik[,2]==max(main_llik[,2])),]
+  main_seed <- main_dim[1]
+
+  set.seed(main_seed)
   final.gcproc.model <- gcproc(x = x,
                                y = y,
                                k_dim = gcproc.model$meta.parameters$k_dim,
@@ -47,6 +80,7 @@ transfer.gcproc <- function(gcproc.model,y,x,anchor="y"){
                                center = gcproc.model$meta.parameters$center,
                                scale.z = gcproc.model$meta.parameters$scale.z,
                                anchors = anchors)
+
 
   return(final.gcproc.model)
 

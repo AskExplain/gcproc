@@ -80,8 +80,8 @@ gcproc <- function(x,
     }
     if (init == "svd"){
 
-      u.beta.svd <- irlba::irlba(t(x)%*%x,j_dim)
-      v.beta.svd <- irlba::irlba(t(y)%*%y,j_dim)
+      u.beta.svd <- irlba::irlba(t(x)%*%x,j_dim,tol=1e-10,maxit = 10000)
+      v.beta.svd <- irlba::irlba(t(y)%*%y,j_dim,tol=1e-10,maxit = 10000)
 
       u.beta.star.beta <- u.beta.svd$v
       v.beta.star.beta <- v.beta.svd$v
@@ -147,10 +147,10 @@ gcproc <- function(x,
     d0.alpha.L.K = 10e-4
 
 
-    count = 0
+    count = 1
     llik.vec <- c()
     prev.internal.score.vec <- rep(Inf,10)
-    score.vec <- 0
+    score.vec <- 10e8
 
     X.x <- x
     Y.y <- y
@@ -185,7 +185,7 @@ gcproc <- function(x,
       y.v.sample <- if(dim(Y.y)[2]>batches){chunk(sample(c(1:dim(Y.y)[2])),batches)}else{chunk(sample(c(1:dim(Y.y)[2])),1)}
 
 
-      to_return <- pbmcapply::pbmclapply(c(1:batches),function(i){
+      to_return <- parallel::mclapply(c(1:batches),function(i){
         set.seed(i*count)
 
         x.g.ids <- x.g.sample[[min(length(x.g.sample),i)]]
@@ -212,7 +212,7 @@ gcproc <- function(x,
 
 
 
-        a.star.beta = a0.beta + dim(y)[2]/2
+        a.star.beta = a0.beta + min(dim(y)[2],length(y.v.ids))/2
         b.star.beta = b0.beta + (1/2)*((t(alpha.L.K.star.alpha.L.K%*%y%*%v.beta.star.beta)%*%(alpha.L.K.star.alpha.L.K%*%y%*%v.beta.star.beta)) - t(u.beta.star.beta)%*%t(alpha.L.J.star.alpha.L.J%*%x)%*%(alpha.L.J.star.alpha.L.J%*%x)%*%u.beta.star.beta)
         c.star.beta = c0.beta + 1/2
 
@@ -226,7 +226,7 @@ gcproc <- function(x,
 
 
 
-        a.star.beta = a0.beta + dim(x)[2]/2
+        a.star.beta = a0.beta + min(dim(x)[2],length(x.v.ids))/2
         b.star.beta = b0.beta + (1/2)*((t(alpha.L.J.star.alpha.L.J%*%x%*%u.beta.star.beta)%*%(alpha.L.J.star.alpha.L.J%*%x%*%u.beta.star.beta)) - t(v.beta.star.beta)%*%t(alpha.L.K.star.alpha.L.K%*%y)%*%(alpha.L.K.star.alpha.L.K%*%y)%*%v.beta.star.beta)
         c.star.beta = c0.beta + 1/2
 
@@ -241,7 +241,7 @@ gcproc <- function(x,
 
 
 
-        a.star.alpha.L.K = a0.alpha.L.K + dim(y)[1]/2
+        a.star.alpha.L.K = a0.alpha.L.K + min(dim(y)[1],length(y.g.ids))/2
         b.star.alpha.L.K = b0.alpha.L.K + (1/2)*(((alpha.L.J.star.alpha.L.J%*%x%*%u.beta.star.beta)%*%t(alpha.L.J.star.alpha.L.J%*%x%*%u.beta.star.beta)) - (alpha.L.K.star.alpha.L.K)%*%V.star.inv.alpha.L.K%*%t(alpha.L.K.star.alpha.L.K))
         c.star.alpha.L.K = c0.alpha.L.K + 1/2
 
@@ -254,7 +254,7 @@ gcproc <- function(x,
         E.diag.alpha.alpha.L.K <- n.y/min(dim(y)[1],length(y.g.ids))*E.diag.alpha.alpha.L.K
 
 
-        a.star.alpha.L.J = a0.alpha.L.J + dim(x)[1]/2
+        a.star.alpha.L.J = a0.alpha.L.J + min(dim(x)[1],length(x.g.ids))/2
         b.star.alpha.L.J = b0.alpha.L.J + (1/2)*(((alpha.L.K.star.alpha.L.K%*%y%*%v.beta.star.beta)%*%t(alpha.L.K.star.alpha.L.K%*%y%*%v.beta.star.beta)) - (alpha.L.J.star.alpha.L.J)%*%V.star.inv.alpha.L.J%*%t(alpha.L.J.star.alpha.L.J))
         c.star.alpha.L.J = c0.alpha.L.J + 1/2
 
@@ -297,7 +297,7 @@ gcproc <- function(x,
           x.v.ids = x.v.ids,
           y.v.ids = y.v.ids
         ))
-      },mc.cores = cores)
+      },mc.silent = verbose,mc.cores = cores)
 
 
     }
@@ -320,8 +320,10 @@ gcproc <- function(x,
         x.v.ids <- to_return[[i]]$x.v.ids
         y.v.ids <- to_return[[i]]$y.v.ids
 
-        a.b <- c(1-eta)
-        b.a <- c(eta)
+
+
+        b.a <- eta
+        a.b <- c(1-b.a)
 
         alpha.L.J.star.alpha.L.J.final[,x.g.ids] <- a.b*alpha.L.J.star.alpha.L.J.final[,x.g.ids] + b.a*alpha.L.J.star.alpha.L.J
         V.star.inv.alpha.L.J.final[x.g.ids,x.g.ids] <- a.b*V.star.inv.alpha.L.J.final[x.g.ids,x.g.ids] + b.a*V.star.inv.alpha.L.J
@@ -349,6 +351,7 @@ gcproc <- function(x,
     }
 
     matrix.residuals <- alpha.L.K.star.alpha.L.K.final%*%Y.y%*%v.beta.star.beta.final - alpha.L.J.star.alpha.L.J.final%*%X.x%*%u.beta.star.beta.final
+
 
     llik.vec <- c(llik.vec, mean(mclust::dmvnorm(matrix.residuals,sigma = diag(diag(t(matrix.residuals)%*%matrix.residuals/dim(matrix.residuals)[2])),log = T)))
     score.vec <- c(score.vec, (mean(abs(c(matrix.residuals)))))
