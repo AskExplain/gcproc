@@ -13,7 +13,8 @@ gcproc <- function(x,
                    cores=2,
                    verbose=F,
                    init="eigen",
-                   anchors = NULL){
+                   anchors = NULL,
+                   seed = 1){
 
   prepare_data = TRUE
   initialise = TRUE
@@ -69,6 +70,7 @@ gcproc <- function(x,
       print("Initialising data")
     }
 
+    set.seed(seed)
     if (init == "eigen"){
 
       u.beta.eigen <- RSpectra::eigs_sym(t(x)%*%x,j_dim)
@@ -93,18 +95,16 @@ gcproc <- function(x,
       v.beta.star.beta <- matrix(rnorm(j_dim*dim(y)[2]),ncol = j_dim,nrow=dim(y)[2])
 
     }
+    if (init == "anchors"){
 
-    a0.beta = 10e-2
-    b0.beta = 10e-4
-    c0.beta = 10e-2
-    d0.beta = 10e-4
+      u.beta.star.beta <- anchor_x.feature
+      v.beta.star.beta <- anchor_y.feature
 
-    # #Initialise u.beta
-    v.V.star.inv.beta = t(y)%*%(y)
+    }
 
-    #Initialise u.beta
-    u.V.star.inv.beta = t(x)%*%(x)
 
+
+    set.seed(seed)
     if (init == "eigen"){
 
       alpha.L.J.eigen <- RSpectra::eigs_sym(x%*%t(x),k_dim)
@@ -129,6 +129,25 @@ gcproc <- function(x,
       alpha.L.K.star.alpha.L.K <- matrix(rnorm(k_dim*dim(y)[1]),nrow = k_dim,ncol=dim(y)[1])
 
     }
+    if (init == "anchors"){
+
+      alpha.L.J.star.alpha.L.J <- anchor_x.sample
+      alpha.L.K.star.alpha.L.K <- anchor_y.sample
+
+    }
+
+
+    a0.beta = 10e-2
+    b0.beta = 10e-4
+    c0.beta = 10e-2
+    d0.beta = 10e-4
+
+    # #Initialise u.beta
+    v.V.star.inv.beta = t(alpha.L.K.star.alpha.L.K%*%y)%*%(alpha.L.K.star.alpha.L.K%*%y)
+
+    #Initialise u.beta
+    u.V.star.inv.beta = t(alpha.L.J.star.alpha.L.J%*%x)%*%(alpha.L.J.star.alpha.L.J%*%x)
+
 
     V.star.inv.alpha.L.K = (y%*%v.beta.star.beta)%*%t(y%*%v.beta.star.beta)
     V.star.inv.alpha.L.J = (x%*%u.beta.star.beta)%*%t(x%*%u.beta.star.beta)
@@ -145,6 +164,17 @@ gcproc <- function(x,
     b0.alpha.L.K = 10e-4
     c0.alpha.L.K = 10e-2
     d0.alpha.L.K = 10e-4
+
+    if (init=="anchors"){
+
+      check_anchors = FALSE
+
+      anchor_y.sample = NULL
+      anchor_y.feature = NULL
+      anchor_x.sample = NULL
+      anchor_x.feature = NULL
+
+    }
 
 
     count = 1
@@ -177,6 +207,7 @@ gcproc <- function(x,
   while (T){
 
     if (variational_gradient_descent_updates == T){
+      set.seed(seed+count)
 
       x.g.sample <- if(dim(X.x)[1]>batches){chunk(sample(c(1:dim(X.x)[1])),batches)}else{chunk(sample(c(1:dim(X.x)[1])),1)}
       y.g.sample <- if(dim(Y.y)[1]>batches){chunk(sample(c(1:dim(Y.y)[1])),batches)}else{chunk(sample(c(1:dim(Y.y)[1])),1)}
@@ -186,7 +217,6 @@ gcproc <- function(x,
 
 
       to_return <- parallel::mclapply(c(1:batches),function(i){
-        set.seed(i*count)
 
         x.g.ids <- x.g.sample[[min(length(x.g.sample),i)]]
         y.g.ids <- y.g.sample[[min(length(y.g.sample),i)]]

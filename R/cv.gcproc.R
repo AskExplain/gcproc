@@ -11,51 +11,104 @@ cv.gcproc <- function(x,
                       batches=16,
                       cores=2,
                       verbose=F,
-                      init="eigen"){
+                      init="svd"){
+
+  j_dim <- 70
+  k_dim <- 70
+  param.dim <- data.frame(c(1:seeds),k_dim,j_dim)
+
+
+  if (init == "svd"){
+
+    set.seed(1)
+    u.beta.svd <- irlba::irlba(
+      Matrix::crossprod(
+        x = Matrix::Matrix(x,sparse=T),
+        y = Matrix::Matrix(x,sparse=T)
+      ),k_dim,tol=1e-10,maxit = 10000)
+    v.beta.svd <- irlba::irlba(
+      Matrix::crossprod(
+        x = Matrix::Matrix(y,sparse=T),
+        y = Matrix::Matrix(y,sparse=T)
+      ),k_dim,tol=1e-10,maxit = 10000)
+
+    u.beta.star.beta <- u.beta.svd$v
+    v.beta.star.beta <- v.beta.svd$v
+
+    alpha.L.J.svd <- irlba::irlba(
+      Matrix::crossprod(
+      x = Matrix::t(x),
+      y = Matrix::t(x)
+    ),k_dim,tol=1e-10,maxit = 10000)
+    alpha.L.K.svd <- irlba::irlba(
+      Matrix::crossprod(
+      x = Matrix::t(y),
+      y = Matrix::t(y)
+    ),k_dim,tol=1e-10,maxit = 10000)
+
+    alpha.L.J.star.alpha.L.J = t(alpha.L.J.svd$u)
+    alpha.L.K.star.alpha.L.K = t(alpha.L.K.svd$u)
+
+  }
+  if (init == "random"){
+    set.seed(1)
+
+    u.beta.star.beta <- matrix(rnorm(j_dim*dim(x)[2]),ncol = j_dim,nrow=dim(x)[2])
+    v.beta.star.beta <- matrix(rnorm(j_dim*dim(y)[2]),ncol = j_dim,nrow=dim(y)[2])
+
+    alpha.L.J.star.alpha.L.J <- matrix(rnorm(k_dim*dim(x)[1]),nrow = k_dim,ncol=dim(x)[1])
+    alpha.L.K.star.alpha.L.K <- matrix(rnorm(k_dim*dim(y)[1]),nrow = k_dim,ncol=dim(y)[1])
+
+  }
+
+
+  anchors <- list(  anchor_y.sample = alpha.L.K.star.alpha.L.K,
+                    anchor_y.feature = v.beta.star.beta,
+                    anchor_x.sample = alpha.L.J.star.alpha.L.J,
+                    anchor_x.feature = u.beta.star.beta  )
+
 
   main_llik <- c()
-  for (seed in c(1:seeds)){
-    for (j in seq(2,min(min(dim(x)[2],dim(y)[2])-1,30),length.out=3)){
-      for (k in seq(2,min(min(dim(x)[1],dim(y)[1])-1,30),length.out=3)){
-        set.seed(seed)
-        j <- floor(j)
-        k <- floor(k)
+  for (row in 1:nrow(param.dim)){
+    seed <- param.dim[row,1]
+    set.seed(seed)
+    k <- param.dim[row,2]
+    j <- param.dim[row,3]
 
-        if (verbose==T){
-          print("Beginning tuning dimension to: ")
-          print(paste("seed: ",seed, "   k_dim: ",k,"   j_dim: ",j,sep=""))
-        }
+    if (verbose==T){
+      print("Beginning tuning dimension to: ")
+      print(paste("seed: ",seed, "   k_dim: ",k,"   j_dim: ",j,sep=""))
+    }
 
-        gcproc.model <- try(gcproc(y = y,
-                                   x = x,
-                                   k_dim = k,
-                                   j_dim = j,
-                                   eta = eta,
-                                   max_iter = 105,
-                                   min_iter = 15,
-                                   tol = tol,
-                                   log = log,
-                                   center = center,
-                                   scale.z = scale.z,
-                                   batches = batches,
-                                   cores = cores,
-                                   verbose = F,
-                                   init=init),silent = F)
-        if (!is.character(gcproc.model)){
-          main_llik <- rbind(main_llik,c(seed,j,k,tail(gcproc.model$convergence.parameters$llik.vec,1)))
-        } else {
-          main_llik <- rbind(main_llik,c(-Inf))
-        }
-
-
-      }
+    gcproc.model <- try(gcproc(y = y,
+                               x = x,
+                               k_dim = k,
+                               j_dim = j,
+                               eta = eta,
+                               max_iter = 15,
+                               min_iter = 15,
+                               tol = tol,
+                               log = log,
+                               center = center,
+                               scale.z = scale.z,
+                               batches = batches,
+                               cores = cores,
+                               verbose = verbose,
+                               init= "anchors",
+                               seed=seed,
+                               anchors = anchors),silent = F)
+    if (!is.character(gcproc.model)){
+      cost <- tail(gcproc.model$convergence.parameters$llik.vec,1)
+      main_llik <- rbind(main_llik,c(seed,k,j,cost))
+    } else {
+      main_llik <- rbind(main_llik,c(-Inf))
     }
   }
 
   main_dim <- main_llik[which(main_llik[,4]==max(main_llik[,4])),]
   main_seed <- main_dim[1]
-  main_j_dim <- main_dim[2]
-  main_k_dim <- main_dim[3]
+  main_k_dim <- main_dim[2]
+  main_j_dim <- main_dim[3]
 
   if (verbose==T){
     print("Running final gcproc at optimal dimension of: ")
@@ -64,21 +117,22 @@ cv.gcproc <- function(x,
 
   set.seed(main_seed)
   final.gcproc.model <- gcproc(x = x,
-                         y = y,
-                         k_dim = main_k_dim,
-                         j_dim = main_j_dim,
-                         eta = eta,
-                         max_iter = max_iter,
-                         min_iter = min_iter,
-                         tol = tol,
-                         log = log,
-                         center = center,
-                         scale.z = scale.z,
-                         batches = batches,
-                         cores = cores,
-                         verbose = verbose,
-                         init=init)
-
+                               y = y,
+                               k_dim = main_k_dim,
+                               j_dim = main_j_dim,
+                               eta = eta,
+                               max_iter = max_iter,
+                               min_iter = min_iter,
+                               tol = tol,
+                               log = log,
+                               center = center,
+                               scale.z = scale.z,
+                               batches = batches,
+                               cores = cores,
+                               verbose = verbose,
+                               init="anchors",
+                               anchor=anchors,
+                               seed = main_seed)
 
   final.gcproc.model$cv.llik <- main_llik
   final.gcproc.model$meta.parameters$seeds <- seeds
