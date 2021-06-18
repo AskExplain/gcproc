@@ -14,6 +14,7 @@ gcproc <- function(x,
                    verbose=F,
                    init="eigen",
                    anchors = NULL,
+                   initial.param = NULL,
                    seed = 1){
 
   prepare_data = TRUE
@@ -35,6 +36,7 @@ gcproc <- function(x,
     anchor_y.feature = anchors$anchor_y.feature
     anchor_x.sample = anchors$anchor_x.sample
     anchor_x.feature = anchors$anchor_x.feature
+
   }
 
   if (verbose){
@@ -70,71 +72,14 @@ gcproc <- function(x,
       print("Initialising data")
     }
 
-    set.seed(seed)
-    if (init == "eigen"){
-
-      u.beta.eigen <- RSpectra::eigs_sym(t(x)%*%x,j_dim)
-      v.beta.eigen <- RSpectra::eigs_sym(t(y)%*%y,j_dim)
-
-      u.beta.star.beta <- u.beta.eigen$vectors
-      v.beta.star.beta <- v.beta.eigen$vectors
-
-    }
-    if (init == "svd"){
-
-      u.beta.svd <- irlba::irlba(t(x)%*%x,j_dim,tol=1e-10,maxit = 10000)
-      v.beta.svd <- irlba::irlba(t(y)%*%y,j_dim,tol=1e-10,maxit = 10000)
-
-      u.beta.star.beta <- u.beta.svd$v
-      v.beta.star.beta <- v.beta.svd$v
-
-    }
-    if (init == "random"){
-
-      u.beta.star.beta <- matrix(rnorm(j_dim*dim(x)[2]),ncol = j_dim,nrow=dim(x)[2])
-      v.beta.star.beta <- matrix(rnorm(j_dim*dim(y)[2]),ncol = j_dim,nrow=dim(y)[2])
-
-    }
-    if (init == "anchors"){
-
-      u.beta.star.beta <- anchor_x.feature
-      v.beta.star.beta <- anchor_y.feature
-
+    if (is.null(initial.param)){
+      initial.param <-initialise.gcproc(x=x,y=y,k_dim=k_dim,j_dim=j_dim,init="svd")
     }
 
-
-
-    set.seed(seed)
-    if (init == "eigen"){
-
-      alpha.L.J.eigen <- RSpectra::eigs_sym(x%*%t(x),k_dim)
-      alpha.L.K.eigen <- RSpectra::eigs_sym(y%*%t(y),k_dim)
-
-      alpha.L.J.star.alpha.L.J = t(alpha.L.J.eigen$vectors)
-      alpha.L.K.star.alpha.L.K = t(alpha.L.K.eigen$vectors)
-
-    }
-    if (init == "svd"){
-
-      alpha.L.J.svd <- irlba::irlba(x%*%t(x),k_dim)
-      alpha.L.K.svd <- irlba::irlba(y%*%t(y),k_dim)
-
-      alpha.L.J.star.alpha.L.J = t(alpha.L.J.svd$u)
-      alpha.L.K.star.alpha.L.K = t(alpha.L.K.svd$u)
-
-    }
-    if (init == "random"){
-
-      alpha.L.J.star.alpha.L.J <- matrix(rnorm(k_dim*dim(x)[1]),nrow = k_dim,ncol=dim(x)[1])
-      alpha.L.K.star.alpha.L.K <- matrix(rnorm(k_dim*dim(y)[1]),nrow = k_dim,ncol=dim(y)[1])
-
-    }
-    if (init == "anchors"){
-
-      alpha.L.J.star.alpha.L.J <- anchor_x.sample
-      alpha.L.K.star.alpha.L.K <- anchor_y.sample
-
-    }
+    alpha.L.K.star.alpha.L.K <- if (is.null(anchor_y.sample)){initial.param$anchor_y.sample}else{anchor_y.sample}
+    alpha.L.J.star.alpha.L.J <- if (is.null(anchor_x.sample)){initial.param$anchor_x.sample}else{anchor_x.sample}
+    v.beta.star.beta <- if (is.null(anchor_y.feature)){initial.param$anchor_y.feature}else{anchor_y.feature}
+    u.beta.star.beta <- if (is.null(anchor_x.feature)){initial.param$anchor_x.feature}else{anchor_x.feature}
 
 
     a0.beta = 10e-2
@@ -164,18 +109,6 @@ gcproc <- function(x,
     b0.alpha.L.K = 10e-4
     c0.alpha.L.K = 10e-2
     d0.alpha.L.K = 10e-4
-
-    if (init=="anchors"){
-
-      check_anchors = FALSE
-
-      anchor_y.sample = NULL
-      anchor_y.feature = NULL
-      anchor_x.sample = NULL
-      anchor_x.feature = NULL
-
-    }
-
 
     count = 1
     llik.vec <- c()
@@ -209,11 +142,11 @@ gcproc <- function(x,
     if (variational_gradient_descent_updates == T){
       set.seed(seed+count)
 
-      x.g.sample <- if(dim(X.x)[1]>batches){chunk(sample(c(1:dim(X.x)[1])),batches)}else{chunk(sample(c(1:dim(X.x)[1])),1)}
-      y.g.sample <- if(dim(Y.y)[1]>batches){chunk(sample(c(1:dim(Y.y)[1])),batches)}else{chunk(sample(c(1:dim(Y.y)[1])),1)}
+      x.g.sample <- if(dim(X.x)[1]>batches){chunk(sample(c(1:dim(X.x)[1])),batches)}else{chunk(sample(c(1:dim(X.x)[1])),8)}
+      y.g.sample <- if(dim(Y.y)[1]>batches){chunk(sample(c(1:dim(Y.y)[1])),batches)}else{chunk(sample(c(1:dim(Y.y)[1])),8)}
 
-      x.v.sample <- if(dim(X.x)[2]>batches){chunk(sample(c(1:dim(X.x)[2])),batches)}else{chunk(sample(c(1:dim(X.x)[2])),1)}
-      y.v.sample <- if(dim(Y.y)[2]>batches){chunk(sample(c(1:dim(Y.y)[2])),batches)}else{chunk(sample(c(1:dim(Y.y)[2])),1)}
+      x.v.sample <- if(dim(X.x)[2]>batches){chunk(sample(c(1:dim(X.x)[2])),batches)}else{chunk(sample(c(1:dim(X.x)[2])),8)}
+      y.v.sample <- if(dim(Y.y)[2]>batches){chunk(sample(c(1:dim(Y.y)[2])),batches)}else{chunk(sample(c(1:dim(Y.y)[2])),8)}
 
 
       to_return <- parallel::mclapply(c(1:batches),function(i){

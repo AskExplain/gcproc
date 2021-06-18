@@ -17,56 +17,7 @@ cv.gcproc <- function(x,
   k_dim <- 70
   param.dim <- data.frame(c(1:seeds),k_dim,j_dim)
 
-
-  if (init == "svd"){
-
-    set.seed(1)
-    u.beta.svd <- irlba::irlba(
-      Matrix::crossprod(
-        x = Matrix::Matrix(x,sparse=T),
-        y = Matrix::Matrix(x,sparse=T)
-      ),k_dim,tol=1e-10,maxit = 10000)
-    v.beta.svd <- irlba::irlba(
-      Matrix::crossprod(
-        x = Matrix::Matrix(y,sparse=T),
-        y = Matrix::Matrix(y,sparse=T)
-      ),k_dim,tol=1e-10,maxit = 10000)
-
-    u.beta.star.beta <- u.beta.svd$v
-    v.beta.star.beta <- v.beta.svd$v
-
-    alpha.L.J.svd <- irlba::irlba(
-      Matrix::crossprod(
-      x = Matrix::t(x),
-      y = Matrix::t(x)
-    ),k_dim,tol=1e-10,maxit = 10000)
-    alpha.L.K.svd <- irlba::irlba(
-      Matrix::crossprod(
-      x = Matrix::t(y),
-      y = Matrix::t(y)
-    ),k_dim,tol=1e-10,maxit = 10000)
-
-    alpha.L.J.star.alpha.L.J = t(alpha.L.J.svd$u)
-    alpha.L.K.star.alpha.L.K = t(alpha.L.K.svd$u)
-
-  }
-  if (init == "random"){
-    set.seed(1)
-
-    u.beta.star.beta <- matrix(rnorm(j_dim*dim(x)[2]),ncol = j_dim,nrow=dim(x)[2])
-    v.beta.star.beta <- matrix(rnorm(j_dim*dim(y)[2]),ncol = j_dim,nrow=dim(y)[2])
-
-    alpha.L.J.star.alpha.L.J <- matrix(rnorm(k_dim*dim(x)[1]),nrow = k_dim,ncol=dim(x)[1])
-    alpha.L.K.star.alpha.L.K <- matrix(rnorm(k_dim*dim(y)[1]),nrow = k_dim,ncol=dim(y)[1])
-
-  }
-
-
-  anchors <- list(  anchor_y.sample = alpha.L.K.star.alpha.L.K,
-                    anchor_y.feature = v.beta.star.beta,
-                    anchor_x.sample = alpha.L.J.star.alpha.L.J,
-                    anchor_x.feature = u.beta.star.beta  )
-
+  anchors <- initialise.gcproc(x=x,y=y,init=init,k_dim=k_dim,j_dim=j_dim)
 
   main_llik <- c()
   for (row in 1:nrow(param.dim)){
@@ -94,9 +45,10 @@ cv.gcproc <- function(x,
                                batches = batches,
                                cores = cores,
                                verbose = verbose,
-                               init= "anchors",
+                               init= init,
                                seed=seed,
-                               anchors = anchors),silent = F)
+                               initial.param = anchors,
+                               anchors = NULL),silent = F)
     if (!is.character(gcproc.model)){
       cost <- tail(gcproc.model$convergence.parameters$llik.vec,1)
       main_llik <- rbind(main_llik,c(seed,k,j,cost))
@@ -130,8 +82,9 @@ cv.gcproc <- function(x,
                                batches = batches,
                                cores = cores,
                                verbose = verbose,
-                               init="anchors",
-                               anchor=anchors,
+                               init=init,
+                               initial.param = anchors,
+                               anchor = NULL,
                                seed = main_seed)
 
   final.gcproc.model$cv.llik <- main_llik
