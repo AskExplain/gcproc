@@ -338,7 +338,7 @@ gcproc <- function(x,
 
     transformed.data = transformed.data,
 
-    residuals = residuals,
+    residuals = matrix.residuals,
 
     main.parameters = list(
       alpha.L.J = alpha.L.J.star.alpha.L.J.final,
