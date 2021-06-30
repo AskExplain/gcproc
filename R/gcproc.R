@@ -1,18 +1,18 @@
 gcproc <- function(x,
                    y,
-                   k_dim = 30,
-                   j_dim = 30,
-                   eta=1e-2,
+                   k_dim = 150,
+                   j_dim = 3,
+                   eta=1e-1,
                    max_iter=1500,
                    min_iter = 15,
-                   tol=1e-3,
+                   tol=1e-5,
                    log=F,
-                   center=F,
-                   scale.z=F,
-                   batches=2,
+                   center=T,
+                   scale.z=T,
+                   batches=4,
                    cores=2,
-                   verbose=F,
-                   init="eigen",
+                   verbose=T,
+                   init="svd",
                    anchors = NULL,
                    initial.param = NULL,
                    seed = 1){
@@ -73,7 +73,7 @@ gcproc <- function(x,
     }
 
     if (is.null(initial.param)){
-      initial.param <-initialise.gcproc(x=x,y=y,k_dim=k_dim,j_dim=j_dim,init="svd")
+      initial.param <-initialise.gcproc(x=x,y=y,k_dim=k_dim,j_dim=j_dim,init=init)
     }
 
     alpha.L.K.star.alpha.L.K <- if (is.null(anchor_y.sample)){initial.param$anchor_y.sample}else{anchor_y.sample}
@@ -112,7 +112,6 @@ gcproc <- function(x,
 
     count = 1
     llik.vec <- c()
-    prev.internal.score.vec <- rep(Inf,10)
     score.vec <- 10e8
 
     X.x <- x
@@ -137,25 +136,80 @@ gcproc <- function(x,
     print(paste("Beginning gcproc learning with:   Cores: ",cores, "   Batches: ", batches, "   Learning Rate (eta): ", eta, "   Tolerance Threshold: ", tol, "   Minimum Number of iterations: ",min_iter, "   Maximum number of iterations: ", max_iter, "   Verbose: ", verbose,sep=""))
   }
 
+  MSE <- Inf
+  bar_count <- 0
+  bar_c = F
+
   while (T){
 
     if (variational_gradient_descent_updates == T){
       set.seed(seed+count)
 
-      x.g.sample <- if(dim(X.x)[1]>batches){chunk(sample(c(1:dim(X.x)[1])),batches)}else{chunk(sample(c(1:dim(X.x)[1])),8)}
-      y.g.sample <- if(dim(Y.y)[1]>batches){chunk(sample(c(1:dim(Y.y)[1])),batches)}else{chunk(sample(c(1:dim(Y.y)[1])),8)}
+      # x.g.sample <- if(count%%4==0 & bar_count <= 8){lapply(c(1:batches),function(X){sample(c(1:dim(X.x)[1]),size = min(200,dim(X.x)[1]/(batches/4)))})}else{chunk(sample(c(1:dim(X.x)[1])),batches)}
+      # y.g.sample <- if(count%%4==1 & bar_count <= 8){lapply(c(1:batches),function(X){sample(c(1:dim(Y.y)[1]),size = min(200,dim(Y.y)[1]/(batches/4)))})}else{chunk(sample(c(1:dim(Y.y)[1])),batches)}
+      #
+      # x.v.sample <- if(count%%4==2 & bar_count <= 8){lapply(c(1:batches),function(X){sample(c(1:dim(X.x)[2]),size = min(200,dim(X.x)[2]/(batches/4)))})}else{chunk(sample(c(1:dim(X.x)[2])),batches)}
+      # y.v.sample <- if(count%%4==3 & bar_count <= 8){lapply(c(1:batches),function(X){sample(c(1:dim(Y.y)[2]),size = min(200,dim(Y.y)[2]/(batches/4)))})}else{chunk(sample(c(1:dim(Y.y)[2])),batches)}
 
-      x.v.sample <- if(dim(X.x)[2]>batches){chunk(sample(c(1:dim(X.x)[2])),batches)}else{chunk(sample(c(1:dim(X.x)[2])),8)}
-      y.v.sample <- if(dim(Y.y)[2]>batches){chunk(sample(c(1:dim(Y.y)[2])),batches)}else{chunk(sample(c(1:dim(Y.y)[2])),8)}
-
+      x.g.sample <- lapply(c(1:batches),function(X){sample(c(1:dim(X.x)[1]),size = dim(X.x)[1]/(batches))})
+      y.g.sample <- lapply(c(1:batches),function(X){sample(c(1:dim(Y.y)[1]),size = dim(Y.y)[1]/(batches))})
+      x.v.sample <- lapply(c(1:batches),function(X){sample(c(1:dim(X.x)[2]),size = dim(X.x)[2]/(batches))})
+      y.v.sample <- lapply(c(1:batches),function(X){sample(c(1:dim(Y.y)[2]),size = dim(Y.y)[2]/(batches))})
 
       to_return <- parallel::mclapply(c(1:batches),function(i){
 
-        x.g.ids <- x.g.sample[[min(length(x.g.sample),i)]]
-        y.g.ids <- y.g.sample[[min(length(y.g.sample),i)]]
+        # if (bar_count > 4){
+          # print("runs_fast")
 
-        x.v.ids <- x.v.sample[[min(length(x.v.sample),i)]]
-        y.v.ids <- y.v.sample[[min(length(y.v.sample),i)]]
+          x.g.ids <- x.g.sample[[i]]
+          y.g.ids <- y.g.sample[[i]]
+
+          x.v.ids <- x.v.sample[[i]]
+          y.v.ids <- y.v.sample[[i]]
+
+        # }
+        # if (count%%4==0 & bar_count <= 8){
+        #
+        #   # print("runs")
+        #
+        #   x.g.ids <- x.g.sample[[i]]
+        #   y.g.ids <- y.g.sample[[1]]
+        #
+        #   x.v.ids <- x.v.sample[[1]]
+        #   y.v.ids <- y.v.sample[[1]]
+        #
+        # }
+        # if (count%%4==1 & bar_count <= 8){
+        #   # print("runs")
+        #
+        #   x.g.ids <- x.g.sample[[1]]
+        #   y.g.ids <- y.g.sample[[i]]
+        #
+        #   x.v.ids <- x.v.sample[[1]]
+        #   y.v.ids <- y.v.sample[[1]]
+        #
+        # }
+        # if (count%%4==2 & bar_count <= 8){
+        #   # print("runs")
+        #
+        #   x.g.ids <- x.g.sample[[1]]
+        #   y.g.ids <- y.g.sample[[1]]
+        #
+        #   x.v.ids <- x.v.sample[[i]]
+        #   y.v.ids <- y.v.sample[[1]]
+        #
+        # }
+        # if (count%%4==3 & bar_count <= 8){
+        #   # print("runs")
+        #
+        #   x.g.ids <- x.g.sample[[1]]
+        #   y.g.ids <- y.g.sample[[1]]
+        #
+        #   x.v.ids <- x.v.sample[[1]]
+        #   y.v.ids <- y.v.sample[[i]]
+        #
+        # }
+
 
         x <- X.x[x.g.ids,x.v.ids]
         y <- Y.y[y.g.ids,y.v.ids]
@@ -172,8 +226,41 @@ gcproc <- function(x,
         v.V.star.inv.beta <- v.V.star.inv.beta.final[y.v.ids,y.v.ids]
         u.V.star.inv.beta <- u.V.star.inv.beta.final[x.v.ids,x.v.ids]
 
+        a.star.alpha.L.J = a0.alpha.L.J + min(dim(x)[1],length(x.g.ids))/2
+        b.star.alpha.L.J = b0.alpha.L.J + (1/2)*(((alpha.L.K.star.alpha.L.K%*%y%*%v.beta.star.beta)%*%t(alpha.L.K.star.alpha.L.K%*%y%*%v.beta.star.beta)) - (alpha.L.J.star.alpha.L.J)%*%V.star.inv.alpha.L.J%*%t(alpha.L.J.star.alpha.L.J))
+        c.star.alpha.L.J = c0.alpha.L.J + 1/2
 
+        E.alpha.L.J.D.alpha.L.J <- a.star.alpha.L.J*((t(alpha.L.J.star.alpha.L.J)%*%(MASS::ginv(b.star.alpha.L.J))%*%(alpha.L.J.star.alpha.L.J)))+(MASS::ginv(V.star.inv.alpha.L.J))
+        E.alpha.L.J.D.alpha.L.J <- n.x/min(dim(x)[1],length(x.g.ids))*E.alpha.L.J.D.alpha.L.J
 
+        d.star.alpha.L.J = d0.alpha.L.J + (1/2)*(E.alpha.L.J.D.alpha.L.J)
+
+        E.diag.alpha.alpha.L.J = c.star.alpha.L.J*MASS::ginv(d.star.alpha.L.J)
+        E.diag.alpha.alpha.L.J <- n.x/min(dim(x)[1],length(x.g.ids))*E.diag.alpha.alpha.L.J
+
+        a.star.alpha.L.K = a0.alpha.L.K + min(dim(y)[1],length(y.g.ids))/2
+        b.star.alpha.L.K = b0.alpha.L.K + (1/2)*(((alpha.L.J.star.alpha.L.J%*%x%*%u.beta.star.beta)%*%t(alpha.L.J.star.alpha.L.J%*%x%*%u.beta.star.beta)) - (alpha.L.K.star.alpha.L.K)%*%V.star.inv.alpha.L.K%*%t(alpha.L.K.star.alpha.L.K))
+        c.star.alpha.L.K = c0.alpha.L.K + 1/2
+
+        E.alpha.L.K.D.alpha.L.K <- a.star.alpha.L.K*((t(alpha.L.K.star.alpha.L.K)%*%(MASS::ginv(b.star.alpha.L.K))%*%(alpha.L.K.star.alpha.L.K)))+(MASS::ginv(V.star.inv.alpha.L.K))
+        E.alpha.L.K.D.alpha.L.K <- n.y/min(dim(y)[1],length(y.g.ids))*E.alpha.L.K.D.alpha.L.K
+
+        d.star.alpha.L.K = d0.alpha.L.K + (1/2)*(E.alpha.L.K.D.alpha.L.K)
+
+        E.diag.alpha.alpha.L.K = c.star.alpha.L.K*MASS::ginv(d.star.alpha.L.K)
+        E.diag.alpha.alpha.L.K <- n.y/min(dim(y)[1],length(y.g.ids))*E.diag.alpha.alpha.L.K
+
+        a.star.beta = a0.beta + min(dim(x)[2],length(x.v.ids))/2
+        b.star.beta = b0.beta + (1/2)*((t(alpha.L.J.star.alpha.L.J%*%x%*%u.beta.star.beta)%*%(alpha.L.J.star.alpha.L.J%*%x%*%u.beta.star.beta)) - t(v.beta.star.beta)%*%t(alpha.L.K.star.alpha.L.K%*%y)%*%(alpha.L.K.star.alpha.L.K%*%y)%*%v.beta.star.beta)
+        c.star.beta = c0.beta + 1/2
+
+        u.E.beta.D.beta <- a.star.beta*(((u.beta.star.beta)%*%MASS::ginv(b.star.beta)%*%t(u.beta.star.beta)))+(MASS::ginv(u.V.star.inv.beta))
+        u.E.beta.D.beta <- p.x/min(dim(x)[2],length(x.v.ids))*u.E.beta.D.beta
+
+        d.star.beta = d0.beta + (1/2)*(u.E.beta.D.beta)
+
+        u.E.diag.alpha.beta = c.star.beta*MASS::ginv(d.star.beta)
+        u.E.diag.alpha.beta <- p.x/min(dim(x)[2],length(x.v.ids))*u.E.diag.alpha.beta
 
         a.star.beta = a0.beta + min(dim(y)[2],length(y.v.ids))/2
         b.star.beta = b0.beta + (1/2)*((t(alpha.L.K.star.alpha.L.K%*%y%*%v.beta.star.beta)%*%(alpha.L.K.star.alpha.L.K%*%y%*%v.beta.star.beta)) - t(u.beta.star.beta)%*%t(alpha.L.J.star.alpha.L.J%*%x)%*%(alpha.L.J.star.alpha.L.J%*%x)%*%u.beta.star.beta)
@@ -188,62 +275,18 @@ gcproc <- function(x,
         v.E.diag.alpha.beta <- p.y/min(dim(y)[2],length(y.v.ids))*v.E.diag.alpha.beta
 
 
+        V.star.inv.alpha.L.J = E.diag.alpha.alpha.L.J + (x%*%u.beta.star.beta)%*%t(x%*%u.beta.star.beta)
+        alpha.L.J.star.alpha.L.J = if (is.null(anchor_x.sample)){(alpha.L.K.star.alpha.L.K%*%y%*%v.beta.star.beta)%*%t(x%*%u.beta.star.beta)%*%MASS::ginv(V.star.inv.alpha.L.J)}else{anchor_x.sample[,x.g.ids]}
 
-        a.star.beta = a0.beta + min(dim(x)[2],length(x.v.ids))/2
-        b.star.beta = b0.beta + (1/2)*((t(alpha.L.J.star.alpha.L.J%*%x%*%u.beta.star.beta)%*%(alpha.L.J.star.alpha.L.J%*%x%*%u.beta.star.beta)) - t(v.beta.star.beta)%*%t(alpha.L.K.star.alpha.L.K%*%y)%*%(alpha.L.K.star.alpha.L.K%*%y)%*%v.beta.star.beta)
-        c.star.beta = c0.beta + 1/2
-
-        u.E.beta.D.beta <- a.star.beta*(((u.beta.star.beta)%*%MASS::ginv(b.star.beta)%*%t(u.beta.star.beta)))+(MASS::ginv(u.V.star.inv.beta))
-        u.E.beta.D.beta <- p.x/min(dim(x)[2],length(x.v.ids))*u.E.beta.D.beta
-
-        d.star.beta = d0.beta + (1/2)*(u.E.beta.D.beta)
-
-        u.E.diag.alpha.beta = c.star.beta*MASS::ginv(d.star.beta)
-        u.E.diag.alpha.beta <- p.x/min(dim(x)[2],length(x.v.ids))*u.E.diag.alpha.beta
-
-
-
-
-        a.star.alpha.L.K = a0.alpha.L.K + min(dim(y)[1],length(y.g.ids))/2
-        b.star.alpha.L.K = b0.alpha.L.K + (1/2)*(((alpha.L.J.star.alpha.L.J%*%x%*%u.beta.star.beta)%*%t(alpha.L.J.star.alpha.L.J%*%x%*%u.beta.star.beta)) - (alpha.L.K.star.alpha.L.K)%*%V.star.inv.alpha.L.K%*%t(alpha.L.K.star.alpha.L.K))
-        c.star.alpha.L.K = c0.alpha.L.K + 1/2
-
-        E.alpha.L.K.D.alpha.L.K <- a.star.alpha.L.K*((t(alpha.L.K.star.alpha.L.K)%*%(MASS::ginv(b.star.alpha.L.K))%*%(alpha.L.K.star.alpha.L.K)))+(MASS::ginv(V.star.inv.alpha.L.K))
-        E.alpha.L.K.D.alpha.L.K <- n.y/min(dim(y)[1],length(y.g.ids))*E.alpha.L.K.D.alpha.L.K
-
-        d.star.alpha.L.K = d0.alpha.L.K + (1/2)*(E.alpha.L.K.D.alpha.L.K)
-
-        E.diag.alpha.alpha.L.K = c.star.alpha.L.K*MASS::ginv(d.star.alpha.L.K)
-        E.diag.alpha.alpha.L.K <- n.y/min(dim(y)[1],length(y.g.ids))*E.diag.alpha.alpha.L.K
-
-
-        a.star.alpha.L.J = a0.alpha.L.J + min(dim(x)[1],length(x.g.ids))/2
-        b.star.alpha.L.J = b0.alpha.L.J + (1/2)*(((alpha.L.K.star.alpha.L.K%*%y%*%v.beta.star.beta)%*%t(alpha.L.K.star.alpha.L.K%*%y%*%v.beta.star.beta)) - (alpha.L.J.star.alpha.L.J)%*%V.star.inv.alpha.L.J%*%t(alpha.L.J.star.alpha.L.J))
-        c.star.alpha.L.J = c0.alpha.L.J + 1/2
-
-        E.alpha.L.J.D.alpha.L.J <- a.star.alpha.L.J*((t(alpha.L.J.star.alpha.L.J)%*%(MASS::ginv(b.star.alpha.L.J))%*%(alpha.L.J.star.alpha.L.J)))+(MASS::ginv(V.star.inv.alpha.L.J))
-        E.alpha.L.J.D.alpha.L.J <- n.x/min(dim(x)[1],length(x.g.ids))*E.alpha.L.J.D.alpha.L.J
-
-        d.star.alpha.L.J = d0.alpha.L.J + (1/2)*(E.alpha.L.J.D.alpha.L.J)
-
-        E.diag.alpha.alpha.L.J = c.star.alpha.L.J*MASS::ginv(d.star.alpha.L.J)
-        E.diag.alpha.alpha.L.J <- n.x/min(dim(x)[1],length(x.g.ids))*E.diag.alpha.alpha.L.J
-
-
-
+        V.star.inv.alpha.L.K = E.diag.alpha.alpha.L.K + (y%*%v.beta.star.beta)%*%t(y%*%v.beta.star.beta)
+        alpha.L.K.star.alpha.L.K = if (is.null(anchor_y.sample)){( alpha.L.J.star.alpha.L.J%*%x%*%u.beta.star.beta)%*%t(y%*%v.beta.star.beta)%*%MASS::ginv(V.star.inv.alpha.L.K)}else{anchor_y.sample[,y.g.ids]}
 
         u.V.star.inv.beta = u.E.diag.alpha.beta + t(alpha.L.J.star.alpha.L.J%*%x)%*%(alpha.L.J.star.alpha.L.J%*%x)
         u.beta.star.beta = if (is.null(anchor_x.feature)){MASS::ginv(u.V.star.inv.beta)%*%t((alpha.L.J.star.alpha.L.J%*%x))%*%(alpha.L.K.star.alpha.L.K%*%y%*%v.beta.star.beta)}else{anchor_x.feature[x.v.ids,]}
 
         v.V.star.inv.beta = v.E.diag.alpha.beta + t(alpha.L.K.star.alpha.L.K%*%y)%*%(alpha.L.K.star.alpha.L.K%*%y)
-        v.beta.star.beta = if (is.null(anchor_y.feature)){MASS::ginv(v.V.star.inv.beta)%*%t((alpha.L.K.star.alpha.L.K%*%y))%*%(alpha.L.J.star.alpha.L.J%*%x%*%u.beta.star.beta)}else{anchor_y.feature[y.v.ids,]}
+        v.beta.star.beta = if (is.null(anchor_y.feature)){MASS::ginv(v.V.star.inv.beta)%*%t((alpha.L.K.star.alpha.L.K%*%y))%*%( alpha.L.J.star.alpha.L.J%*%x%*%u.beta.star.beta)}else{anchor_y.feature[y.v.ids,]}
 
-
-        V.star.inv.alpha.L.J = E.diag.alpha.alpha.L.J + (x%*%u.beta.star.beta)%*%t(x%*%u.beta.star.beta)
-        alpha.L.J.star.alpha.L.J = if (is.null(anchor_x.sample)){(alpha.L.K.star.alpha.L.K%*%y%*%v.beta.star.beta)%*%t(x%*%u.beta.star.beta)%*%MASS::ginv(V.star.inv.alpha.L.J)}else{anchor_x.sample[,x.g.ids]}
-
-        V.star.inv.alpha.L.K = E.diag.alpha.alpha.L.K + (y%*%v.beta.star.beta)%*%t(y%*%v.beta.star.beta)
-        alpha.L.K.star.alpha.L.K = if (is.null(anchor_y.sample)){(alpha.L.J.star.alpha.L.J%*%x%*%u.beta.star.beta)%*%t(y%*%v.beta.star.beta)%*%MASS::ginv(V.star.inv.alpha.L.K)}else{anchor_y.sample[,y.g.ids]}
 
 
         return(list(
@@ -264,10 +307,15 @@ gcproc <- function(x,
 
 
     }
+    # print("up2")
 
 
     if (update_batched_parameters==T){
+
+
       for (i in 1:batches){
+        # print("up3")
+
         alpha.L.J.star.alpha.L.J <- to_return[[i]]$alpha.L.J.star.alpha.L.J
         alpha.L.K.star.alpha.L.K <- to_return[[i]]$alpha.L.K.star.alpha.L.K
         V.star.inv.alpha.L.J <- to_return[[i]]$V.star.inv.alpha.L.J
@@ -277,13 +325,12 @@ gcproc <- function(x,
         u.beta.star.beta <- to_return[[i]]$u.beta.star.beta
         u.V.star.inv.beta <- to_return[[i]]$u.V.star.inv.beta
         v.V.star.inv.beta <- to_return[[i]]$v.V.star.inv.beta
+
         x.g.ids <- to_return[[i]]$x.g.ids
         y.g.ids <- to_return[[i]]$y.g.ids
 
         x.v.ids <- to_return[[i]]$x.v.ids
         y.v.ids <- to_return[[i]]$y.v.ids
-
-
 
         b.a <- eta
         a.b <- c(1-b.a)
@@ -295,10 +342,13 @@ gcproc <- function(x,
         V.star.inv.alpha.L.K.final[y.g.ids,y.g.ids] <- a.b*V.star.inv.alpha.L.K.final[y.g.ids,y.g.ids] + b.a*V.star.inv.alpha.L.K
 
         u.beta.star.beta.final[x.v.ids,] <- a.b*u.beta.star.beta.final[x.v.ids,] + b.a*u.beta.star.beta
-        v.beta.star.beta.final[y.v.ids,] <- a.b*v.beta.star.beta.final[y.v.ids,] + b.a*v.beta.star.beta
-
         u.V.star.inv.beta.final[x.v.ids,x.v.ids] <- a.b*u.V.star.inv.beta.final[x.v.ids,x.v.ids] + b.a*u.V.star.inv.beta
+
+        v.beta.star.beta.final[y.v.ids,] <- a.b*v.beta.star.beta.final[y.v.ids,] + b.a*v.beta.star.beta
         v.V.star.inv.beta.final[y.v.ids,y.v.ids] <- a.b*v.V.star.inv.beta.final[y.v.ids,y.v.ids] + b.a*v.V.star.inv.beta
+
+
+
       }
 
     }
@@ -313,15 +363,28 @@ gcproc <- function(x,
 
     }
 
-    matrix.residuals <- alpha.L.K.star.alpha.L.K.final%*%Y.y%*%v.beta.star.beta.final - alpha.L.J.star.alpha.L.J.final%*%X.x%*%u.beta.star.beta.final
+
+    matrix.residuals <- alpha.L.K.star.alpha.L.K.final%*%Y.y%*%v.beta.star.beta.final - (alpha.L.J.star.alpha.L.J.final%*%X.x%*%u.beta.star.beta.final)
+    intercept <- matrix.residuals
+
+    matrix.residuals <- matrix.residuals
 
 
     llik.vec <- c(llik.vec, mean(mclust::dmvnorm(matrix.residuals,sigma = diag(diag(t(matrix.residuals)%*%matrix.residuals/dim(matrix.residuals)[2])),log = T)))
     score.vec <- c(score.vec, (mean(abs(c(matrix.residuals)))))
+    MSE <- tail(score.vec,1)
+
+    if (runif(1)<1/(count+1)) {
+      bar_count = 0
+    } else {
+      bar_count <- bar_count + 1
+    }
+    print(c(count,bar_count))
+
 
     # Check convergence
     if (count>min_iter){
-      if ((count>max_iter) | tail(score.vec,1)<tol){
+      if ((count>max_iter) | MSE<tol){
         break
       }
     }
@@ -329,10 +392,12 @@ gcproc <- function(x,
     count = count + 1
 
     if (verbose == T){
-      print(paste("Iteration: ",count," with MSE of: ",tail(score.vec,1),sep=""))
+      print(paste("Iteration: ",count," with MSE of: ",MSE," and Log-Lik of: ",tail(llik.vec,1),sep=""))
     }
 
+
   }
+
 
   return(list(
 
@@ -344,7 +409,8 @@ gcproc <- function(x,
       alpha.L.J = alpha.L.J.star.alpha.L.J.final,
       alpha.L.K = alpha.L.K.star.alpha.L.K.final,
       u.beta = u.beta.star.beta.final,
-      v.beta = v.beta.star.beta.final
+      v.beta = v.beta.star.beta.final,
+      intercept = intercept
     ),
 
     meta.parameters = list(

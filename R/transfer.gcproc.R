@@ -1,4 +1,4 @@
-transfer.gcproc <- function(gcproc.model,y,x,anchors=NULL,initial.param=NULL){
+transfer.gcproc <- function(gcproc.model,y,x,anchors=NULL){
 
   y <- as.matrix(y)
   x <- as.matrix(x)
@@ -7,37 +7,33 @@ transfer.gcproc <- function(gcproc.model,y,x,anchors=NULL,initial.param=NULL){
   j_dim <- gcproc.model$meta.parameters$j_dim
 
   if (is.null(anchors)){
-    initial.anchors <- initialise.gcproc(x=x,y=y,init=init,k_dim=k_dim,j_dim=j_dim)
 
     anchor_y.sample = NULL
     anchor_y.feature = NULL
     anchor_x.sample = NULL
     anchor_x.feature = NULL
 
-    if (is.null(anchors)){
-      if (dim(y)[1]==dim(gcproc.model$transformed.data$y)[1]){
-        anchor_y.sample = gcproc.model$main.parameters$alpha.L.K
-      }
-      if (dim(y)[2]==dim(gcproc.model$transformed.data$y)[2]){
-        anchor_y.feature = gcproc.model$main.parameters$v.beta
-      }
-      if (dim(x)[1]==dim(gcproc.model$transformed.data$x)[1]){
-        anchor_x.sample = gcproc.model$main.parameters$alpha.L.J
-      }
-      if (dim(x)[2]==dim(gcproc.model$transformed.data$x)[2]){
-        anchor_x.feature = gcproc.model$main.parameters$u.beta
-      }
-
-      anchors$anchor_y.sample <- anchor_y.sample
-      anchors$anchor_y.feature <- anchor_y.feature
-      anchors$anchor_x.sample <- anchor_x.sample
-      anchors$anchor_x.feature <- anchor_x.feature
-
+    if (dim(y)[1]==dim(gcproc.model$transformed.data$y)[1]){
+      anchor_y.sample = gcproc.model$main.parameters$alpha.L.K
     }
-  }
+    if (dim(y)[2]==dim(gcproc.model$transformed.data$y)[2]){
+      anchor_y.feature = gcproc.model$main.parameters$v.beta
+    }
+    if (dim(x)[1]==dim(gcproc.model$transformed.data$x)[1]){
+      anchor_x.sample = gcproc.model$main.parameters$alpha.L.J
+    }
+    if (dim(x)[2]==dim(gcproc.model$transformed.data$x)[2]){
+      anchor_x.feature = gcproc.model$main.parameters$u.beta
+    }
 
-  if (is.null(initial.param)){
-    initial.param <- initialise.gcproc(x=x,y=y,init="svd",k_dim=70,j_dim=70)
+
+    anchors = list(
+      anchor_y.sample = anchor_y.sample,
+      anchor_y.feature = anchor_y.feature,
+      anchor_x.sample = anchor_x.sample,
+      anchor_x.feature = anchor_x.feature
+    )
+
   }
 
   main_llik <- c()
@@ -54,13 +50,12 @@ transfer.gcproc <- function(gcproc.model,y,x,anchors=NULL,initial.param=NULL){
                                      tol = gcproc.model$meta.parameters$tol,
                                      batches = gcproc.model$meta.parameters$batches,
                                      cores = gcproc.model$meta.parameters$cores,
-                                     verbose = T,
-                                     init = "svd",
+                                     verbose = gcproc.model$meta.parameters$verbose,
+                                     init = gcproc.model$meta.parameters$init,
                                      log = gcproc.model$meta.parameters$log,
                                      center = gcproc.model$meta.parameters$center,
                                      scale.z = gcproc.model$meta.parameters$scale.z,
                                      anchors = anchors,
-                                     initial.param = initial.param,
                                      seed = seed),silent = F)
 
     if (!is.character(final.gcproc.model)){
@@ -74,6 +69,12 @@ transfer.gcproc <- function(gcproc.model,y,x,anchors=NULL,initial.param=NULL){
   main_dim <- main_llik[which(main_llik[,2]==max(main_llik[,2])),]
   main_seed <- main_dim[1]
 
+
+  if (gcproc.model$meta.parameters$verbose){
+    print("Running final gcproc at optimal dimension of: ")
+    print(paste("seed:", main_seed,sep=""))
+  }
+
   set.seed(main_seed)
   final.gcproc.model <- gcproc(x = x,
                                y = y,
@@ -86,12 +87,11 @@ transfer.gcproc <- function(gcproc.model,y,x,anchors=NULL,initial.param=NULL){
                                batches = gcproc.model$meta.parameters$batches,
                                cores = gcproc.model$meta.parameters$cores,
                                verbose = gcproc.model$meta.parameters$verbose,
-                               init = "svd",
+                               init = gcproc.model$meta.parameters$init,
                                log = gcproc.model$meta.parameters$log,
                                center = gcproc.model$meta.parameters$center,
                                scale.z = gcproc.model$meta.parameters$scale.z,
                                anchors = anchors,
-                               initial.param = initial.param,
                                seed = main_seed)
 
 

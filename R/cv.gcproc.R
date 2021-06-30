@@ -1,20 +1,20 @@
 cv.gcproc <- function(x,
                       y,
+                      k_dim = 150,
+                      j_dim = 3,
                       seeds = 3,
-                      eta=1e-2,
+                      eta=1e-1,
                       max_iter= 1500,
                       min_iter = 15,
-                      tol=1e-3,
+                      tol=1e-5,
                       log=F,
-                      center=F,
-                      scale.z=F,
-                      batches=16,
+                      center=T,
+                      scale.z=T,
+                      batches=4,
                       cores=2,
                       verbose=F,
                       init="svd"){
 
-  j_dim <- 70
-  k_dim <- 70
   param.dim <- data.frame(c(1:seeds),k_dim,j_dim)
 
   anchors <- initialise.gcproc(x=x,y=y,init=init,k_dim=k_dim,j_dim=j_dim)

@@ -13,10 +13,19 @@ prepare_data <- function(x, y, log = F, center = F, scale.z = F){
     x <- log(1+x)
     y <- log(1+y)
   }
-  if (center == T | scale.z == T){
+  if (center == T){
 
-    x <- scale(x,center = center,scale = scale.z)
-    y <- scale(y,center = center,scale = scale.z)
+    x <- scale(x, center = TRUE, scale = FALSE)
+    y <- scale(y, center = TRUE, scale = FALSE)
+
+  }
+  if (scale.z == T){
+
+    x.size <- norm(x, type = "F") / (ncol(x) * nrow(x))
+    x <- x / x.size
+
+    y.size <- norm(y, type = "F") / (ncol(y) * nrow(y))
+    y <- y / y.size
 
   }
 
