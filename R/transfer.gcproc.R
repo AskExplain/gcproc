@@ -1,4 +1,4 @@
-transfer.gcproc <- function(gcproc.model,y,x,anchors=NULL){
+transfer.gcproc <- function(gcproc.model,y,x,anchors=c(NULL)){
 
   y <- as.matrix(y)
   x <- as.matrix(x)
@@ -25,7 +25,6 @@ transfer.gcproc <- function(gcproc.model,y,x,anchors=NULL){
     if (dim(x)[2]==dim(gcproc.model$transformed.data$x)[2]){
       anchor_x.feature = gcproc.model$main.parameters$u.beta
     }
-
 
     anchors = list(
       anchor_y.sample = anchor_y.sample,
