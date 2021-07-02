@@ -1,23 +1,14 @@
 cv.gcproc <- function(x,
                       y,
-                      k_dim = 150,
-                      j_dim = 3,
-                      seeds = 3,
-                      eta=1e-1,
-                      max_iter= 1500,
-                      min_iter = 15,
-                      tol=1e-5,
-                      log=F,
-                      center=T,
-                      scale.z=T,
-                      batches=4,
-                      cores=2,
-                      verbose=F,
-                      init="svd"){
+                      config = NULL,
+                      initial_starts = 3
+){
 
-  param.dim <- data.frame(c(1:seeds),k_dim,j_dim)
+  param.dim <- data.frame(c(1:initial_starts),config$k_dim,config$j_dim)
 
-  anchors <- initialise.gcproc(x=x,y=y,init=init,k_dim=k_dim,j_dim=j_dim)
+
+  internal_config <- config
+  internal_config$max_iter <- 15
 
   main_llik <- c()
   for (row in 1:nrow(param.dim)){
@@ -26,29 +17,16 @@ cv.gcproc <- function(x,
     k <- param.dim[row,2]
     j <- param.dim[row,3]
 
-    if (verbose==T){
+    if (config$verbose==T){
       print("Beginning tuning dimension to: ")
       print(paste("seed: ",seed, "   k_dim: ",k,"   j_dim: ",j,sep=""))
     }
 
     gcproc.model <- try(gcproc(y = y,
                                x = x,
-                               k_dim = k,
-                               j_dim = j,
-                               eta = eta,
-                               max_iter = 15,
-                               min_iter = 15,
-                               tol = tol,
-                               log = log,
-                               center = center,
-                               scale.z = scale.z,
-                               batches = batches,
-                               cores = cores,
-                               verbose = verbose,
-                               init= init,
-                               seed=seed,
-                               initial.param = anchors,
-                               anchors = NULL),silent = F)
+                               config = internal_config,
+                               seed = seed
+                               ),silent = F)
     if (!is.character(gcproc.model)){
       cost <- tail(gcproc.model$convergence.parameters$llik.vec,1)
       main_llik <- rbind(main_llik,c(seed,k,j,cost))
@@ -59,36 +37,22 @@ cv.gcproc <- function(x,
 
   main_dim <- main_llik[which(main_llik[,4]==max(main_llik[,4])),]
   main_seed <- main_dim[1]
-  main_k_dim <- main_dim[2]
-  main_j_dim <- main_dim[3]
+  config$k_dim <- main_dim[2]
+  config$j_dim <- main_dim[3]
 
-  if (verbose==T){
+  if (config$verbose==T){
     print("Running final gcproc at optimal dimension of: ")
-    print(paste("seed:", main_seed, "   k_dim: ",main_k_dim,"   j_dim: ",main_j_dim,sep=""))
+    print(paste("seed:", main_seed, "   k_dim: ",config$k_dim,"   j_dim: ",config$j_dim,sep=""))
   }
 
   set.seed(main_seed)
   final.gcproc.model <- gcproc(x = x,
                                y = y,
-                               k_dim = main_k_dim,
-                               j_dim = main_j_dim,
-                               eta = eta,
-                               max_iter = max_iter,
-                               min_iter = min_iter,
-                               tol = tol,
-                               log = log,
-                               center = center,
-                               scale.z = scale.z,
-                               batches = batches,
-                               cores = cores,
-                               verbose = verbose,
-                               init=init,
-                               initial.param = anchors,
-                               anchor = NULL,
+                               config = config,
                                seed = main_seed)
 
   final.gcproc.model$cv.llik <- main_llik
-  final.gcproc.model$meta.parameters$seeds <- seeds
+  final.gcproc.model$meta.parameters$initial_starts <- initial_starts
 
   return(final.gcproc.model)
 }

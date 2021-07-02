@@ -1,21 +1,23 @@
+# config <- list(k_dim = 70,
+#      j_dim = 70,
+#      eta=5e-3,
+#      max_iter=1500,
+#      min_iter = 15,
+#      tol=1e-3,
+#      log=F,
+#      center=T,
+#      scale.z=T,
+#      batches=64,
+#      cores=8,
+#      verbose=T,
+#      init="svd")
+
 gcproc <- function(x,
                    y,
-                   k_dim = 150,
-                   j_dim = 3,
-                   eta=1e-1,
-                   max_iter=1500,
-                   min_iter = 15,
-                   tol=1e-5,
-                   log=F,
-                   center=T,
-                   scale.z=T,
-                   batches=4,
-                   cores=2,
-                   verbose=T,
-                   init="svd",
-                   anchors = NULL,
-                   initial.param = NULL,
-                   seed = 1){
+                   config = NULL,
+                   seed = 1,
+                   anchors = NULL
+                   ){
 
   prepare_data = TRUE
   initialise = TRUE
@@ -39,8 +41,8 @@ gcproc <- function(x,
 
   }
 
-  if (verbose){
-    print(paste("Using gcproc to dimensionally reduce both samples and features with following dimensions:   Sample dimension (k_dim): ",k_dim, "   Feature dimension (j_dim): ", j_dim,sep=""))
+  if (config$verbose){
+    print(paste("Using gcproc to dimensionally reduce both samples and features with following dimensions:   Sample dimension (config$k_dim): ",config$k_dim, "   Feature dimension (config$j_dim): ", config$j_dim,sep=""))
   }
 
   n.x <- dim(x)[1]
@@ -51,16 +53,16 @@ gcproc <- function(x,
   if (prepare_data == T){
     transformed.data <- prepare_data(x=x,
                                      y=y,
-                                     log=log,
-                                     center=center,
-                                     scale=scale.z)
+                                     log=config$log,
+                                     center=config$center,
+                                     scale=config$scale.z)
 
 
-    if (verbose){
+    if (config$verbose){
       print("Prepared transformations on data are (True/False):")
-      print(paste("Natural Log (with pseudocount): ", log, sep = ""))
-      print(paste("Center: ", center, sep = ""))
-      print(paste("Standardise by standard deviation: ", scale.z, sep = ""))
+      print(paste("Natural Log (with pseudocount): ", config$log, sep = ""))
+      print(paste("Center: ", config$center, sep = ""))
+      print(paste("Standardise by standard deviation: ", config$scale.z, sep = ""))
     }
     x <- transformed.data$x
     y <- transformed.data$y
@@ -68,13 +70,11 @@ gcproc <- function(x,
 
 
   if (initialise==T){
-    if (verbose){
+    if (config$verbose){
       print("Initialising data")
     }
 
-    if (is.null(initial.param)){
-      initial.param <-initialise.gcproc(x=x,y=y,k_dim=k_dim,j_dim=j_dim,init=init)
-    }
+    initial.param <-initialise.gcproc(x=x,y=y,k_dim=config$k_dim,j_dim=config$j_dim,init=config$init)
 
     alpha.L.K.star.alpha.L.K <- if (is.null(anchor_y.sample)){initial.param$anchor_y.sample}else{anchor_y.sample}
     alpha.L.J.star.alpha.L.J <- if (is.null(anchor_x.sample)){initial.param$anchor_x.sample}else{anchor_x.sample}
@@ -132,8 +132,8 @@ gcproc <- function(x,
   }
 
 
-  if (verbose){
-    print(paste("Beginning gcproc learning with:   Cores: ",cores, "   Batches: ", batches, "   Learning Rate (eta): ", eta, "   Tolerance Threshold: ", tol, "   Minimum Number of iterations: ",min_iter, "   Maximum number of iterations: ", max_iter, "   Verbose: ", verbose,sep=""))
+  if (config$verbose){
+    print(paste("Beginning gcproc learning with:   Cores: ",config$cores, "   Batches: ", config$batches, "   Learning Rate (config$eta): ", config$eta, "   Tolerance Threshold: ", config$tol, "   Minimum Number of iterations: ",config$min_iter, "   Maximum number of iterations: ", config$max_iter, "   Verbose: ", config$verbose,sep=""))
   }
 
   MSE <- Inf
@@ -145,18 +145,12 @@ gcproc <- function(x,
     if (variational_gradient_descent_updates == T){
       set.seed(seed+count)
 
-      # x.g.sample <- if(count%%4==0 & bar_count <= 8){lapply(c(1:batches),function(X){sample(c(1:dim(X.x)[1]),size = min(200,dim(X.x)[1]/(batches/4)))})}else{chunk(sample(c(1:dim(X.x)[1])),batches)}
-      # y.g.sample <- if(count%%4==1 & bar_count <= 8){lapply(c(1:batches),function(X){sample(c(1:dim(Y.y)[1]),size = min(200,dim(Y.y)[1]/(batches/4)))})}else{chunk(sample(c(1:dim(Y.y)[1])),batches)}
-      #
-      # x.v.sample <- if(count%%4==2 & bar_count <= 8){lapply(c(1:batches),function(X){sample(c(1:dim(X.x)[2]),size = min(200,dim(X.x)[2]/(batches/4)))})}else{chunk(sample(c(1:dim(X.x)[2])),batches)}
-      # y.v.sample <- if(count%%4==3 & bar_count <= 8){lapply(c(1:batches),function(X){sample(c(1:dim(Y.y)[2]),size = min(200,dim(Y.y)[2]/(batches/4)))})}else{chunk(sample(c(1:dim(Y.y)[2])),batches)}
+      x.g.sample <- lapply(c(1:config$batches),function(X){sample(c(1:dim(X.x)[1]),size = dim(X.x)[1]/(config$batches))})
+      y.g.sample <- lapply(c(1:config$batches),function(X){sample(c(1:dim(Y.y)[1]),size = dim(Y.y)[1]/(config$batches))})
+      x.v.sample <- lapply(c(1:config$batches),function(X){sample(c(1:dim(X.x)[2]),size = dim(X.x)[2]/(config$batches))})
+      y.v.sample <- lapply(c(1:config$batches),function(X){sample(c(1:dim(Y.y)[2]),size = dim(Y.y)[2]/(config$batches))})
 
-      x.g.sample <- lapply(c(1:batches),function(X){sample(c(1:dim(X.x)[1]),size = dim(X.x)[1]/(batches))})
-      y.g.sample <- lapply(c(1:batches),function(X){sample(c(1:dim(Y.y)[1]),size = dim(Y.y)[1]/(batches))})
-      x.v.sample <- lapply(c(1:batches),function(X){sample(c(1:dim(X.x)[2]),size = dim(X.x)[2]/(batches))})
-      y.v.sample <- lapply(c(1:batches),function(X){sample(c(1:dim(Y.y)[2]),size = dim(Y.y)[2]/(batches))})
-
-      to_return <- parallel::mclapply(c(1:batches),function(i){
+      to_return <- parallel::mclapply(c(1:config$batches),function(i){
 
         # if (bar_count > 4){
           # print("runs_fast")
@@ -303,7 +297,7 @@ gcproc <- function(x,
           x.v.ids = x.v.ids,
           y.v.ids = y.v.ids
         ))
-      },mc.silent = verbose,mc.cores = cores)
+      },mc.silent = config$verbose,mc.cores = config$cores)
 
 
     }
@@ -313,7 +307,7 @@ gcproc <- function(x,
     if (update_batched_parameters==T){
 
 
-      for (i in 1:batches){
+      for (i in 1:config$batches){
         # print("up3")
 
         alpha.L.J.star.alpha.L.J <- to_return[[i]]$alpha.L.J.star.alpha.L.J
@@ -332,7 +326,7 @@ gcproc <- function(x,
         x.v.ids <- to_return[[i]]$x.v.ids
         y.v.ids <- to_return[[i]]$y.v.ids
 
-        b.a <- eta
+        b.a <- config$eta
         a.b <- c(1-b.a)
 
         alpha.L.J.star.alpha.L.J.final[,x.g.ids] <- a.b*alpha.L.J.star.alpha.L.J.final[,x.g.ids] + b.a*alpha.L.J.star.alpha.L.J
@@ -383,15 +377,15 @@ gcproc <- function(x,
 
 
     # Check convergence
-    if (count>min_iter){
-      if ((count>max_iter) | MSE<tol){
+    if (count>config$min_iter){
+      if ((count>config$max_iter) | MSE<config$tol){
         break
       }
     }
 
     count = count + 1
 
-    if (verbose == T){
+    if (config$verbose == T){
       print(paste("Iteration: ",count," with MSE of: ",MSE," and Log-Lik of: ",tail(llik.vec,1),sep=""))
     }
 
@@ -413,21 +407,7 @@ gcproc <- function(x,
       intercept = intercept
     ),
 
-    meta.parameters = list(
-      k_dim = k_dim,
-      j_dim = j_dim,
-      eta= eta,
-      max_iter = max_iter,
-      min_iter = min_iter,
-      tol = tol,
-      log = log,
-      center = center,
-      scale.z = scale.z,
-      batches = batches,
-      cores = cores,
-      verbose = verbose,
-      init = init
-    ),
+    meta.parameters = config,
 
     convergence.parameters = list(
       iterations = count,

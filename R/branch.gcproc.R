@@ -1,56 +1,44 @@
-branch.gcproc <- function(gcproc.model,
+branch.gcproc <- function(
                          y,
                          x,
-                         branch_size = 1000){
-  
+                         config = NULL,
+                         branch_size = 1000,
+                         method = NULL,
+                         anchors = NULL
+){
+
   # Prepare
-  gcproc.model <- gcproc::transfer.gcproc(
-    gcproc.model = gcproc.model,
-    x = x,
-    y = y
-  )
-  
   branch_id <- chunk(c(1:dim(x)[1]),dim(x)[1]/branch_size)
-  
-  gcproc.model_list <- list()
-  gcproc.rotation_parameter <- list(gcproc.model$main.parameters$u.beta)
-  
+
+  gcproc.rotation_parameter <- list()
+
   # Action
   for (i in c(1:length(branch_id))){
-    
-    if (i < length(branch_id)){
-      internal_x1 <- x[branch_id[[i]],]
-      internal_x2 <- x[branch_id[[i+1]],]
+
+    if (method == "transfer"){
+      internal_gcproc.model <-  transfer.gcproc(
+        y = y,
+        x = x[branch_id[[i]],],
+        config = config,
+        anchors = anchors
+      )
     }
-    if (i == length(branch_id)){
-      internal_x1 <- x[branch_id[[i]],]
-      internal_x2 <- x[branch_id[[1]],]
+    if (method == "cv"){
+      internal_gcproc.model <-  cv.gcproc(
+        y = y,
+        x =  x[branch_id[[i]],],
+        config = config
+      )
     }
-    
-    
-    anchors = list(
-      anchor_y.sample = NULL,
-      anchor_y.feature = gcproc.model$main.parameters$u.beta,
-      anchor_x.sample = NULL,
-      anchor_x.feature = NULL
-    )
-    
-    gcproc.model_list[[i]] <- gcproc.model <- 
-      transfer.gcproc(gcproc.model = gcproc.model,
-                    y = internal_x1,
-                    x = internal_x2,
-                    anchors = anchors)
-    
-    gcproc.rotation_parameter[[i]] <- gcproc.model$main.parameters$u.beta
-    
+
+    gcproc.rotation_parameter[[i]] <- internal_gcproc.model$main.parameters$u.beta
   }
-  
+
   # Finalise
-  final_rotation <- Reduce('*',gcproc.rotation_parameter)
-  
+  final_rotation <- Reduce('+',gcproc.rotation_parameter)
+
   # Return
-  return(list(gcproc.model_list = gcproc.model_list,
-              final_rotation = final_rotation
-              )
+  return(
+    list(final_rotation = final_rotation)
   )
 }
