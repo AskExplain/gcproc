@@ -1,6 +1,8 @@
 cv.gcproc <- function(x,
                       y,
                       config = NULL,
+                      anchors = NULL,
+                      pivots = NULL,
                       initial_starts = 3
 ){
 
@@ -25,7 +27,9 @@ cv.gcproc <- function(x,
     gcproc.model <- try(gcproc(y = y,
                                x = x,
                                config = internal_config,
-                               seed = seed
+                               seed = seed,
+                               anchors = anchors,
+                               pivots = pivots
                                ),silent = F)
     if (!is.character(gcproc.model)){
       cost <- tail(gcproc.model$convergence.parameters$llik.vec,1)
@@ -49,6 +53,8 @@ cv.gcproc <- function(x,
   final.gcproc.model <- gcproc(x = x,
                                y = y,
                                config = config,
+                               pivots = pivots,
+                               anchors = anchors,
                                seed = main_seed)
 
   final.gcproc.model$cv.llik <- main_llik

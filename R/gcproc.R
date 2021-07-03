@@ -17,7 +17,7 @@ gcproc <- function(x,
                    config = NULL,
                    seed = 1,
                    anchors = NULL,
-                   pivot = NULL
+                   pivots = NULL
                    ){
 
   prepare_data = TRUE
@@ -75,10 +75,10 @@ gcproc <- function(x,
       print("Initialising data")
     }
 
-    if (is.null(pivot)){
+    if (is.null(pivots)){
       initial.param <-initialise.gcproc(x=x,y=y,k_dim=config$k_dim,j_dim=config$j_dim,init=config$init)
     } else {
-      initial.param <- pivot
+      initial.param <- pivots
     }
 
     alpha.L.K.star.alpha.L.K <- if (is.null(anchor_y.sample)){initial.param$anchor_y.sample}else{anchor_y.sample}
@@ -333,7 +333,7 @@ gcproc <- function(x,
     } else {
       bar_count <- bar_count + 1
     }
-    print(c(count,bar_count))
+    # print(c(count,bar_count))
 
 
     # Check convergence

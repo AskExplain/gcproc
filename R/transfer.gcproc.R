@@ -2,7 +2,8 @@ transfer.gcproc <- function(y,
                             x,
                             config = NULL,
                             initial_starts = 3,
-                            anchors = NULL
+                            anchors = NULL,
+                            pivots = NULL
 ){
 
   y <- as.matrix(y)
@@ -31,7 +32,8 @@ transfer.gcproc <- function(y,
                                      y = y,
                                      config = internal_config,
                                      seed = seed,
-                                     anchors = anchors),silent = F)
+                                     anchors = anchors,
+                                     pivots = pivots),silent = F)
 
     if (!is.character(final.gcproc.model)){
       main_llik <- rbind(main_llik,c(seed,tail(final.gcproc.model$convergence.parameters$llik.vec,1)))
@@ -55,7 +57,8 @@ transfer.gcproc <- function(y,
                                y = y,
                                config = config,
                                seed = main_seed,
-                               anchors = anchors)
+                               anchors = anchors,
+                               pivots = pivots)
 
   final.initial_starts <- initial_starts
   return(final.gcproc.model)
