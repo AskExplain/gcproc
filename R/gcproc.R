@@ -16,7 +16,8 @@ gcproc <- function(x,
                    y,
                    config = NULL,
                    seed = 1,
-                   anchors = NULL
+                   anchors = NULL,
+                   pivot = NULL
                    ){
 
   prepare_data = TRUE
@@ -74,7 +75,11 @@ gcproc <- function(x,
       print("Initialising data")
     }
 
-    initial.param <-initialise.gcproc(x=x,y=y,k_dim=config$k_dim,j_dim=config$j_dim,init=config$init)
+    if (is.null(pivot)){
+      initial.param <-initialise.gcproc(x=x,y=y,k_dim=config$k_dim,j_dim=config$j_dim,init=config$init)
+    } else {
+      initial.param <- pivot
+    }
 
     alpha.L.K.star.alpha.L.K <- if (is.null(anchor_y.sample)){initial.param$anchor_y.sample}else{anchor_y.sample}
     alpha.L.J.star.alpha.L.J <- if (is.null(anchor_x.sample)){initial.param$anchor_x.sample}else{anchor_x.sample}
@@ -152,57 +157,12 @@ gcproc <- function(x,
 
       to_return <- parallel::mclapply(c(1:config$batches),function(i){
 
-        # if (bar_count > 4){
-          # print("runs_fast")
 
-          x.g.ids <- x.g.sample[[i]]
-          y.g.ids <- y.g.sample[[i]]
+        x.g.ids <- x.g.sample[[i]]
+        y.g.ids <- y.g.sample[[i]]
 
-          x.v.ids <- x.v.sample[[i]]
-          y.v.ids <- y.v.sample[[i]]
-
-        # }
-        # if (count%%4==0 & bar_count <= 8){
-        #
-        #   # print("runs")
-        #
-        #   x.g.ids <- x.g.sample[[i]]
-        #   y.g.ids <- y.g.sample[[1]]
-        #
-        #   x.v.ids <- x.v.sample[[1]]
-        #   y.v.ids <- y.v.sample[[1]]
-        #
-        # }
-        # if (count%%4==1 & bar_count <= 8){
-        #   # print("runs")
-        #
-        #   x.g.ids <- x.g.sample[[1]]
-        #   y.g.ids <- y.g.sample[[i]]
-        #
-        #   x.v.ids <- x.v.sample[[1]]
-        #   y.v.ids <- y.v.sample[[1]]
-        #
-        # }
-        # if (count%%4==2 & bar_count <= 8){
-        #   # print("runs")
-        #
-        #   x.g.ids <- x.g.sample[[1]]
-        #   y.g.ids <- y.g.sample[[1]]
-        #
-        #   x.v.ids <- x.v.sample[[i]]
-        #   y.v.ids <- y.v.sample[[1]]
-        #
-        # }
-        # if (count%%4==3 & bar_count <= 8){
-        #   # print("runs")
-        #
-        #   x.g.ids <- x.g.sample[[1]]
-        #   y.g.ids <- y.g.sample[[1]]
-        #
-        #   x.v.ids <- x.v.sample[[1]]
-        #   y.v.ids <- y.v.sample[[i]]
-        #
-        # }
+        x.v.ids <- x.v.sample[[i]]
+        y.v.ids <- y.v.sample[[i]]
 
 
         x <- X.x[x.g.ids,x.v.ids]
