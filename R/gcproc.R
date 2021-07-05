@@ -76,7 +76,7 @@ gcproc <- function(x,
     }
 
     if (is.null(pivots)){
-      initial.param <-initialise.gcproc(x=x,y=y,k_dim=config$k_dim,j_dim=config$j_dim,init=config$init)
+      initial.param <-initialise.gcproc(x=x,y=y,k_dim=config$k_dim,j_dim=config$j_dim,init=config$init,verbose=config$verbose)
     } else {
       initial.param <- pivots
     }
