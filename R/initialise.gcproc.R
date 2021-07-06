@@ -5,12 +5,12 @@ initialise.gcproc <- function(x,y,k_dim=70,j_dim=70,init="svd",verbose=F){
 
   set.seed(1)
 
-  cov_x <- corpcor::cov.shrink((x),lambda = 0.99,lambda.var = 0.99,verbose = verbose)
+  cov_x <- corpcor::cov.shrink((x),lambda = 0.2,lambda.var = 0.2,verbose = verbose)
   u.beta.svd <- irlba::irlba(
     cov_x,j_dim,tol=1e-10,maxit = 10000)
   rm(cov_x)
 
-  cov_y <- corpcor::cov.shrink((y),lambda = 0.99,lambda.var = 0.99,verbose = verbose)
+  cov_y <- corpcor::cov.shrink((y),lambda = 0.2,lambda.var = 0.2,verbose = verbose)
   v.beta.svd <- irlba::irlba(
     cov_y,j_dim,tol=1e-10,maxit = 10000)
   rm(cov_y)
@@ -18,12 +18,12 @@ initialise.gcproc <- function(x,y,k_dim=70,j_dim=70,init="svd",verbose=F){
   u.beta.star.beta <- u.beta.svd$v
   v.beta.star.beta <- v.beta.svd$v
 
-  cov_tx <- corpcor::cov.shrink(Matrix::t(x),lambda = 0.99,lambda.var = 0.99,verbose = verbose)
+  cov_tx <- corpcor::cov.shrink(Matrix::t(x),lambda = 0.2,lambda.var = 0.2,verbose = verbose)
   alpha.L.J.svd <- irlba::irlba(
     cov_tx,k_dim,tol=1e-10,maxit = 10000)
   rm(cov_tx)
 
-  cov_ty <- corpcor::cov.shrink(Matrix::t(y),lambda = 0.99,lambda.var = 0.99,verbose = verbose)
+  cov_ty <- corpcor::cov.shrink(Matrix::t(y),lambda = 0.2,lambda.var = 0.2,verbose = verbose)
   alpha.L.K.svd <- irlba::irlba(
     cov_ty,k_dim,tol=1e-10,maxit = 10000)
   rm(cov_ty)
