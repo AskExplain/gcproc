@@ -1,3 +1,15 @@
+#' Generalised Canonical Procrustes
+#'
+#' A method that uses a likelihood model to align two datasets via an encoding in a lower dimensional space
+#'
+#' @param x Reference dataset of cell by gene matrix
+#' @param y Experimental dataset of cell by gene matrix
+#' @param config Configuration parameters (please read gcproc code for more details)
+#' @param seed Fixed seed for random seeding
+#' @param anchors Fixing and anchoring the main model parameters to transfer prior information
+#' @param pivots Initialisation of the main model parameters to speed up learning process
+#' @return  Main parameters contains the learned model parameters. The data is normalised and scaled and is found in the Transformed data list.
+#' @export
 gcproc <- function(x,
                    y,
                    config = list(k_dim = 70,
@@ -9,8 +21,8 @@ gcproc <- function(x,
                                  log=F,
                                  center=T,
                                  scale.z=T,
-                                 batches=64,
-                                 cores=8,
+                                 batches=16,
+                                 cores=2,
                                  verbose=T,
                                  init="svd"),
                    seed = 1,
