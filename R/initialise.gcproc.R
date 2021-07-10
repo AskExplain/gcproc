@@ -75,8 +75,8 @@ initialise.gcproc <- function(x,y,k_dim=70,j_dim=70,init="svd",verbose=F){
       cov_y,j_dim)
     rm(cov_y)
 
-    u.beta.star.beta <- u.beta.svd$vectors[,c(1:k_dim)]
-    v.beta.star.beta <- v.beta.svd$vectors[,c(1:k_dim)]
+    u.beta.star.beta <- u.beta.svd$vectors[,c(1:j_dim)]
+    v.beta.star.beta <- v.beta.svd$vectors[,c(1:j_dim)]
 
     cov_tx <- Matrix::crossprod(Matrix::t(x),Matrix::t(x))
     alpha.L.J.svd <- eigen(
