@@ -20,7 +20,7 @@ gcproc(
 
 \item{y}{Experimental dataset of cell by gene matrix}
 
-\item{config}{Configuration parameters (please read gcproc code for more details)}
+\item{config}{Configuration parameters (please refer to the function extract_config() for more details on each parameter)}
 
 \item{seed}{Fixed seed for random seeding}
 
@@ -29,7 +29,15 @@ gcproc(
 \item{pivots}{Initialisation of the main model parameters to speed up learning process}
 }
 \value{
-Main parameters contains the learned model parameters. The data is normalised and scaled and is found in the Transformed data list.
+Main parameters contains the learned model parameters.
+
+alpha.L.K:    For dataset y to dimensionally reduce rows to k_dim
+
+alpha.L.J:    For dataset x to dimensionally reduce rows to k_dim
+
+v.beta:       For dataset y to dimensionally reduce rows to j_dim
+
+u.beta:       For dataset x to dimensionally reduce rows to j_dim
 }
 \description{
 A method that uses a likelihood model to align two datasets via an encoding in a lower dimensional space
