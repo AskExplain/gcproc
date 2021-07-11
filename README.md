@@ -1,5 +1,5 @@
-# gcproc
-Generalised Canonical Procrustes
+# Generalised Canonical Procrustes
+A generative encoding method - ideas stemming from the geomtric Procrustes, the statistical Canonical Correlation Analysis, and the neural network Autoencoder.
 
 A method that uses a likelihood model to align two datasets via an encoding in a lower dimensional space
 
