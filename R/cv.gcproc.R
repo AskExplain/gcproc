@@ -1,6 +1,30 @@
+#' Generalised Canonical Procrustes
+#'
+#' Runs gcproc with multiple initial seeds
+#'
+#' @param x Reference dataset of cell by gene matrix
+#' @param y Experimental dataset of cell by gene matrix
+#' @param config Configuration parameters (please read gcproc code for more details)
+#' @param initial_starts Multiple fixed seeds for initial seeding
+#' @param anchors Fixing and anchoring the main model parameters to transfer prior information
+#' @param pivots Initialisation of the main model parameters to speed up learning process
+#' @return  The best seeded gcproc model with the highest negative log-likelihood is returned.
+#' @export
 cv.gcproc <- function(x,
                       y,
-                      config = NULL,
+                      config = list(k_dim = 70,
+                                             j_dim = 70,
+                                             eta=5e-3,
+                                             max_iter=1500,
+                                             min_iter = 15,
+                                             tol=1e-3,
+                                             log=F,
+                                             center=T,
+                                             scale.z=T,
+                                             batches=16,
+                                             cores=2,
+                                             verbose=T,
+                                             init="svd"),
                       anchors = NULL,
                       pivots = NULL,
                       initial_starts = 3
