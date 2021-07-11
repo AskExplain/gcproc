@@ -9,9 +9,9 @@ extract_config(verbose = T)
 \arguments{
 \item{verbose}{Print statements?}
 
-\item{k_dim}{Dimension reduction for samples}
+\item{k_dim}{Dimension reduction for samples (assumed to be along rows)}
 
-\item{j_dim}{Dimension reduction for features}
+\item{j_dim}{Dimension reduction for features (assumed to be along columns)}
 
 \item{eta}{Step size of variational inference method. Please ensure this is appropriate (default = 5e-3)}
 
@@ -19,7 +19,7 @@ extract_config(verbose = T)
 
 \item{min_iter}{Minimum iteration of gcproc}
 
-\item{tol}{Tolerance threshold}
+\item{tol}{Tolerance threshold for convergence (metric: Root Mean Squared Error)}
 
 \item{log}{log with pseudo-count tranformation of data}
 

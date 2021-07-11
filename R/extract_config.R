@@ -2,12 +2,12 @@
 #'
 #' Extract configuration parameters of gcproc
 #'
-#' @param k_dim Dimension reduction for samples
-#' @param j_dim Dimension reduction for features
+#' @param k_dim Dimension reduction for samples (assumed to be along rows)
+#' @param j_dim Dimension reduction for features (assumed to be along columns)
 #' @param eta Step size of variational inference method. Please ensure this is appropriate (default = 5e-3)
 #' @param max_iter Maximum iteration of gcproc
 #' @param min_iter Minimum iteration of gcproc
-#' @param tol Tolerance threshold
+#' @param tol Tolerance threshold for convergence (metric: Root Mean Squared Error)
 #' @param log log with pseudo-count tranformation of data
 #' @param center Center data by setting mean location to zero (akin to Procrustes)
 #' @param scale.z Scale data by normalising (akin to Procrustes)
