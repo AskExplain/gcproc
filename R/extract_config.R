@@ -1,6 +1,6 @@
 #' Generalised Canonical Procrustes
 #'
-#' Runs gcproc with multiple initial seeds
+#' Extract configuration parameters of gcproc
 #'
 #' @param k_dim Dimension reduction for samples
 #' @param j_dim Dimension reduction for features

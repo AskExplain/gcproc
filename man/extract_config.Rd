@@ -37,5 +37,5 @@ extract_config(verbose = T)
 Configuration parameters for gcproc
 }
 \description{
-Runs gcproc with multiple initial seeds
+Extract configuration parameters of gcproc
 }
