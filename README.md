@@ -8,6 +8,6 @@ https://www.askexplain.com/generative-encoding
 
 ![](main_splatter.gif)
 
-Example of single cell RNA-seq (matrix, rows are genes, columns are cells) aligned to Spatial Transcriptomic information (histology image, and, cell-gene expression matrix). Gene expression is visualised and corresponds to the immunofluoresecent tissue. Notice expression changes through space and time.
+Example of single cell RNA-seq (matrix, rows are genes, columns are cells) aligned to Spatial Transcriptomic information (histology image, and, cell-gene expression matrix). Gene expression is visualised and corresponds to the immunofluoresecent tissue. Notice tissue structure changes through space and time (and is a function of gene expression at each time and spatial point).
 
 More information can be found at: https://github.com/AskExplain/gcproc_analysis
