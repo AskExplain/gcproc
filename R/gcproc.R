@@ -160,15 +160,10 @@ gcproc <- function(x,
     if (variational_gradient_descent_updates == T){
       set.seed(seed+count)
 
-      x.g.sample <- gcproc::chunk(c(1:dim(X.x)[1]),config$batches)
-      y.g.sample <- gcproc::chunk(c(1:dim(Y.y)[1]),config$batches)
-      x.v.sample <- gcproc::chunk(c(1:dim(X.x)[2]),config$batches)
-      y.v.sample <- gcproc::chunk(c(1:dim(Y.y)[2]),config$batches)
-
-      # x.g.sample <- lapply(c(1:config$batches),function(X){sample(c(1:dim(X.x)[1]),size = dim(X.x)[1]/(config$batches))})
-      # y.g.sample <- lapply(c(1:config$batches),function(X){sample(c(1:dim(Y.y)[1]),size = dim(Y.y)[1]/(config$batches))})
-      # x.v.sample <- lapply(c(1:config$batches),function(X){sample(c(1:dim(X.x)[2]),size = dim(X.x)[2]/(config$batches))})
-      # y.v.sample <- lapply(c(1:config$batches),function(X){sample(c(1:dim(Y.y)[2]),size = dim(Y.y)[2]/(config$batches))})
+      x.g.sample <- lapply(c(1:config$batches),function(X){sample(c(1:dim(X.x)[1]),size = dim(X.x)[1]/(config$batches))})
+      y.g.sample <- lapply(c(1:config$batches),function(X){sample(c(1:dim(Y.y)[1]),size = dim(Y.y)[1]/(config$batches))})
+      x.v.sample <- lapply(c(1:config$batches),function(X){sample(c(1:dim(X.x)[2]),size = dim(X.x)[2]/(config$batches))})
+      y.v.sample <- lapply(c(1:config$batches),function(X){sample(c(1:dim(Y.y)[2]),size = dim(Y.y)[2]/(config$batches))})
 
 
       to_return <- parallel::mclapply(c(1:config$batches),function(i){
