@@ -33,9 +33,6 @@ extract_config(verbose = T)
 
 \item{init}{Initialisation method for the model ("svd","eigen-sparse","eigen-dense")}
 }
-\value{
-The best seeded gcproc model with the highest negative log-likelihood is returned.
-}
 \description{
 Runs gcproc with multiple initial seeds
 }
