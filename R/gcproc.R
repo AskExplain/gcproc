@@ -8,7 +8,7 @@
 #' @param seed Fixed seed for random seeding
 #' @param anchors Fixing and anchoring the main model parameters to transfer prior information
 #' @param pivots Initialisation of the main model parameters to speed up learning process
-#' @return  Main parameters contains the learned model parameters. The data is normalised and scaled - it is found in the Transformed data list.
+#' @return  Main parameters contains the learned model parameters.
 #' @return alpha.L.K:    For dataset y to dimensionally reduce rows to k_dim
 #' @return alpha.L.J:    For dataset x to dimensionally reduce rows to k_dim
 #' @return v.beta:       For dataset y to dimensionally reduce rows to j_dim

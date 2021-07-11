@@ -29,7 +29,7 @@ gcproc(
 \item{pivots}{Initialisation of the main model parameters to speed up learning process}
 }
 \value{
-Main parameters contains the learned model parameters. The data is normalised and scaled - it is found in the Transformed data list.
+Main parameters contains the learned model parameters.
 
 alpha.L.K:    For dataset y to dimensionally reduce rows to k_dim
 
