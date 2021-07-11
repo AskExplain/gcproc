@@ -5,3 +5,7 @@ A method that uses a likelihood model to align two datasets via an encoding in a
 
 Current Paper (Biorxiv pending)
 https://www.askexplain.com/generative-encoding
+
+![](main_splatter.gif)
+
+Example of single cell RNA-seq aligned to Spatial Transcriptomic information. Gene expression is visualised and corresponds to the immunofluoresecent image. Notice expression changes through space and time.
