@@ -15,7 +15,7 @@
 #' @param cores Number of cores the batches are split over each run
 #' @param verbose Print statements?
 #' @param init Initialisation method for the model ("svd","eigen-sparse","eigen-dense")
-#' @return  The best seeded gcproc model with the highest negative log-likelihood is returned.
+#' @return  Configuration parameters for gcproc
 #' @export
 extract_config <- function(verbose=T){
   config <- list(
