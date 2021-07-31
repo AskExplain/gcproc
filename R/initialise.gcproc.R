@@ -5,6 +5,15 @@ initialise.gcproc <- function(x,y,k_dim=70,j_dim=70,init="svd",verbose=F){
 
   set.seed(1)
 
+
+  if (init=="random"){
+    u.beta.star.beta <- matrix(rnorm(dim(x)[2]*j_dim),nrow=dim(x)[2],ncol=j_dim)
+    v.beta.star.beta <- matrix(rnorm(dim(y)[2]*j_dim),nrow=dim(y)[2],ncol=j_dim)
+
+    alpha.L.J.star.alpha.L.J = matrix(rnorm(dim(x)[1]*k_dim),nrow=k_dim,ncol=dim(x)[1])
+    alpha.L.K.star.alpha.L.K = matrix(rnorm(dim(y)[1]*k_dim),nrow=k_dim,ncol=dim(y)[1])
+
+  }
   if (init=="svd"){
     cov_x <- Matrix::crossprod(x,x)
     u.beta.svd <- irlba::irlba(
@@ -94,10 +103,10 @@ initialise.gcproc <- function(x,y,k_dim=70,j_dim=70,init="svd",verbose=F){
   }
 
 
-  anchors <- list(  anchor_y.sample = alpha.L.K.star.alpha.L.K,
-                    anchor_y.feature = v.beta.star.beta,
-                    anchor_x.sample = alpha.L.J.star.alpha.L.J,
-                    anchor_x.feature = u.beta.star.beta  )
-  return(anchors)
+  pivots <- list(  pivot_y.sample = alpha.L.K.star.alpha.L.K,
+                    pivot_y.feature = v.beta.star.beta,
+                    pivot_x.sample = alpha.L.J.star.alpha.L.J,
+                    pivot_x.feature = u.beta.star.beta  )
+  return(pivots)
 
 }
