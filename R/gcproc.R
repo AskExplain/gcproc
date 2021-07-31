@@ -39,9 +39,12 @@ gcproc <- function(x,
   initialise = TRUE
   variational_gradient_descent_updates = TRUE
   update_batched_parameters = TRUE
-  run_covariates = TRUE
+  finalise_epoch = TRUE
 
+  run_covariates = TRUE
   check_anchors = FALSE
+
+
 
   anchor_y.sample = NULL
   anchor_y.feature = NULL
@@ -213,19 +216,6 @@ gcproc <- function(x,
   while (T){
 
 
-    debug=F
-    if(debug==T){
-
-      if (count%%100==0){
-        v <- v.beta.star.beta.final
-        u <- u.beta.star.beta.final
-
-        plot(umap::umap(rbind(Y.y,X.x)%*%(v*u))$layout,col=as.factor(c(row.names(Y.y),row.names(X.x))),pch=as.integer(c(rep(1,length(row.names(Y.y))),rep(2,length(row.names(X.x))))),main=count)
-      }
-
-    }
-
-
     internal_list <- list(
       intercept.x = 0,
       y_encode = 0,
@@ -364,7 +354,6 @@ gcproc <- function(x,
         x.delta <- if(is.null(anchor_x.cov.feature)){MASS::ginv(t(cov.x.f)%*%(cov.x.f))%*%t(cov.x.f)%*%((colMeans(((alpha.L.J.star.alpha.L.J%*%(x)%*%u.beta.star.beta - c(alpha.L.J.star.alpha.L.J%*%cov.x.s.p) - y_encode))%*%t(u.beta.star.beta)%*%MASS::ginv((u.beta.star.beta)%*%t(u.beta.star.beta)))))}else{anchor_x.cov.feature}
 
 
-
         cov.y.s.p <- c(t(covariates_list$covariates_y.sample)[y.g.ids,]%*%y.gamma.final)
         cov.x.s.p <- c(t(covariates_list$covariates_x.sample)[x.g.ids,]%*%x.gamma.final)
 
@@ -479,8 +468,17 @@ gcproc <- function(x,
 
     }
 
+    if (check_anchors==T){
 
-    finalise_epoch = T
+      alpha.L.J.star.alpha.L.J.final <- if (is.null(anchor_x.sample)){alpha.L.J.star.alpha.L.J.final}else{anchor_x.sample}
+      alpha.L.K.star.alpha.L.K.final <- if (is.null(anchor_y.sample)){alpha.L.K.star.alpha.L.K.final}else{anchor_y.sample}
+
+      u.beta.star.beta.final <- if (is.null(anchor_x.feature)){u.beta.star.beta.final}else{anchor_x.feature}
+      v.beta.star.beta.final <- if (is.null(anchor_y.feature)){v.beta.star.beta.final}else{anchor_y.feature}
+
+    }
+
+
     if (finalise_epoch==T){
 
       cov.y.s <- covariates_list$covariates_y.sample
@@ -501,17 +499,6 @@ gcproc <- function(x,
         c(MASS::ginv((alpha.L.J.star.alpha.L.J.final)%*%t(alpha.L.J.star.alpha.L.J.final))%*%alpha.L.J.star.alpha.L.J.final%*%cov.x.s.p) +
         c(cov.x.f.p%*%(u.beta.star.beta.final)%*%MASS::ginv(t(u.beta.star.beta.final)%*%(u.beta.star.beta.final))) +
         (MASS::ginv((alpha.L.J.star.alpha.L.J.final)%*%t(alpha.L.J.star.alpha.L.J.final))%*%intercept_x.final%*%MASS::ginv(t(u.beta.star.beta.final)%*%(u.beta.star.beta.final)))
-
-    }
-
-
-    if (check_anchors==T){
-
-      alpha.L.J.star.alpha.L.J.final <- if (is.null(anchor_x.sample)){alpha.L.J.star.alpha.L.J.final}else{anchor_x.sample}
-      alpha.L.K.star.alpha.L.K.final <- if (is.null(anchor_y.sample)){alpha.L.K.star.alpha.L.K.final}else{anchor_y.sample}
-
-      u.beta.star.beta.final <- if (is.null(anchor_x.feature)){u.beta.star.beta.final}else{anchor_x.feature}
-      v.beta.star.beta.final <- if (is.null(anchor_y.feature)){v.beta.star.beta.final}else{anchor_y.feature}
 
     }
 
