@@ -5,9 +5,3 @@ A method that uses a likelihood model to align two datasets via an encoding in a
 
 Current Paper
 https://www.biorxiv.org/content/10.1101/2021.07.09.451779v1
-
-![](main_splatter.gif)
-
-Example of single cell RNA-seq (matrix, rows are genes, columns are cells) aligned to Spatial Transcriptomic information (histology image, and, spot-gene expression matrix). Gene expression is visualised and corresponds to the immunofluoresecent tissue. Notice tissue structure changes through space and time (and is a function of gene expression at each time and spatial point).
-
-More information can be found at: https://github.com/AskExplain/gcproc_analysis
