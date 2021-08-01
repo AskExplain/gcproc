@@ -24,7 +24,7 @@ cv.gcproc <- function(x,
                                              batches=16,
                                              cores=2,
                                              verbose=T,
-                                             init="svd"),
+                                             init="svd-quick"),
                       anchors = NULL,
                       pivots = NULL,
                       initial_starts = 3

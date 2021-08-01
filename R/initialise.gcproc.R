@@ -1,4 +1,4 @@
-initialise.gcproc <- function(x,y,k_dim=70,j_dim=70,init="svd",verbose=F){
+initialise.gcproc <- function(x,y,k_dim=70,j_dim=70,init="svd-quick",verbose=F){
 
   x <- Matrix::Matrix(x,sparse=T)
   y <- Matrix::Matrix(y,sparse=T)
@@ -14,7 +14,7 @@ initialise.gcproc <- function(x,y,k_dim=70,j_dim=70,init="svd",verbose=F){
     alpha.L.K.star.alpha.L.K = matrix(rnorm(dim(y)[1]*k_dim),nrow=k_dim,ncol=dim(y)[1])
 
   }
-  if (init=="svd"){
+  if (init=="svd-quick"){
     cov_x <- Matrix::crossprod(x,x)
     u.beta.svd <- irlba::irlba(
       cov_x,j_dim,tol=1e-10,maxit = 10000)
@@ -42,8 +42,35 @@ initialise.gcproc <- function(x,y,k_dim=70,j_dim=70,init="svd",verbose=F){
     alpha.L.K.star.alpha.L.K = t(alpha.L.K.svd$u)
 
   }
+  if (init=="svd-dense"){
+    cov_x <- Matrix::crossprod(x,x)
+    u.beta.svd <- svd(
+      cov_x,j_dim)
+    rm(cov_x)
 
-  if (init=="eigen-sparse"){
+    cov_y <- Matrix::crossprod(y,y)
+    v.beta.svd <- svd(
+      cov_y,j_dim)
+    rm(cov_y)
+
+    u.beta.star.beta <- u.beta.svd$v
+    v.beta.star.beta <- v.beta.svd$v
+
+    cov_tx <- Matrix::crossprod(Matrix::t(x),Matrix::t(x))
+    alpha.L.J.svd <- svd(
+      cov_tx,k_dim)
+    rm(cov_tx)
+
+    cov_ty <- Matrix::crossprod(Matrix::t(y),Matrix::t(y))
+    alpha.L.K.svd <- svd(
+      cov_ty,k_dim)
+    rm(cov_ty)
+
+    alpha.L.J.star.alpha.L.J = t(alpha.L.J.svd$u)
+    alpha.L.K.star.alpha.L.K = t(alpha.L.K.svd$u)
+
+  }
+  if (init=="eigen-quick"){
     cov_x <- Matrix::crossprod(x,x)
     u.beta.svd <- RSpectra::eigs(
       cov_x,j_dim)
@@ -71,8 +98,6 @@ initialise.gcproc <- function(x,y,k_dim=70,j_dim=70,init="svd",verbose=F){
     alpha.L.K.star.alpha.L.K = t(alpha.L.K.svd$vectors)
 
   }
-
-
   if (init=="eigen-dense"){
     cov_x <- Matrix::crossprod(x,x)
     u.beta.svd <- eigen(

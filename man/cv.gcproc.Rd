@@ -9,7 +9,7 @@ cv.gcproc(
   y,
   config = list(k_dim = 70, j_dim = 70, eta = 0.005, max_iter = 1500, min_iter = 15,
     tol = 0.001, log = F, center = T, scale.z = T, batches = 16, cores = 2, verbose = T,
-    init = "svd"),
+    init = "svd-quick"),
   anchors = NULL,
   pivots = NULL,
   initial_starts = 3

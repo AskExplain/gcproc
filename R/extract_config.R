@@ -31,11 +31,11 @@ extract_config <- function(verbose=T){
        batches=16,
        cores=2,
        verbose=T,
-       init="svd")
-  
+       init="svd-quick")
+
   if (verbose == T){
     print(config)
   }
-  
+
   return(config)
 }
