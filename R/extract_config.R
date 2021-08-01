@@ -114,10 +114,10 @@ extract_pivots_framework <- function(verbose=T){
 #' Covariates can be used to further improve batch modelling.
 #' NOTE: This is an empty framework that the user must fill in.
 #'
-#' @param covariates_y.sample Covariates with length equivalent to samples of y
-#' @param covariates_y.feature Covariates with length equivalent to features of y
-#' @param covariates_x.sample Covariates with length equivalent to samples of x
-#' @param covariates_x.feature Covariates with length equivalent to features of x
+#' @param covariates_y.sample Covariates with dimension equivalent to (p1 by samples of y)
+#' @param covariates_y.feature Covariates with dimension equivalent to (features of y by p2)
+#' @param covariates_x.sample Covariates with dimension equivalent to (p3 by samples of x)
+#' @param covariates_x.feature Covariates with dimension equivalent to (features of x by p4)
 #' @return  Covariate framework for gcproc
 extract_covariates_framework <- function(verbose=T){
   covariates <- list(
