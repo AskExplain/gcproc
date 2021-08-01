@@ -9,35 +9,48 @@ gcproc(
   y,
   config = list(k_dim = 70, j_dim = 70, eta = 0.005, max_iter = 1500, min_iter = 15,
     tol = 0.001, log = F, center = T, scale.z = T, batches = 16, cores = 2, verbose = T,
-    init = "svd"),
+    init = "svd-quick"),
   seed = 1,
   anchors = NULL,
-  pivots = NULL
+  pivots = NULL,
+  covariates = NULL
 )
 }
 \arguments{
-\item{x}{Reference dataset of cell by gene matrix}
+\item{x}{Reference dataset of sample by feature matrix (required)}
 
-\item{y}{Experimental dataset of cell by gene matrix}
+\item{y}{Experimental dataset of sample by feature matrix (required)}
 
-\item{config}{Configuration parameters (please refer to the function extract_config() for more details on each parameter)}
+\item{config}{Configuration parameters. Modifiable list accessed from extract_config()}
 
-\item{seed}{Fixed seed for random seeding}
+\item{seed}{Fixed seed (default = 1)}
 
-\item{anchors}{Fixing and anchoring the main model parameters to transfer prior information}
+\item{anchors}{Transferring pre-trained model parameters (not required)}
 
-\item{pivots}{Initialisation of the main model parameters to speed up learning process}
+\item{pivots}{Initialisation of model parameters (not required)}
+
+\item{covariates}{Allows for covariate adjustment (not required)}
 }
 \value{
 Main parameters contains the learned model parameters.
 
-alpha.L.K:    For dataset y to dimensionally reduce rows to k_dim
+alpha.L.K:     To reduce rows of y to k_dim (the reduced form is t(KY))
 
-alpha.L.J:    For dataset x to dimensionally reduce rows to k_dim
+alpha.L.J:     To reduce rows of x to to k_dim (the reduced form is t(JX))
 
-v.beta:       For dataset y to dimensionally reduce rows to j_dim
+v.beta:        To reduce columns of y to to j_dim (the reduced form is (Yv))
 
-u.beta:       For dataset x to dimensionally reduce rows to j_dim
+u.beta:        To reduce columns of x to to j_dim (the reduced form is (Yu))
+
+y.gamma:       Covariate parameters for the sample covariates of y
+
+y.delta:       Covariate parameters for the feature covariates of y
+
+x.gamma:       Covariate parameters for the sample covariates of x
+
+x.delta:       Covariate parameters for the feature covariates of y
+
+intercept.x:   Intercept for the encoding of x (where KYv = JXu + intercept)
 }
 \description{
 A method that uses a likelihood model to align two datasets via an encoding in a lower dimensional space

@@ -31,11 +31,114 @@ extract_config <- function(verbose=T){
        batches=16,
        cores=2,
        verbose=T,
-       init="svd")
-  
+       init="svd-quick")
+
   if (verbose == T){
     print(config)
   }
-  
+
   return(config)
 }
+
+
+#' Extract anchor framework to put into gcproc
+#'
+#' Anchors allow the transfer of learned parameters from a pre-trained model.
+#' NOTE: This is an empty framework that the user must fill in.
+#'
+#' @param anchor_y.sample Equivalent to alpha.L.K
+#' @param anchor_y.feature Equivalent to v.beta
+#' @param anchor_x.sample Equivalent to alpha.L.J
+#' @param anchor_x.feature Equivalent to u.beta
+#' @param anchor_y.cov.sample Equivalent to y.gamma
+#' @param anchor_y.cov.feature Equivalent to y.delta
+#' @param anchor_x.cov.sample Equivalent to x.gamma
+#' @param anchor_x.cov.feature Equivalent to x.delta
+#' @return  Anchor framework for gcproc
+#' @export
+extract_anchors_framework <- function(verbose=T){
+  anchors <- list(
+    anchor_y.sample = NULL,
+    anchor_y.feature = NULL,
+    anchor_x.sample = NULL,
+    anchor_x.feature = NULL,
+    anchor_y.cov.sample = NULL,
+    anchor_y.cov.feature = NULL,
+    anchor_x.cov.sample = NULL,
+    anchor_x.cov.feature = NULL
+  )
+
+  if (verbose == T){
+    print(anchors)
+  }
+
+  return(anchors)
+}
+
+#' Extract pivot framework to put into gcproc.
+#'
+#' Pivots allow initialisation of parameters as input.
+#' NOTE: This is an empty framework that the user must fill in.
+#'
+#' @param pivot_y.sample Equivalent to alpha.L.K
+#' @param pivot_y.feature Equivalent to v.beta
+#' @param pivot_x.sample Equivalent to alpha.L.J
+#' @param pivot_x.feature Equivalent to u.beta
+#' @param pivot_y.cov.sample Equivalent to y.gamma
+#' @param pivot_y.cov.feature Equivalent to y.delta
+#' @param pivot_x.cov.sample Equivalent to x.gamma
+#' @param pivot_x.cov.feature Equivalent to x.delta
+#' @return  Pivot framework for gcproc
+extract_pivots_framework <- function(verbose=T){
+  pivots <- list(
+    pivot_y.sample = NULL,
+    pivot_y.feature = NULL,
+    pivot_x.sample = NULL,
+    pivot_x.feature = NULL,
+    pivot_y.cov.sample = NULL,
+    pivot_y.cov.feature = NULL,
+    pivot_x.cov.sample = NULL,
+    pivot_x.cov.feature = NULL
+  )
+
+  if (verbose == T){
+    print(pivots)
+  }
+
+  return(pivots)
+}
+
+
+#' Extract covariates framework to put into gcproc
+#'
+#' Covariates can be used to further improve batch modelling.
+#' NOTE: This is an empty framework that the user must fill in.
+#'
+#' @param covariates_y.sample Covariates with length equivalent to samples of y
+#' @param covariates_y.feature Covariates with length equivalent to features of y
+#' @param covariates_x.sample Covariates with length equivalent to samples of x
+#' @param covariates_x.feature Covariates with length equivalent to features of x
+#' @return  Covariate framework for gcproc
+extract_covariates_framework <- function(verbose=T){
+  covariates <- list(
+    covariates_y.sample = NULL,
+    covariates_y.feature = NULL,
+    covariates_x.sample = NULL,
+    covariates_x.feature = NULL
+  )
+
+  if (verbose == T){
+    print(covariates)
+  }
+
+  return(covariates)
+}
+
+
+
+
+
+
+
+
+
