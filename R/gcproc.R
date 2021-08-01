@@ -36,32 +36,9 @@ gcproc <- function(x,
                                  verbose=T,
                                  init="svd-quick"),
                    seed = 1,
-                   anchors = list(
-                     anchor_y.sample = NULL,
-                     anchor_y.feature = NULL,
-                     anchor_x.sample = NULL,
-                     anchor_x.feature = NULL,
-                     anchor_y.cov.sample = NULL,
-                     anchor_y.cov.feature = NULL,
-                     anchor_x.cov.sample = NULL,
-                     anchor_x.cov.feature = NULL
-                   ),
-                   pivots = list(
-                     pivot_y.sample = NULL,
-                     pivot_y.feature = NULL,
-                     pivot_x.sample = NULL,
-                     pivot_x.feature = NULL,
-                     pivot_y.cov.sample = NULL,
-                     pivot_y.cov.feature = NULL,
-                     pivot_x.cov.sample = NULL,
-                     pivot_x.cov.feature = NULL
-                   ),
-                   covariates = list(
-                                      covariates_y.sample = NULL,
-                                      covariates_y.feature = NULL,
-                                      covariates_x.sample = NULL,
-                                      covariates_x.feature = NULL
-                   )
+                   anchors = NULL,
+                   pivots = NULL,
+                   covariates = NULL
 
 ){
 
@@ -100,7 +77,7 @@ gcproc <- function(x,
   }
 
   if (config$verbose){
-    print(paste("Using gcproc to dimensionally reduce both samples and features with following dimensions:   Sample dimension (config$k_dim): ",config$k_dim, "   Feature dimension (config$j_dim): ", config$j_dim,sep=""))
+    print(paste("Using gcproc with following dimension reductions:   Sample dimension (config$k_dim): ",config$k_dim, "   Feature dimension (config$j_dim): ", config$j_dim,sep=""))
   }
 
   n.x <- dim(x)[1]
@@ -492,11 +469,11 @@ gcproc <- function(x,
 
     if (finalise_epoch==T){
 
-      cov.y.s.p <- c(t(covariates_list$covariates_y.sample)%*%y.gamma.final)
-      cov.x.s.p <- c(t(covariates_list$covariates_x.sample)%*%x.gamma.final)
+      cov.y.s.p <- (t(covariates_list$covariates_y.sample)%*%y.gamma.final)
+      cov.x.s.p <- (t(covariates_list$covariates_x.sample)%*%x.gamma.final)
 
-      cov.y.f.p <- c(covariates_list$covariates_y.feature%*%y.delta.final)
-      cov.x.f.p <- c(covariates_list$covariates_x.feature%*%x.delta.final)
+      cov.y.f.p <- t(covariates_list$covariates_y.feature%*%y.delta.final)
+      cov.x.f.p <- t(covariates_list$covariates_x.feature%*%x.delta.final)
 
       Y_code <- (MASS::ginv((alpha.L.K.star.alpha.L.K.final)%*%t(alpha.L.K.star.alpha.L.K.final))%*%alpha.L.K.star.alpha.L.K.final%*%(Y.y - cov.y.s.p - cov.y.f.p)%*%(v.beta.star.beta.final)%*%MASS::ginv(t(v.beta.star.beta.final)%*%(v.beta.star.beta.final)))
 
@@ -525,6 +502,19 @@ gcproc <- function(x,
 
   }
 
+
+  # Calculate encoding intercept for user purposes (not needed in learning)
+
+  cov.y.s.p <- (t(covariates_list$covariates_y.sample)%*%y.gamma.final)
+  cov.x.s.p <- (t(covariates_list$covariates_x.sample)%*%x.gamma.final)
+
+  cov.y.f.p <- t(covariates_list$covariates_y.feature%*%y.delta.final)
+  cov.x.f.p <- t(covariates_list$covariates_x.feature%*%x.delta.final)
+
+  y_encode.final <- alpha.L.K.star.alpha.L.K.final%*%Y.y%*%v.beta.star.beta.final - (alpha.L.K.star.alpha.L.K.final%*%(cov.y.s.p)%*%v.beta.star.beta.final) - (alpha.L.K.star.alpha.L.K.final%*% (cov.y.f.p) %*% v.beta.star.beta.final)
+  x_encode.final <- alpha.L.J.star.alpha.L.J.final%*%X.x%*%u.beta.star.beta.final - (alpha.L.J.star.alpha.L.J.final%*%(cov.x.s.p)%*%u.beta.star.beta.final) - ( alpha.L.J.star.alpha.L.J.final%*%(cov.x.f.p) %*% u.beta.star.beta.final)
+
+  intercept_x.final <- y_encode.final - x_encode.final
 
   return(list(
 

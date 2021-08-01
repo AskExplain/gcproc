@@ -11,14 +11,9 @@ gcproc(
     tol = 0.001, log = F, center = T, scale.z = T, batches = 16, cores = 2, verbose = T,
     init = "svd-quick"),
   seed = 1,
-  anchors = list(anchor_y.sample = NULL, anchor_y.feature = NULL, anchor_x.sample =
-    NULL, anchor_x.feature = NULL, anchor_y.cov.sample = NULL, anchor_y.cov.feature =
-    NULL, anchor_x.cov.sample = NULL, anchor_x.cov.feature = NULL),
-  pivots = list(pivot_y.sample = NULL, pivot_y.feature = NULL, pivot_x.sample = NULL,
-    pivot_x.feature = NULL, pivot_y.cov.sample = NULL, pivot_y.cov.feature = NULL,
-    pivot_x.cov.sample = NULL, pivot_x.cov.feature = NULL),
-  covariates = list(covariates_y.sample = NULL, covariates_y.feature = NULL,
-    covariates_x.sample = NULL, covariates_x.feature = NULL)
+  anchors = NULL,
+  pivots = NULL,
+  covariates = NULL
 )
 }
 \arguments{
