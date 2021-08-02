@@ -5,3 +5,6 @@ A method that uses a likelihood model to align two datasets via an encoding in a
 
 Current Paper
 https://www.biorxiv.org/content/10.1101/2021.07.09.451779v1
+
+A brief talk on the method 
+https://www.youtube.com/watch?v=wUM9zpGWuyA
