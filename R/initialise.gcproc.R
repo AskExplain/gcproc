@@ -1,3 +1,4 @@
+#' @export
 initialise.gcproc <- function(x,y,k_dim=70,j_dim=70,init="svd-quick",verbose=F){
 
   x <- Matrix::Matrix(x,sparse=T)
@@ -53,8 +54,8 @@ initialise.gcproc <- function(x,y,k_dim=70,j_dim=70,init="svd-quick",verbose=F){
       cov_y,j_dim)
     rm(cov_y)
 
-    u.beta.star.beta <- u.beta.svd$v
-    v.beta.star.beta <- v.beta.svd$v
+    u.beta.star.beta <- u.beta.svd$v[,c(1:j_dim)]
+    v.beta.star.beta <- v.beta.svd$v[,c(1:j_dim)]
 
     cov_tx <- Matrix::crossprod(Matrix::t(x),Matrix::t(x))
     alpha.L.J.svd <- svd(
@@ -66,8 +67,8 @@ initialise.gcproc <- function(x,y,k_dim=70,j_dim=70,init="svd-quick",verbose=F){
       cov_ty,k_dim)
     rm(cov_ty)
 
-    alpha.L.J.star.alpha.L.J = t(alpha.L.J.svd$u)
-    alpha.L.K.star.alpha.L.K = t(alpha.L.K.svd$u)
+    alpha.L.J.star.alpha.L.J = t(alpha.L.J.svd$u[,c(1:k_dim)])
+    alpha.L.K.star.alpha.L.K = t(alpha.L.K.svd$u[,c(1:k_dim)])
 
   }
   if (init=="eigen-quick"){

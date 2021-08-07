@@ -89,6 +89,7 @@ extract_anchors_framework <- function(verbose=T){
 #' @param pivot_x.cov.sample Equivalent to x.gamma
 #' @param pivot_x.cov.feature Equivalent to x.delta
 #' @return  Pivot framework for gcproc
+#' @export
 extract_pivots_framework <- function(verbose=T){
   pivots <- list(
     pivot_y.sample = NULL,
@@ -119,6 +120,7 @@ extract_pivots_framework <- function(verbose=T){
 #' @param covariates_x.sample Covariates with dimension equivalent to (p3 by samples of x)
 #' @param covariates_x.feature Covariates with dimension equivalent to (features of x by p4)
 #' @return  Covariate framework for gcproc
+#' @export
 extract_covariates_framework <- function(verbose=T){
   covariates <- list(
     covariates_y.sample = NULL,
@@ -132,6 +134,40 @@ extract_covariates_framework <- function(verbose=T){
   }
 
   return(covariates)
+}
+
+
+
+
+
+
+
+
+
+
+
+#' Extract prediction framework to put into gcproc
+#'
+#' Predictions can made be on data not currently calculated
+#' NOTE: This is an empty framework that the user must fill in.
+#'
+#' @param covariates_y.sample Covariates with dimension equivalent to (p1 by samples of y)
+#' @param covariates_y.feature Covariates with dimension equivalent to (features of y by p2)
+#' @param covariates_x.sample Covariates with dimension equivalent to (p3 by samples of x)
+#' @param covariates_x.feature Covariates with dimension equivalent to (features of x by p4)
+#' @return  Covariate framework for gcproc
+#' @export
+extract_prediction_framework <- function(verbose=T){
+  prediction <- list(
+    x = NULL,
+    y = NULL
+  )
+
+  if (verbose == T){
+    print(prediction)
+  }
+
+  return(prediction)
 }
 
 

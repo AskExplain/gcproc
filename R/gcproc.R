@@ -18,7 +18,7 @@
 #' @return y.delta:       Covariate parameters for the feature covariates of y
 #' @return x.gamma:       Covariate parameters for the sample covariates of x
 #' @return x.delta:       Covariate parameters for the feature covariates of y
-#' @return intercept.x:   Intercept for the encoding of x (where KYv = JXu + intercept)
+#' @return intercept.encode:   Intercept for the encoding of x (where KYv = JXu + intercept)
 #' @export
 gcproc <- function(x,
                    y,
@@ -38,15 +38,24 @@ gcproc <- function(x,
                    seed = 1,
                    anchors = NULL,
                    pivots = NULL,
-                   covariates = NULL
+                   covariates = NULL,
+                   predict = NULL
 
 ){
+
+
+  # Step sizes
+  b.a <- config$eta
+  a.b <- c(1-b.a)
+
+
+  config$batches <- ceiling(max(c(dim(x),dim(y)))/20)
 
   prepare_data = TRUE
   initialise = TRUE
   variational_gradient_descent_updates = TRUE
   update_batched_parameters = TRUE
-  finalise_epoch = TRUE
+  epoch_run = TRUE
 
   run_covariates = TRUE
   check_anchors = FALSE
@@ -86,11 +95,15 @@ gcproc <- function(x,
   p.y <- dim(y)[2]
 
   if (prepare_data == T){
-    transformed.data <- prepare_data(x=x,
-                                     y=y,
-                                     log=config$log,
-                                     center=config$center,
-                                     scale=config$scale.z)
+    X.x <- prepare_data(x=x,
+                        log=config$log,
+                        center=config$center,
+                        scale=config$scale.z)
+
+    Y.y <- prepare_data(x=y,
+                        log=config$log,
+                        center=config$center,
+                        scale=config$scale.z)
 
 
     if (config$verbose){
@@ -99,8 +112,6 @@ gcproc <- function(x,
       print(paste("Center: ", config$center, sep = ""))
       print(paste("Standardise by standard deviation: ", config$scale.z, sep = ""))
     }
-    X.x <- transformed.data$x
-    Y.y <- transformed.data$y
   }
 
 
@@ -115,21 +126,23 @@ gcproc <- function(x,
     score.vec <- rep(0,10)
 
 
+    p1 <- p2 <- 0
+
     # Prepare priors
-    a0.beta = 10e-2
-    b0.beta = 10e-4
-    c0.beta = 10e-2
-    d0.beta = 10e-4
+    a0.beta = p1
+    b0.beta = p2
+    c0.beta = p1
+    d0.beta = p2
 
-    a0.alpha.L.J = 10e-2
-    b0.alpha.L.J = 10e-4
-    c0.alpha.L.J = 10e-2
-    d0.alpha.L.J = 10e-4
+    a0.alpha.L.J = p1
+    b0.alpha.L.J = p2
+    c0.alpha.L.J = p1
+    d0.alpha.L.J = p2
 
-    a0.alpha.L.K = 10e-2
-    b0.alpha.L.K = 10e-4
-    c0.alpha.L.K = 10e-2
-    d0.alpha.L.K = 10e-4
+    a0.alpha.L.K = p1
+    b0.alpha.L.K = p2
+    c0.alpha.L.K = p1
+    d0.alpha.L.K = p2
 
 
     if (run_covariates==T){
@@ -190,10 +203,13 @@ gcproc <- function(x,
     V.star.inv.alpha.L.J.final = (X.x%*%u.beta.star.beta.final)%*%t(X.x%*%u.beta.star.beta.final)
 
     # Find intercept in encoded space
-    y_encode.final <- alpha.L.K.star.alpha.L.K.final%*%Y.y%*%v.beta.star.beta.final
-    x_encode.final <- alpha.L.J.star.alpha.L.J.final%*%X.x%*%u.beta.star.beta.final
-    intercept_x.final <- y_encode.final - x_encode.final
+    Y_encode <- alpha.L.K.star.alpha.L.K.final%*%Y.y%*%v.beta.star.beta.final
+    X_encode <- alpha.L.J.star.alpha.L.J.final%*%X.x%*%u.beta.star.beta.final
+    intercept.encode <- Y_encode - X_encode
 
+    Y_code <- (MASS::ginv((alpha.L.K.star.alpha.L.K.final)%*%t(alpha.L.K.star.alpha.L.K.final))%*%alpha.L.K.star.alpha.L.K.final%*%(Y.y)%*%(v.beta.star.beta.final)%*%MASS::ginv(t(v.beta.star.beta.final)%*%(v.beta.star.beta.final)))
+    X_code <- (MASS::ginv((alpha.L.J.star.alpha.L.J.final)%*%t(alpha.L.J.star.alpha.L.J.final))%*%(alpha.L.J.star.alpha.L.J.final%*%(X.x)%*%(u.beta.star.beta.final))%*%MASS::ginv(t(u.beta.star.beta.final)%*%(u.beta.star.beta.final)))
+    intercept.code <- Y_code - X_code
   }
 
   if (config$verbose){
@@ -205,7 +221,7 @@ gcproc <- function(x,
 
 
     internal_list <- list(
-      intercept.x = 0,
+      intercept.encode = 0,
       y_encode = 0,
       x_encode = 0,
       alpha.L.J.star.alpha.L.J = 0,
@@ -226,13 +242,15 @@ gcproc <- function(x,
       y.v.ids = 0
     )
 
+
+
     if (variational_gradient_descent_updates == T){
       set.seed(seed+count)
 
-      x.g.sample <- lapply(c(1:config$batches),function(X){set.seed(X+seed+count);sample(c(1:dim(X.x)[1]),size = if(dim(X.x)[1]<100){dim(X.x)[1]}else{100})})
-      y.g.sample <- lapply(c(1:config$batches),function(X){set.seed(X+seed+count);sample(c(1:dim(Y.y)[1]),size = if(dim(Y.y)[1]<100){dim(Y.y)[1]}else{100})})
-      x.v.sample <- lapply(c(1:config$batches),function(X){set.seed(X+seed+count);sample(c(1:dim(X.x)[2]),size = if(dim(X.x)[2]<100){dim(X.x)[2]}else{100})})
-      y.v.sample <- lapply(c(1:config$batches),function(X){set.seed(X+seed+count);sample(c(1:dim(Y.y)[2]),size = if(dim(Y.y)[2]<100){dim(Y.y)[2]}else{100})})
+      x.g.sample <- lapply(c(1:config$batches),function(X){set.seed(X+seed+count);sample(c(1:dim(X.x)[1]),size = if(dim(X.x)[1]<20){dim(X.x)[1]}else{20})})
+      y.g.sample <- lapply(c(1:config$batches),function(X){set.seed(X+seed+count);sample(c(1:dim(Y.y)[1]),size = if(dim(Y.y)[1]<20){dim(Y.y)[1]}else{20})})
+      x.v.sample <- lapply(c(1:config$batches),function(X){set.seed(X+seed+count);sample(c(1:dim(X.x)[2]),size = if(dim(X.x)[2]<20){dim(X.x)[2]}else{20})})
+      y.v.sample <- lapply(c(1:config$batches),function(X){set.seed(X+seed+count);sample(c(1:dim(Y.y)[2]),size = if(dim(Y.y)[2]<20){dim(Y.y)[2]}else{20})})
 
       to_return <- parallel::mclapply(c(1:config$batches),function(i){
 
@@ -254,12 +272,6 @@ gcproc <- function(x,
         v.V.star.inv.beta <- v.V.star.inv.beta.final[y.v.ids,y.v.ids]
         u.V.star.inv.beta <- u.V.star.inv.beta.final[x.v.ids,x.v.ids]
 
-
-        intercept.x <- intercept_x.final
-
-        y <- (Y.y)[y.g.ids,y.v.ids]
-        x <- (X.x)[x.g.ids,x.v.ids]
-
         cov.y.s <- covariates_list$covariates_y.sample[,y.g.ids]
         cov.y.f <- covariates_list$covariates_y.feature[y.v.ids,]
         cov.x.s <- covariates_list$covariates_x.sample[,x.g.ids]
@@ -269,93 +281,36 @@ gcproc <- function(x,
         cov.x.s.p <- (t(covariates_list$covariates_x.sample)[x.g.ids,]%*%x.gamma.final[,x.v.ids])
 
         cov.y.f.p <- t(covariates_list$covariates_y.feature[y.v.ids,]%*%y.delta.final[,y.g.ids])
-        cov.x.f.p <- t(covariates_list$covariates_x.feature[x.v.ids,]%*%x.delta.final[,y.g.ids])
+        cov.x.f.p <- t(covariates_list$covariates_x.feature[x.v.ids,]%*%x.delta.final[,x.g.ids])
 
-        y_encode <- alpha.L.K.star.alpha.L.K%*%y%*%v.beta.star.beta + (alpha.L.K.star.alpha.L.K%*%(cov.y.s.p)%*%v.beta.star.beta) + (alpha.L.K.star.alpha.L.K%*% (cov.y.f.p) %*% v.beta.star.beta)
-        x_encode <- alpha.L.J.star.alpha.L.J%*%x%*%u.beta.star.beta + (alpha.L.J.star.alpha.L.J%*%(cov.x.s.p)%*%u.beta.star.beta) + ( alpha.L.J.star.alpha.L.J%*%(cov.x.f.p) %*% u.beta.star.beta)
+        y <- (Y.y)[y.g.ids,y.v.ids]
+        x <- (X.x)[x.g.ids,x.v.ids]
 
-        a.star.alpha.L.J = a0.alpha.L.J + min(dim(x)[1],length(x.g.ids))/2
-        b.star.alpha.L.J = b0.alpha.L.J + (1/2)*(((y_encode)%*%t(y_encode)) - (alpha.L.J.star.alpha.L.J)%*%V.star.inv.alpha.L.J%*%t(alpha.L.J.star.alpha.L.J))
-        c.star.alpha.L.J = c0.alpha.L.J + 1/2
+        y_encode <- Y_encode
+        x_encode <- X_encode
 
-        E.alpha.L.J.D.alpha.L.J <- a.star.alpha.L.J*((t(alpha.L.J.star.alpha.L.J)%*%(MASS::ginv(b.star.alpha.L.J))%*%(alpha.L.J.star.alpha.L.J)))+(MASS::ginv(V.star.inv.alpha.L.J))
-        E.alpha.L.J.D.alpha.L.J <- n.x/min(dim(x)[1],length(x.g.ids))*E.alpha.L.J.D.alpha.L.J
-
-        d.star.alpha.L.J = d0.alpha.L.J + (1/2)*(E.alpha.L.J.D.alpha.L.J)
-
-        E.diag.alpha.alpha.L.J = c.star.alpha.L.J*MASS::ginv(d.star.alpha.L.J)
-        E.diag.alpha.alpha.L.J <- n.x/min(dim(x)[1],length(x.g.ids))*E.diag.alpha.alpha.L.J
-
-        a.star.alpha.L.K = a0.alpha.L.K + min(dim(y)[1],length(y.g.ids))/2
-        b.star.alpha.L.K = b0.alpha.L.K + (1/2)*((((x_encode + intercept.x))%*%t((x_encode + intercept.x))) - (alpha.L.K.star.alpha.L.K)%*%V.star.inv.alpha.L.K%*%t(alpha.L.K.star.alpha.L.K))
-        c.star.alpha.L.K = c0.alpha.L.K + 1/2
-
-        E.alpha.L.K.D.alpha.L.K <- a.star.alpha.L.K*((t(alpha.L.K.star.alpha.L.K)%*%(MASS::ginv(b.star.alpha.L.K))%*%(alpha.L.K.star.alpha.L.K)))+(MASS::ginv(V.star.inv.alpha.L.K))
-        E.alpha.L.K.D.alpha.L.K <- n.y/min(dim(y)[1],length(y.g.ids))*E.alpha.L.K.D.alpha.L.K
-
-        d.star.alpha.L.K = d0.alpha.L.K + (1/2)*(E.alpha.L.K.D.alpha.L.K)
-
-        E.diag.alpha.alpha.L.K = c.star.alpha.L.K*MASS::ginv(d.star.alpha.L.K)
-        E.diag.alpha.alpha.L.K <- n.y/min(dim(y)[1],length(y.g.ids))*E.diag.alpha.alpha.L.K
-
-        a.star.beta = a0.beta + min(dim(x)[2],length(x.v.ids))/2
-        b.star.beta = b0.beta + (1/2)*((t(y_encode)%*%(y_encode)) - t(u.beta.star.beta)%*%u.V.star.inv.beta%*%u.beta.star.beta)
-        c.star.beta = c0.beta + 1/2
-
-        u.E.beta.D.beta <- a.star.beta*(((u.beta.star.beta)%*%MASS::ginv(b.star.beta)%*%t(u.beta.star.beta)))+(MASS::ginv(u.V.star.inv.beta))
-        u.E.beta.D.beta <- p.x/min(dim(x)[2],length(x.v.ids))*u.E.beta.D.beta
-
-        d.star.beta = d0.beta + (1/2)*(u.E.beta.D.beta)
-
-        u.E.diag.alpha.beta = c.star.beta*MASS::ginv(d.star.beta)
-        u.E.diag.alpha.beta <- p.x/min(dim(x)[2],length(x.v.ids))*u.E.diag.alpha.beta
-
-        a.star.beta = a0.beta + min(dim(y)[2],length(y.v.ids))/2
-        b.star.beta = b0.beta + (1/2)*((t((x_encode + intercept.x))%*%((x_encode + intercept.x))) - t(v.beta.star.beta)%*%v.V.star.inv.beta%*%v.beta.star.beta)
-        c.star.beta = c0.beta + 1/2
-
-        v.E.beta.D.beta <- a.star.beta*(((v.beta.star.beta)%*%(MASS::ginv(b.star.beta))%*%t(v.beta.star.beta)))+MASS::ginv(v.V.star.inv.beta)
-        v.E.beta.D.beta <- p.y/min(dim(y)[2],length(y.v.ids))*v.E.beta.D.beta
-
-        d.star.beta = d0.beta + (1/2)*(v.E.beta.D.beta)
-
-        v.E.diag.alpha.beta = c.star.beta*MASS::ginv(d.star.beta)
-        v.E.diag.alpha.beta <- p.y/min(dim(y)[2],length(y.v.ids))*v.E.diag.alpha.beta
-
-
-        V.star.inv.alpha.L.J = E.diag.alpha.alpha.L.J + ((x + cov.x.f.p + cov.x.s.p)%*%u.beta.star.beta)%*%t((x + cov.x.f.p + cov.x.s.p)%*%u.beta.star.beta)
+        V.star.inv.alpha.L.J = ((x + cov.x.f.p + cov.x.s.p)%*%u.beta.star.beta)%*%t((x + cov.x.f.p + cov.x.s.p)%*%u.beta.star.beta)
         alpha.L.J.star.alpha.L.J = if (is.null(anchor_x.sample)){(y_encode)%*%t((x + cov.x.f.p + cov.x.s.p)%*%u.beta.star.beta)%*%MASS::ginv(V.star.inv.alpha.L.J)}else{anchor_x.sample[,x.g.ids]}
 
-        V.star.inv.alpha.L.K = E.diag.alpha.alpha.L.K + ((y + cov.y.f.p + cov.y.s.p)%*%v.beta.star.beta)%*%t((y + cov.y.f.p + cov.y.s.p)%*%v.beta.star.beta)
-        alpha.L.K.star.alpha.L.K = if (is.null(anchor_y.sample)){((x_encode + intercept.x))%*%t((y + cov.y.f.p + cov.y.s.p)%*%v.beta.star.beta)%*%MASS::ginv(V.star.inv.alpha.L.K)}else{anchor_y.sample[,y.g.ids]}
+        V.star.inv.alpha.L.K =  ((y + cov.y.f.p + cov.y.s.p)%*%v.beta.star.beta)%*%t((y + cov.y.f.p + cov.y.s.p)%*%v.beta.star.beta)
+        alpha.L.K.star.alpha.L.K = if (is.null(anchor_y.sample)){((x_encode + intercept.encode))%*%t((y + cov.y.f.p + cov.y.s.p)%*%v.beta.star.beta)%*%MASS::ginv(V.star.inv.alpha.L.K)}else{anchor_y.sample[,y.g.ids]}
 
-        u.V.star.inv.beta = u.E.diag.alpha.beta + t(alpha.L.J.star.alpha.L.J%*%(x + cov.x.s.p + cov.x.f.p))%*%(alpha.L.J.star.alpha.L.J%*%(x + cov.x.s.p + cov.x.f.p))
+
+        u.V.star.inv.beta = t(alpha.L.J.star.alpha.L.J%*%(x + cov.x.s.p + cov.x.f.p))%*%(alpha.L.J.star.alpha.L.J%*%(x + cov.x.s.p + cov.x.f.p))
         u.beta.star.beta = if (is.null(anchor_x.feature)){MASS::ginv(u.V.star.inv.beta)%*%t(alpha.L.J.star.alpha.L.J%*%(x + cov.x.s.p + cov.x.f.p))%*%(y_encode)}else{anchor_x.feature[x.v.ids,]}
 
-        v.V.star.inv.beta = v.E.diag.alpha.beta + t(alpha.L.K.star.alpha.L.K%*%(y + cov.y.s.p + cov.y.f.p))%*%(alpha.L.K.star.alpha.L.K%*%(y + cov.y.s.p + cov.y.f.p))
-        v.beta.star.beta = if (is.null(anchor_y.feature)){MASS::ginv(v.V.star.inv.beta)%*%t(alpha.L.K.star.alpha.L.K%*%(y + cov.y.s.p + cov.y.f.p))%*%((x_encode + intercept.x))}else{anchor_y.feature[y.v.ids,]}
 
-        y.gamma <- if(is.null(anchor_y.cov.sample)){MASS::ginv((cov.y.s)%*%t(cov.y.s))%*%(cov.y.s)%*%(((MASS::ginv(t(alpha.L.K.star.alpha.L.K)%*%(alpha.L.K.star.alpha.L.K))%*%t(alpha.L.K.star.alpha.L.K)%*%((alpha.L.K.star.alpha.L.K %*% (y) %*% v.beta.star.beta + (alpha.L.K.star.alpha.L.K%*%cov.y.f.p%*%v.beta.star.beta)  - (x_encode + intercept.x)))%*%t(v.beta.star.beta)%*%MASS::ginv((v.beta.star.beta)%*%t(v.beta.star.beta)))))}else{anchor_y.cov.sample}
-        y.delta <- if(is.null(anchor_y.cov.feature)){MASS::ginv(t(cov.y.f)%*%(cov.y.f))%*%t(cov.y.f)%*%((t((MASS::ginv(t(alpha.L.K.star.alpha.L.K)%*%(alpha.L.K.star.alpha.L.K))%*%t(alpha.L.K.star.alpha.L.K)%*%(alpha.L.K.star.alpha.L.K %*% (y) %*% v.beta.star.beta + (alpha.L.K.star.alpha.L.K%*%cov.y.s.p%*%v.beta.star.beta) - (x_encode + intercept.x)))%*%t(v.beta.star.beta)%*%MASS::ginv((v.beta.star.beta)%*%t(v.beta.star.beta)))))}else{anchor_y.cov.feature}
+        v.V.star.inv.beta = t(alpha.L.K.star.alpha.L.K%*%(y + cov.y.s.p + cov.y.f.p))%*%(alpha.L.K.star.alpha.L.K%*%(y + cov.y.s.p + cov.y.f.p))
+        v.beta.star.beta = if (is.null(anchor_y.feature)){MASS::ginv(v.V.star.inv.beta)%*%t(alpha.L.K.star.alpha.L.K%*%(y + cov.y.s.p + cov.y.f.p))%*%((x_encode + intercept.encode))}else{anchor_y.feature[y.v.ids,]}
+
+
+        y.gamma <- if(is.null(anchor_y.cov.sample)){MASS::ginv((cov.y.s)%*%t(cov.y.s))%*%(cov.y.s)%*%(((MASS::ginv(t(alpha.L.K.star.alpha.L.K)%*%(alpha.L.K.star.alpha.L.K))%*%t(alpha.L.K.star.alpha.L.K)%*%((alpha.L.K.star.alpha.L.K %*% (y) %*% v.beta.star.beta + (alpha.L.K.star.alpha.L.K%*%cov.y.f.p%*%v.beta.star.beta)  - (x_encode + intercept.encode)))%*%t(v.beta.star.beta)%*%MASS::ginv((v.beta.star.beta)%*%t(v.beta.star.beta)))))}else{anchor_y.cov.sample}
+        y.delta <- if(is.null(anchor_y.cov.feature)){MASS::ginv(t(cov.y.f)%*%(cov.y.f))%*%t(cov.y.f)%*%((t((MASS::ginv(t(alpha.L.K.star.alpha.L.K)%*%(alpha.L.K.star.alpha.L.K))%*%t(alpha.L.K.star.alpha.L.K)%*%(alpha.L.K.star.alpha.L.K %*% (y) %*% v.beta.star.beta + (alpha.L.K.star.alpha.L.K%*%cov.y.s.p%*%v.beta.star.beta) - (x_encode + intercept.encode)))%*%t(v.beta.star.beta)%*%MASS::ginv((v.beta.star.beta)%*%t(v.beta.star.beta)))))}else{anchor_y.cov.feature}
 
         x.gamma <- if(is.null(anchor_x.cov.sample)){MASS::ginv((cov.x.s)%*%t(cov.x.s))%*%(cov.x.s)%*%(((MASS::ginv(t(alpha.L.J.star.alpha.L.J)%*%(alpha.L.J.star.alpha.L.J))%*%t(alpha.L.J.star.alpha.L.J)%*%((alpha.L.J.star.alpha.L.J%*%(x)%*%u.beta.star.beta + (alpha.L.J.star.alpha.L.J%*%cov.x.f.p%*%u.beta.star.beta)) - y_encode)%*%t(u.beta.star.beta)%*%MASS::ginv((u.beta.star.beta)%*%t(u.beta.star.beta)))))}else{anchor_x.cov.sample}
         x.delta <- if(is.null(anchor_x.cov.feature)){MASS::ginv(t(cov.x.f)%*%(cov.x.f))%*%t(cov.x.f)%*%((t((MASS::ginv(t(alpha.L.J.star.alpha.L.J)%*%(alpha.L.J.star.alpha.L.J))%*%t(alpha.L.J.star.alpha.L.J)%*%(alpha.L.J.star.alpha.L.J%*%(x)%*%u.beta.star.beta + (alpha.L.J.star.alpha.L.J%*%cov.x.s.p%*%u.beta.star.beta) - y_encode))%*%t(u.beta.star.beta)%*%MASS::ginv((u.beta.star.beta)%*%t(u.beta.star.beta)))))}else{anchor_x.cov.feature}
 
 
-        cov.y.s.p <- (t(covariates_list$covariates_y.sample)[y.g.ids,]%*%y.gamma.final[,y.v.ids])
-        cov.x.s.p <- (t(covariates_list$covariates_x.sample)[x.g.ids,]%*%x.gamma.final[,x.v.ids])
-
-        cov.y.f.p <- t(covariates_list$covariates_y.feature[y.v.ids,]%*%y.delta.final[,y.g.ids])
-        cov.x.f.p <- t(covariates_list$covariates_x.feature[x.v.ids,]%*%x.delta.final[,y.g.ids])
-
-        y_encode <- alpha.L.K.star.alpha.L.K%*%y%*%v.beta.star.beta + (alpha.L.K.star.alpha.L.K%*%(cov.y.s.p)%*%v.beta.star.beta) + (alpha.L.K.star.alpha.L.K%*% (cov.y.f.p) %*% v.beta.star.beta)
-        x_encode <- alpha.L.J.star.alpha.L.J%*%x%*%u.beta.star.beta + (alpha.L.J.star.alpha.L.J%*%(cov.x.s.p)%*%u.beta.star.beta) + ( alpha.L.J.star.alpha.L.J%*%(cov.x.f.p) %*% u.beta.star.beta)
-
-        intercept.x <- y_encode - x_encode
-
-        internal_list$intercept.x = intercept.x
-        internal_list$y_encode = y_encode
-        internal_list$x_encode = x_encode
         internal_list$alpha.L.J.star.alpha.L.J = alpha.L.J.star.alpha.L.J
         internal_list$alpha.L.K.star.alpha.L.K = alpha.L.K.star.alpha.L.K
         internal_list$V.star.inv.alpha.L.J = V.star.inv.alpha.L.J
@@ -380,12 +335,8 @@ gcproc <- function(x,
     }
 
 
+
     if (update_batched_parameters==T){
-
-      y_encode.final <- 0
-      x_encode.final <- 0
-
-      intercept_x.final <- 0
 
       y.gamma.internal <- 0
       y.delta.internal <- 0
@@ -394,14 +345,11 @@ gcproc <- function(x,
 
       for (i in 1:config$batches){
 
+
+
         if (is.character(to_return[[i]])){
           to_return[[i]] <- internal_list
         }
-
-        y_encode.final <- y_encode.final + to_return[[i]]$y_encode / config$batches
-        x_encode.final <- x_encode.final + to_return[[i]]$x_encode / config$batches
-
-        intercept.x <- to_return[[i]]$intercept.x
 
         alpha.L.J.star.alpha.L.J <- to_return[[i]]$alpha.L.J.star.alpha.L.J
         alpha.L.K.star.alpha.L.K <- to_return[[i]]$alpha.L.K.star.alpha.L.K
@@ -424,9 +372,6 @@ gcproc <- function(x,
         x.v.ids <- to_return[[i]]$x.v.ids
         y.v.ids <- to_return[[i]]$y.v.ids
 
-        b.a <- config$eta
-        a.b <- c(1-b.a)
-
         alpha.L.J.star.alpha.L.J.final[,x.g.ids] <- a.b*alpha.L.J.star.alpha.L.J.final[,x.g.ids] + b.a*alpha.L.J.star.alpha.L.J
         V.star.inv.alpha.L.J.final[x.g.ids,x.g.ids] <- a.b*V.star.inv.alpha.L.J.final[x.g.ids,x.g.ids] + b.a*V.star.inv.alpha.L.J
 
@@ -439,22 +384,37 @@ gcproc <- function(x,
         v.beta.star.beta.final[y.v.ids,] <- a.b*v.beta.star.beta.final[y.v.ids,] + b.a*v.beta.star.beta
         v.V.star.inv.beta.final[y.v.ids,y.v.ids] <- a.b*v.V.star.inv.beta.final[y.v.ids,y.v.ids] + b.a*v.V.star.inv.beta
 
-        intercept_x.final <- intercept_x.final + intercept.x / config$batches
-
-        y.gamma.internal <- y.gamma.internal + y.gamma / config$batches
-        y.delta.internal <- y.delta.internal + y.delta / config$batches
-        x.gamma.internal <- x.gamma.internal + x.gamma / config$batches
-        x.delta.internal <- x.delta.internal + x.delta / config$batches
-
-        y.gamma.final[,y.v.ids] <- a.b*y.gamma.final[,y.v.ids] + b.a*y.gamma.internal
-        y.delta.final[,y.g.ids] <- a.b*y.delta.final[,y.g.ids] + b.a*y.delta.internal
-        x.gamma.final[,x.v.ids] <- a.b*x.gamma.final[,x.v.ids] + b.a*x.gamma.internal
-        x.delta.final[,x.g.ids] <- a.b*x.delta.final[,x.g.ids] + b.a*x.delta.internal
-
+        y.gamma.final[,y.v.ids] <- a.b*y.gamma.final[,y.v.ids] + b.a*y.gamma
+        y.delta.final[,y.g.ids] <- a.b*y.delta.final[,y.g.ids] + b.a*y.delta
+        x.gamma.final[,x.v.ids] <- a.b*x.gamma.final[,x.v.ids] + b.a*x.gamma
+        x.delta.final[,x.g.ids] <- a.b*x.delta.final[,x.g.ids] + b.a*x.delta
 
       }
 
     }
+
+
+    if (epoch_run==T){
+
+      cov.y.s.p <- (t(covariates_list$covariates_y.sample)%*%y.gamma.final)
+      cov.x.s.p <- (t(covariates_list$covariates_x.sample)%*%x.gamma.final)
+
+      cov.y.f.p <- t(covariates_list$covariates_y.feature%*%y.delta.final)
+      cov.x.f.p <- t(covariates_list$covariates_x.feature%*%x.delta.final)
+
+      Y_encode <- (alpha.L.K.star.alpha.L.K.final%*%(Y.y + cov.y.s.p + cov.y.f.p)%*%(v.beta.star.beta.final))
+      Y_code <- (MASS::ginv((alpha.L.K.star.alpha.L.K.final)%*%t(alpha.L.K.star.alpha.L.K.final))%*%Y_encode%*%MASS::ginv(t(v.beta.star.beta.final)%*%(v.beta.star.beta.final)))
+
+      X_encode <- (alpha.L.J.star.alpha.L.J.final%*%(X.x + cov.x.s.p + cov.x.f.p)%*%(u.beta.star.beta.final))
+      X_code <- (MASS::ginv((alpha.L.J.star.alpha.L.J.final)%*%t(alpha.L.J.star.alpha.L.J.final))%*%(X_encode+intercept.encode)%*%MASS::ginv(t(u.beta.star.beta.final)%*%(u.beta.star.beta.final)))
+
+      # intercept.code = Y_code - X_code
+      # intercept.encode = Y_encode - X_encode
+
+      intercept.code <- intercept.encode <- 0
+    }
+
+
 
     if (check_anchors==T){
 
@@ -466,75 +426,72 @@ gcproc <- function(x,
 
     }
 
+    if (!is.null(predict)){
 
-    if (finalise_epoch==T){
+      predictions.x <- (t(alpha.L.J.star.alpha.L.J.final)%*%((X_code+intercept.code))%*%t(u.beta.star.beta.final))[which(predict$x==1,arr.ind = T)]
+      predictions.y <- (t(alpha.L.K.star.alpha.L.K.final)%*%((Y_code))%*%t(v.beta.star.beta.final))[which(predict$y==1,arr.ind = T)]
 
-      cov.y.s.p <- (t(covariates_list$covariates_y.sample)%*%y.gamma.final)
-      cov.x.s.p <- (t(covariates_list$covariates_x.sample)%*%x.gamma.final)
 
-      cov.y.f.p <- t(covariates_list$covariates_y.feature%*%y.delta.final)
-      cov.x.f.p <- t(covariates_list$covariates_x.feature%*%x.delta.final)
+      if (!is.null(predict$x)){
+        X.x[which(predict$x==1,arr.ind = T)] <- predictions.x
+      }
+      if (!is.null(predict$y)){
+        Y.y[which(predict$y==1,arr.ind = T)] <- predictions.y
+      }
 
-      Y_code <- (MASS::ginv((alpha.L.K.star.alpha.L.K.final)%*%t(alpha.L.K.star.alpha.L.K.final))%*%alpha.L.K.star.alpha.L.K.final%*%(Y.y + cov.y.s.p + cov.y.f.p)%*%(v.beta.star.beta.final)%*%MASS::ginv(t(v.beta.star.beta.final)%*%(v.beta.star.beta.final)))
-
-      X_code <- (MASS::ginv((alpha.L.J.star.alpha.L.J.final)%*%t(alpha.L.J.star.alpha.L.J.final))%*%alpha.L.J.star.alpha.L.J.final%*%(X.x + cov.x.s.p + cov.x.f.p)%*%(u.beta.star.beta.final)%*%MASS::ginv(t(u.beta.star.beta.final)%*%(u.beta.star.beta.final)))
-        (MASS::ginv((alpha.L.J.star.alpha.L.J.final)%*%t(alpha.L.J.star.alpha.L.J.final))%*%intercept_x.final%*%MASS::ginv(t(u.beta.star.beta.final)%*%(u.beta.star.beta.final)))
 
     }
+
 
     matrix.residuals <- Y_code - X_code
     llik.vec <- c(llik.vec, mean(mclust::dmvnorm(matrix.residuals,sigma = diag(diag(t(matrix.residuals)%*%(matrix.residuals)/dim(matrix.residuals)[2])),log = T)))
     score.vec <- c(score.vec, (mean(abs(matrix.residuals))))
-    MSE <- mean(tail(score.vec,5))
+    MSE <- mean(tail(score.vec,2))
+    prev_MSE <- mean(tail(score.vec,4)[1:2])
 
+    llik <- mean(tail(llik.vec,2))
+    prev_llik <- mean(tail(llik.vec,4)[1:2])
 
     if (config$verbose == T){
-      print(paste("Iteration: ",count," with Tolerance of: ",MSE," and Log-Lik of: ",tail(llik.vec,1),sep=""))
+      print(paste("Iteration: ",count," with Tolerance of: ",abs(llik-prev_llik)," and Log-Lik of: ",tail(llik.vec,1),sep=""))
     }
 
     # Check convergence
     if (count>config$min_iter){
-      if ((count>config$max_iter) | MSE < config$tol ){
+      if ((count>config$max_iter) | abs(llik - prev_llik) < config$tol ){
         break
       }
     }
+
+    # Step sizes
+    b.a <- max(1e-10,config$eta * (1/(count)))
+    a.b <- c(1-b.a)
+
     count = count + 1
 
+
   }
-
-
-  # Calculate encoding intercept for user purposes (not needed in learning)
-
-  cov.y.s.p <- (t(covariates_list$covariates_y.sample)%*%y.gamma.final)
-  cov.x.s.p <- (t(covariates_list$covariates_x.sample)%*%x.gamma.final)
-
-  cov.y.f.p <- t(covariates_list$covariates_y.feature%*%y.delta.final)
-  cov.x.f.p <- t(covariates_list$covariates_x.feature%*%x.delta.final)
-
-  y_encode.final <- alpha.L.K.star.alpha.L.K.final%*%Y.y%*%v.beta.star.beta.final + (alpha.L.K.star.alpha.L.K.final%*%(cov.y.s.p)%*%v.beta.star.beta.final) + (alpha.L.K.star.alpha.L.K.final%*% (cov.y.f.p) %*% v.beta.star.beta.final)
-  x_encode.final <- alpha.L.J.star.alpha.L.J.final%*%X.x%*%u.beta.star.beta.final + (alpha.L.J.star.alpha.L.J.final%*%(cov.x.s.p)%*%u.beta.star.beta.final) + ( alpha.L.J.star.alpha.L.J.final%*%(cov.x.f.p) %*% u.beta.star.beta.final)
-
-  intercept_x.final <- y_encode.final - x_encode.final
 
   return(list(
 
     main.parameters = list(
-      alpha.L.J = alpha.L.J.star.alpha.L.J.final,
       alpha.L.K = alpha.L.K.star.alpha.L.K.final,
-      u.beta = u.beta.star.beta.final,
       v.beta = v.beta.star.beta.final,
+      alpha.L.J = alpha.L.J.star.alpha.L.J.final,
+      u.beta = u.beta.star.beta.final,
       y.gamma = y.gamma.final,
       y.delta = y.delta.final,
       x.gamma = x.gamma.final,
-      x.delta = x.delta.final,
-      intercept_x = intercept_x.final
+      x.delta = x.delta.final
     ),
 
     code = list(
+      intercept.code = intercept.code,
+      intercept.encode = intercept.encode,
       X_code = X_code,
       Y_code = Y_code,
-      X_encode = x_encode.final,
-      Y_encode = y_encode.final
+      X_encode = X_encode,
+      Y_encode = Y_encode
     ),
 
     meta.parameters = config,
@@ -549,7 +506,3 @@ gcproc <- function(x,
 
 
 }
-
-
-
-
