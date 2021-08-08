@@ -266,6 +266,12 @@ gcproc <- function(x,
         x.v.ids <- x.v.sample[[i]]
         y.v.ids <- y.v.sample[[i]]
 
+        x.c.g.ids <- x.c.g.sample[[i]]
+        y.c.g.ids <- y.g.sample[[i]]
+
+        x.c.v.ids <- x.c.v.sample[[i]]
+        y.c.v.ids <- y.c.v.sample[[i]]
+
         alpha.L.J.star.alpha.L.J <- alpha.L.J.star.alpha.L.J.final[,x.g.ids]
         alpha.L.K.star.alpha.L.K <- alpha.L.K.star.alpha.L.K.final[,y.g.ids]
 
@@ -278,15 +284,15 @@ gcproc <- function(x,
         v.V.star.inv.beta <- v.V.star.inv.beta.final[y.v.ids,y.v.ids]
         u.V.star.inv.beta <- u.V.star.inv.beta.final[x.v.ids,x.v.ids]
 
-        cov.y.s <- covariates_list$covariates_y.sample[y.c.g.sample,y.g.ids]
-        cov.y.f <- covariates_list$covariates_y.feature[y.v.ids,y.c.v.sample]
-        cov.x.s <- covariates_list$covariates_x.sample[x.c.g.sample,x.g.ids]
-        cov.x.f <- covariates_list$covariates_x.feature[x.v.ids,x.c.v.sample]
+        cov.y.s <- covariates_list$covariates_y.ids[y.c.g.ids,y.g.ids]
+        cov.y.f <- covariates_list$covariates_y.feature[y.v.ids,y.c.v.ids]
+        cov.x.s <- covariates_list$covariates_x.ids[x.c.g.ids,x.g.ids]
+        cov.x.f <- covariates_list$covariates_x.feature[x.v.ids,x.c.v.ids]
 
-        cov.y.s.p <- (t(covariates_list$covariates_y.sample)[y.g.ids,y.c.g.sample]%*%y.gamma.final[y.c.g.sample,y.v.ids])
-        cov.x.s.p <- (t(covariates_list$covariates_x.sample)[x.g.ids,x.c.g.sample]%*%x.gamma.final[x.c.g.sample,x.v.ids])
-        cov.y.f.p <- t(covariates_list$covariates_y.feature[y.v.ids,y.c.v.sample]%*%y.delta.final[y.c.v.sample,y.g.ids])
-        cov.x.f.p <- t(covariates_list$covariates_x.feature[x.v.ids,x.c.v.sample]%*%x.delta.final[x.c.v.sample,x.g.ids])
+        cov.y.s.p <- (t(covariates_list$covariates_y.ids)[y.g.ids,y.c.g.ids]%*%y.gamma.final[y.c.g.ids,y.v.ids])
+        cov.x.s.p <- (t(covariates_list$covariates_x.ids)[x.g.ids,x.c.g.ids]%*%x.gamma.final[x.c.g.ids,x.v.ids])
+        cov.y.f.p <- t(covariates_list$covariates_y.feature[y.v.ids,y.c.v.ids]%*%y.delta.final[y.c.v.ids,y.g.ids])
+        cov.x.f.p <- t(covariates_list$covariates_x.feature[x.v.ids,x.c.v.ids]%*%x.delta.final[x.c.v.ids,x.g.ids])
 
         y <- (Y.y)[y.g.ids,y.v.ids]
         x <- (X.x)[x.g.ids,x.v.ids]
