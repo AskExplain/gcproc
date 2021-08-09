@@ -43,13 +43,16 @@ gcproc <- function(x,
 
 ){
 
+  x <- as.matrix(x)
+  y <- as.matrix(y)
+
 
   # Step sizes
   b.a <- config$eta
   a.b <- c(1-b.a)
 
 
-  config$batches <- ceiling(max(c(dim(x),dim(y)))/64)
+  config$batches <- ceiling(max(c(dim(x),dim(y)))/128)
 
   prepare_data = TRUE
   initialise = TRUE
@@ -124,26 +127,7 @@ gcproc <- function(x,
     count = 1
     llik.vec <- rep(0,10)
     score.vec <- rep(0,10)
-
-
-    p1 <- p2 <- 0
-
-    # Prepare priors
-    a0.beta = p1
-    b0.beta = p2
-    c0.beta = p1
-    d0.beta = p2
-
-    a0.alpha.L.J = p1
-    b0.alpha.L.J = p2
-    c0.alpha.L.J = p1
-    d0.alpha.L.J = p2
-
-    a0.alpha.L.K = p1
-    b0.alpha.L.K = p2
-    c0.alpha.L.K = p1
-    d0.alpha.L.K = p2
-
+    best.predict_MSE <- sum(abs(y)) + sum(abs(x))
 
     if (run_covariates==T){
 
@@ -181,10 +165,10 @@ gcproc <- function(x,
     initial.param$pivot_x.sample <- if (is.null(pivots$pivot_x.sample)){initial.param$pivot_x.sample}else{pivots$pivot_x.sample}
     initial.param$pivot_y.feature <- if (is.null(pivots$pivot_y.feature)){initial.param$pivot_y.feature}else{pivots$pivot_y.feature}
     initial.param$pivot_x.feature <- if (is.null(pivots$pivot_x.feature)){initial.param$pivot_x.feature}else{pivots$pivot_x.feature}
-    initial.param$y.gamma <- if (is.null(pivots$y.gamma)){((covariates_list$covariates_y.sample)%*%(((Y.y))))}else{pivots$y.gamma}
-    initial.param$y.delta <- if (is.null(pivots$y.delta)){(t(covariates_list$covariates_y.feature)%*%((t(Y.y))))}else{pivots$y.delta}
-    initial.param$x.gamma <- if (is.null(pivots$x.gamma)){((covariates_list$covariates_x.sample)%*%(((X.x))))}else{pivots$x.gamma}
-    initial.param$x.delta <- if (is.null(pivots$x.delta)){(t(covariates_list$covariates_x.feature)%*%((t(X.x))))}else{pivots$x.delta}
+    initial.param$y.gamma <- if (is.null(pivots$y.gamma)){(MASS::ginv((covariates_list$covariates_y.sample)%*%t(covariates_list$covariates_y.sample))%*%(covariates_list$covariates_y.sample)%*%(((Y.y))))}else{pivots$y.gamma}
+    initial.param$y.delta <- if (is.null(pivots$y.delta)){(MASS::ginv(t(covariates_list$covariates_y.feature)%*%(covariates_list$covariates_y.feature))%*%t(covariates_list$covariates_y.feature)%*%((t(Y.y))))}else{pivots$y.delta}
+    initial.param$x.gamma <- if (is.null(pivots$x.gamma)){(MASS::ginv((covariates_list$covariates_x.sample)%*%t(covariates_list$covariates_x.sample))%*%(covariates_list$covariates_x.sample)%*%(((X.x))))}else{pivots$x.gamma}
+    initial.param$x.delta <- if (is.null(pivots$x.delta)){(MASS::ginv(t(covariates_list$covariates_x.feature)%*%(covariates_list$covariates_x.feature))%*%t(covariates_list$covariates_x.feature)%*%((t(X.x))))}else{pivots$x.delta}
 
     # Check anchoring parameters
     alpha.L.K.star.alpha.L.K.final <- if (is.null(anchor_y.sample)){initial.param$pivot_y.sample}else{anchor_y.sample}
@@ -247,16 +231,10 @@ gcproc <- function(x,
     if (variational_gradient_descent_updates == T){
       set.seed(seed+count)
 
-      x.g.sample <- lapply(c(1:config$batches),function(X){set.seed(X+seed+count);sample(c(1:dim(X.x)[1]),size = if(dim(X.x)[1]<64){dim(X.x)[1]}else{64})})
-      y.g.sample <- lapply(c(1:config$batches),function(X){set.seed(X+seed+count);sample(c(1:dim(Y.y)[1]),size = if(dim(Y.y)[1]<64){dim(Y.y)[1]}else{64})})
-      x.v.sample <- lapply(c(1:config$batches),function(X){set.seed(X+seed+count);sample(c(1:dim(X.x)[2]),size = if(dim(X.x)[2]<64){dim(X.x)[2]}else{64})})
-      y.v.sample <- lapply(c(1:config$batches),function(X){set.seed(X+seed+count);sample(c(1:dim(Y.y)[2]),size = if(dim(Y.y)[2]<64){dim(Y.y)[2]}else{64})})
-
-      x.c.g.sample <- lapply(c(1:config$batches),function(X){set.seed(X+seed+count);sample(c(1:dim(covariates_list$covariates_x.sample)[1]),size = if(dim(covariates_list$covariates_x.sample)[1]<64){dim(covariates_list$covariates_x.sample)[1]}else{64})})
-      y.c.g.sample <- lapply(c(1:config$batches),function(X){set.seed(X+seed+count);sample(c(1:dim(covariates_list$covariates_y.sample)[1]),size = if(dim(covariates_list$covariates_y.sample)[1]<64){dim(covariates_list$covariates_y.sample)[1]}else{64})})
-      x.c.v.sample <- lapply(c(1:config$batches),function(X){set.seed(X+seed+count);sample(c(1:dim(covariates_list$covariates_x.feature)[2]),size = if(dim(covariates_list$covariates_x.feature)[2]<64){dim(covariates_list$covariates_x.feature)[2]}else{64})})
-      y.c.v.sample <- lapply(c(1:config$batches),function(X){set.seed(X+seed+count);sample(c(1:dim(covariates_list$covariates_y.feature)[2]),size = if(dim(covariates_list$covariates_y.feature)[2]<64){dim(covariates_list$covariates_y.feature)[2]}else{64})})
-
+      x.g.sample <- lapply(c(1:config$batches),function(X){set.seed(X+seed+count);sample(c(1:dim(X.x)[1]),size = if(dim(X.x)[1]<128){dim(X.x)[1]}else{128})})
+      y.g.sample <- lapply(c(1:config$batches),function(X){set.seed(X+seed+count);sample(c(1:dim(Y.y)[1]),size = if(dim(Y.y)[1]<128){dim(Y.y)[1]}else{128})})
+      x.v.sample <- lapply(c(1:config$batches),function(X){set.seed(X+seed+count);sample(c(1:dim(X.x)[2]),size = if(dim(X.x)[2]<128){dim(X.x)[2]}else{128})})
+      y.v.sample <- lapply(c(1:config$batches),function(X){set.seed(X+seed+count);sample(c(1:dim(Y.y)[2]),size = if(dim(Y.y)[2]<128){dim(Y.y)[2]}else{128})})
 
       to_return <- parallel::mclapply(c(1:config$batches),function(i){
 
@@ -265,12 +243,6 @@ gcproc <- function(x,
 
         x.v.ids <- x.v.sample[[i]]
         y.v.ids <- y.v.sample[[i]]
-
-        x.c.g.ids <- x.c.g.sample[[i]]
-        y.c.g.ids <- y.g.sample[[i]]
-
-        x.c.v.ids <- x.c.v.sample[[i]]
-        y.c.v.ids <- y.c.v.sample[[i]]
 
         alpha.L.J.star.alpha.L.J <- alpha.L.J.star.alpha.L.J.final[,x.g.ids]
         alpha.L.K.star.alpha.L.K <- alpha.L.K.star.alpha.L.K.final[,y.g.ids]
@@ -284,21 +256,22 @@ gcproc <- function(x,
         v.V.star.inv.beta <- v.V.star.inv.beta.final[y.v.ids,y.v.ids]
         u.V.star.inv.beta <- u.V.star.inv.beta.final[x.v.ids,x.v.ids]
 
-        cov.y.s <- covariates_list$covariates_y.ids[y.c.g.ids,y.g.ids]
-        cov.y.f <- covariates_list$covariates_y.feature[y.v.ids,y.c.v.ids]
-        cov.x.s <- covariates_list$covariates_x.ids[x.c.g.ids,x.g.ids]
-        cov.x.f <- covariates_list$covariates_x.feature[x.v.ids,x.c.v.ids]
+        cov.y.s <- covariates_list$covariates_y.sample[,y.g.ids]
+        cov.y.f <- covariates_list$covariates_y.feature[y.v.ids,]
+        cov.x.s <- covariates_list$covariates_x.sample[,x.g.ids]
+        cov.x.f <- covariates_list$covariates_x.feature[x.v.ids,]
 
-        cov.y.s.p <- (t(covariates_list$covariates_y.ids)[y.g.ids,y.c.g.ids]%*%y.gamma.final[y.c.g.ids,y.v.ids])
-        cov.x.s.p <- (t(covariates_list$covariates_x.ids)[x.g.ids,x.c.g.ids]%*%x.gamma.final[x.c.g.ids,x.v.ids])
-        cov.y.f.p <- t(covariates_list$covariates_y.feature[y.v.ids,y.c.v.ids]%*%y.delta.final[y.c.v.ids,y.g.ids])
-        cov.x.f.p <- t(covariates_list$covariates_x.feature[x.v.ids,x.c.v.ids]%*%x.delta.final[x.c.v.ids,x.g.ids])
+        cov.y.s.p <- (t(covariates_list$covariates_y.sample)[y.g.ids,]%*%y.gamma.final[,y.v.ids])
+        cov.x.s.p <- (t(covariates_list$covariates_x.sample)[x.g.ids,]%*%x.gamma.final[,x.v.ids])
+
+        cov.y.f.p <- t(covariates_list$covariates_y.feature[y.v.ids,]%*%y.delta.final[,y.g.ids])
+        cov.x.f.p <- t(covariates_list$covariates_x.feature[x.v.ids,]%*%x.delta.final[,x.g.ids])
 
         y <- (Y.y)[y.g.ids,y.v.ids]
         x <- (X.x)[x.g.ids,x.v.ids]
 
-        y_encode <- (alpha.L.K.star.alpha.L.K%*%(y + cov.y.s.p + cov.y.f.p)%*%(v.beta.star.beta))
-        x_encode <- (alpha.L.J.star.alpha.L.J%*%(x + cov.x.s.p + cov.x.f.p)%*%(u.beta.star.beta))
+        y_encode <- Y_encode
+        x_encode <- X_encode
 
         V.star.inv.alpha.L.J = ((x + cov.x.f.p + cov.x.s.p)%*%u.beta.star.beta)%*%t((x + cov.x.f.p + cov.x.s.p)%*%u.beta.star.beta)
         alpha.L.J.star.alpha.L.J = if (is.null(anchor_x.sample)){(y_encode)%*%t((x + cov.x.f.p + cov.x.s.p)%*%u.beta.star.beta)%*%MASS::ginv(V.star.inv.alpha.L.J)}else{anchor_x.sample[,x.g.ids]}
@@ -338,10 +311,6 @@ gcproc <- function(x,
         internal_list$x.g.ids = x.g.ids
         internal_list$x.v.ids = x.v.ids
         internal_list$y.v.ids = y.v.ids
-        internal_list$x.c.g.ids = x.c.g.ids
-        internal_list$y.c.g.ids = y.c.g.ids
-        internal_list$x.c.v.ids = x.c.v.ids
-        internal_list$y.c.v.ids = y.c.v.ids
 
         return(internal_list)
       },mc.silent = config$verbose,mc.cores = config$cores)
@@ -383,14 +352,9 @@ gcproc <- function(x,
 
         x.g.ids <- to_return[[i]]$x.g.ids
         y.g.ids <- to_return[[i]]$y.g.ids
+
         x.v.ids <- to_return[[i]]$x.v.ids
         y.v.ids <- to_return[[i]]$y.v.ids
-
-        x.c.g.ids <- to_return[[i]]$x.c.g.ids
-        y.c.g.ids <- to_return[[i]]$y.c.g.ids
-        x.c.v.ids <- to_return[[i]]$x.c.v.ids
-        y.c.v.ids <- to_return[[i]]$y.c.v.ids
-
 
         alpha.L.J.star.alpha.L.J.final[,x.g.ids] <- a.b*alpha.L.J.star.alpha.L.J.final[,x.g.ids] + b.a*alpha.L.J.star.alpha.L.J
         V.star.inv.alpha.L.J.final[x.g.ids,x.g.ids] <- a.b*V.star.inv.alpha.L.J.final[x.g.ids,x.g.ids] + b.a*V.star.inv.alpha.L.J
@@ -404,10 +368,10 @@ gcproc <- function(x,
         v.beta.star.beta.final[y.v.ids,] <- a.b*v.beta.star.beta.final[y.v.ids,] + b.a*v.beta.star.beta
         v.V.star.inv.beta.final[y.v.ids,y.v.ids] <- a.b*v.V.star.inv.beta.final[y.v.ids,y.v.ids] + b.a*v.V.star.inv.beta
 
-        y.gamma.final[y.g.ids,y.c.g.ids] <- a.b*y.gamma.final[y.g.ids,y.c.g.ids] + b.a*y.gamma
-        y.delta.final[y.c.v.ids,y.v.ids] <- a.b*y.delta.final[y.c.v.ids,y.v.ids] + b.a*y.delta
-        x.gamma.final[x.g.ids,x.c.g.ids] <- a.b*x.gamma.final[x.g.ids,x.c.g.ids] + b.a*x.gamma
-        x.delta.final[x.c.v.ids,x.v.ids] <- a.b*x.delta.final[x.c.v.ids,x.v.ids] + b.a*x.delta
+        y.gamma.final[,y.v.ids] <- a.b*y.gamma.final[,y.v.ids] + b.a*y.gamma
+        y.delta.final[,y.g.ids] <- a.b*y.delta.final[,y.g.ids] + b.a*y.delta
+        x.gamma.final[,x.v.ids] <- a.b*x.gamma.final[,x.v.ids] + b.a*x.gamma
+        x.delta.final[,x.g.ids] <- a.b*x.delta.final[,x.g.ids] + b.a*x.delta
 
       }
 
@@ -416,10 +380,16 @@ gcproc <- function(x,
 
     if (epoch_run==T){
 
-      Y_encode <- (alpha.L.K.star.alpha.L.K.final%*%(Y.y)%*%(v.beta.star.beta.final))
+      cov.y.s.p <- (t(covariates_list$covariates_y.sample)%*%y.gamma.final)
+      cov.x.s.p <- (t(covariates_list$covariates_x.sample)%*%x.gamma.final)
+
+      cov.y.f.p <- t(covariates_list$covariates_y.feature%*%y.delta.final)
+      cov.x.f.p <- t(covariates_list$covariates_x.feature%*%x.delta.final)
+
+      Y_encode <- (alpha.L.K.star.alpha.L.K.final%*%(y + cov.y.s.p + cov.y.f.p)%*%(v.beta.star.beta.final))
       Y_code <- (MASS::ginv((alpha.L.K.star.alpha.L.K.final)%*%t(alpha.L.K.star.alpha.L.K.final))%*%Y_encode%*%MASS::ginv(t(v.beta.star.beta.final)%*%(v.beta.star.beta.final)))
 
-      X_encode <- (alpha.L.J.star.alpha.L.J.final%*%(X.x)%*%(u.beta.star.beta.final))
+      X_encode <- (alpha.L.J.star.alpha.L.J.final%*%(x + cov.x.s.p + cov.x.f.p)%*%(u.beta.star.beta.final))
       X_code <- (MASS::ginv((alpha.L.J.star.alpha.L.J.final)%*%t(alpha.L.J.star.alpha.L.J.final))%*%(X_encode+intercept.encode)%*%MASS::ginv(t(u.beta.star.beta.final)%*%(u.beta.star.beta.final)))
 
       # intercept.code = Y_code - X_code
@@ -440,17 +410,28 @@ gcproc <- function(x,
 
     }
 
-    if (!is.null(predict)){
+    if (!is.null(predict) & count > 100 ){
 
-      predictions.x <- (t(alpha.L.J.star.alpha.L.J.final)%*%((X_code+intercept.code))%*%t(u.beta.star.beta.final))[which(predict$x==1,arr.ind = T)]
-      predictions.y <- (t(alpha.L.K.star.alpha.L.K.final)%*%((Y_code))%*%t(v.beta.star.beta.final))[which(predict$y==1,arr.ind = T)]
+      predictions.x <- (t(alpha.L.J.star.alpha.L.J.final)%*%((X_code+intercept.code))%*%t(u.beta.star.beta.final))
+      predictions.y <- (t(alpha.L.K.star.alpha.L.K.final)%*%((Y_code))%*%t(v.beta.star.beta.final))
+
+      main.prediction <- (predictions.x+predictions.y)/2
+
+      predict_MSE <- mean(abs((((x+y)/2 - main.prediction)*(predict$x==0))))
 
 
-      if (!is.null(predict$x)){
-        X.x[which(predict$x==1,arr.ind = T)] <- predictions.x
-      }
-      if (!is.null(predict$y)){
-        Y.y[which(predict$y==1,arr.ind = T)] <- predictions.y
+      if (best.predict_MSE*Inf > predict_MSE){
+        best.predict_MSE <- predict_MSE
+
+        if (!is.null(predict$x)){
+          x[which(predict$x==1,arr.ind = T)] <- main.prediction[which(predict$x==1,arr.ind = T)]
+        }
+        predict$predictions.x <- main.prediction
+
+        if (!is.null(predict$y)){
+          y[which(predict$y==1,arr.ind = T)] <- main.prediction[which(predict$y==1,arr.ind = T)]
+        }
+        predict$predictions.y <- main.prediction
       }
 
 
@@ -478,13 +459,41 @@ gcproc <- function(x,
     }
 
     # Step sizes
-    b.a <- max(1e-10,config$eta * (1/(count)))
+    b.a <- max(1e-3,config$eta * (1/(count)))
     a.b <- c(1-b.a)
 
     count = count + 1
 
 
+    debug=T
+    if (debug==T & count > 100+1){
+
+      predictions.x <- (predict$predictions.x)
+      predictions.y <- (predict$predictions.y)
+
+      par(mfcol=c(3,2))
+      plot(predictions.y[-train_id,id_col]~data[-train_id,id_col],main=summary(lm(predictions.y[-train_id,id_col]~data[-train_id,id_col]))$r.squared)
+      abline(lm(predictions.y[-train_id,id_col]~data[-train_id,id_col]),col="red")
+
+      plot(predictions.x[-train_id,id_col]~data[-train_id,id_col],main=summary(lm(predictions.x[-train_id,id_col]~data[-train_id,id_col]))$r.squared)
+      abline(lm(predictions.x[-train_id,id_col]~data[-train_id,id_col]),col="red")
+
+      plot(glmnet_predict~data[-train_id,id_col],main=summary(lm(glmnet_predict~data[-train_id,id_col]))$r.squared)
+      abline(lm(glmnet_predict~data[-train_id,id_col]),col="red")
+
+      mean(abs(glmnet_predict-data[-train_id,id_col]))
+      mean(abs(predictions.x[-train_id,id_col]-data[-train_id,id_col]))
+
+      plot(predictions.y[,id_col]~data[,id_col],main=summary(lm(predictions.y[,id_col]~data[,id_col]))$r.squared)
+      abline(lm(predictions.y[,id_col]~data[,id_col]),col="red")
+
+      plot(predictions.x[,id_col]~data[,id_col],main=summary(lm(predictions.x[,id_col]~data[,id_col]))$r.squared)
+      abline(lm(predictions.x[,id_col]~data[,id_col]),col="red")
+
+    }
   }
+
+
 
   return(list(
 
