@@ -211,8 +211,9 @@ gcproc <- function(x,
     Y_decoded <- t(alpha.L.K.star.alpha.L.K.final)%*%Y_code%*%t(v.beta.star.beta.final)
     X_decoded <- t(alpha.L.J.star.alpha.L.J.final)%*%X_code%*%t(u.beta.star.beta.final)
 
-
-    main.parameters.copy = main.parameters = list(
+    main.parameters = list(
+      D_Y_code.final = diag(dim(Y.y)[1]),
+      D_X_code.final = diag(dim(X.x)[1]),
       alpha.L.J.star.alpha.L.J.final = alpha.L.J.star.alpha.L.J.final,
       alpha.L.K.star.alpha.L.K.final = alpha.L.K.star.alpha.L.K.final,
       u.beta.star.beta.final = u.beta.star.beta.final,
@@ -223,7 +224,12 @@ gcproc <- function(x,
       x.delta.final = x.delta.final
     )
 
+
+    predict$y.dim_red <- y%*%v.beta.star.beta.final
+    predict$x.dim_red <- x%*%u.beta.star.beta.final
+
     predict =  predict
+
 
     code = list(
       X_code = X_code,
@@ -231,7 +237,10 @@ gcproc <- function(x,
       X_encode = X_encode,
       Y_encode = Y_encode,
       X_decoded = X_decoded,
-      Y_decoded = Y_decoded
+      Y_decoded = Y_decoded,
+      Y_code.final = Y_code,
+      X_code.final = X_code
+
     )
 
   }
@@ -262,27 +271,6 @@ gcproc <- function(x,
 
 
 
-
-    # vi.step <- variational_inference_update(
-    #   x = (1-a.b*predict$x)*X.x+(b.a*predict$x)*Y.y,
-    #   y = Y.y,
-    #   seed = seed,
-    #   count = count,
-    #   config = config,
-    #   parameters = main.parameters,
-    #   code = code,
-    #   predict = predict,
-    #   covariates = covariates_list,
-    #   anchors = anchors)
-    #
-    # X.x <- vi.step$x
-    # Y.y <- vi.step$y
-    # parameters = vi.step$main.parameters
-    # code = vi.step$code
-    # predict = vi.step$predict
-
-
-
     matrix.residuals <- code$Y_code - code$X_code
     if (config$j_dim==1){
       llik.vec <- c(llik.vec, mean(mclust::dmvnorm(matrix.residuals,sigma = sd(matrix.residuals),log = T)))
@@ -310,7 +298,7 @@ gcproc <- function(x,
 
   return(list(
 
-    main.parameters = main.parameters,
+    main.parameters = parameters,
 
     predict =  predict,
 
@@ -366,6 +354,10 @@ variational_inference_update <- function(x,
   y.c.v.sample <- lapply(c(1:config$batches),function(X){set.seed(X+seed+count);sample(c(1:dim(covariates_data$covariates_y.feature)[2]),size = if(dim(covariates_data$covariates_y.feature)[2]<config$batch_size){dim(covariates_data$covariates_y.feature)[2]}else{config$batch_size})})
 
   internal_list <- list(
+    Y_code = 0,
+    X_code = 0,
+    D_Y_code = 0,
+    D_X_code = 0,
     intercept.x = 0,
     y_encode = 0,
     x_encode = 0,
@@ -453,6 +445,16 @@ variational_inference_update <- function(x,
     x.gamma <- if(is.null(anchors$anchor_x.cov.sample)){MASS::ginv((cov.x.s)%*%t(cov.x.s))%*%(cov.x.s)%*%(((MASS::ginv(t(alpha.L.J.star.alpha.L.J)%*%(alpha.L.J.star.alpha.L.J))%*%t(alpha.L.J.star.alpha.L.J)%*%((alpha.L.J.star.alpha.L.J%*%(x)%*%u.beta.star.beta - (alpha.L.J.star.alpha.L.J%*%cov.x.f.p%*%u.beta.star.beta)) - y_encode)%*%t(u.beta.star.beta)%*%MASS::ginv((u.beta.star.beta)%*%t(u.beta.star.beta)))))}else{anchors$anchor_x.cov.sample}
     x.delta <- if(is.null(anchors$anchor_x.cov.feature)){MASS::ginv(t(cov.x.f)%*%(cov.x.f))%*%t(cov.x.f)%*%((t((MASS::ginv(t(alpha.L.J.star.alpha.L.J)%*%(alpha.L.J.star.alpha.L.J))%*%t(alpha.L.J.star.alpha.L.J)%*%(alpha.L.J.star.alpha.L.J%*%(x)%*%u.beta.star.beta - (alpha.L.J.star.alpha.L.J%*%cov.x.s.p%*%u.beta.star.beta) - y_encode))%*%t(u.beta.star.beta)%*%MASS::ginv((u.beta.star.beta)%*%t(u.beta.star.beta)))))}else{anchors$anchor_x.cov.feature}
 
+    D_Y_code <- (predict$y.dim_red[y.g.ids,] - t(alpha.L.K.star.alpha.L.K)%*%code$Y_code)%*%t(predict$y.dim_red[y.g.ids,] - t(alpha.L.K.star.alpha.L.K)%*%code$Y_code)/dim(y)[1]
+    D_X_code <- (predict$x.dim_red[x.g.ids,] - t(alpha.L.J.star.alpha.L.J)%*%code$X_code)%*%t(predict$x.dim_red[x.g.ids,] - t(alpha.L.J.star.alpha.L.J)%*%code$X_code)/dim(x)[1]
+
+    Y_code <- (alpha.L.K.star.alpha.L.K%*%MASS::ginv(t(alpha.L.K.star.alpha.L.K)%*%(alpha.L.K.star.alpha.L.K)+D_Y_code)%*%predict$y.dim_red[y.g.ids,])
+    X_code <- (alpha.L.J.star.alpha.L.J%*%MASS::ginv(t(alpha.L.J.star.alpha.L.J)%*%(alpha.L.J.star.alpha.L.J)+D_X_code)%*%predict$x.dim_red[x.g.ids,])
+
+    internal_list$Y_code = Y_code
+    internal_list$X_code = X_code
+    internal_list$D_Y_code = D_Y_code
+    internal_list$D_X_code = D_X_code
     internal_list$alpha.L.J.star.alpha.L.J = alpha.L.J.star.alpha.L.J
     internal_list$alpha.L.K.star.alpha.L.K = alpha.L.K.star.alpha.L.K
     internal_list$V.star.inv.alpha.L.J = V.star.inv.alpha.L.J
@@ -478,111 +480,128 @@ variational_inference_update <- function(x,
   },mc.silent = config$verbose,mc.cores = config$cores)
 
 
-  if (update_batched_parameters==T){
-
-    for (i in 1:config$batches){
-
-      if (is.character(to_return[[i]])){
-        to_return[[i]] <- internal_list
-      }
-
-      alpha.L.J.star.alpha.L.J <- to_return[[i]]$alpha.L.J.star.alpha.L.J
-      alpha.L.K.star.alpha.L.K <- to_return[[i]]$alpha.L.K.star.alpha.L.K
-      V.star.inv.alpha.L.J <- to_return[[i]]$V.star.inv.alpha.L.J
-      V.star.inv.alpha.L.K <- to_return[[i]]$V.star.inv.alpha.L.K
-
-      v.beta.star.beta <- to_return[[i]]$v.beta.star.beta
-      u.beta.star.beta <- to_return[[i]]$u.beta.star.beta
-      u.V.star.inv.beta <- to_return[[i]]$u.V.star.inv.beta
-      v.V.star.inv.beta <- to_return[[i]]$v.V.star.inv.beta
-
-      y.gamma <- to_return[[i]]$y.gamma
-      y.delta <- to_return[[i]]$y.delta
-      x.gamma <- to_return[[i]]$x.gamma
-      x.delta <- to_return[[i]]$x.delta
-
-      x.g.ids <- to_return[[i]]$x.g.ids
-      y.g.ids <- to_return[[i]]$y.g.ids
-
-      x.v.ids <- to_return[[i]]$x.v.ids
-      y.v.ids <- to_return[[i]]$y.v.ids
 
 
-      x.c.g.ids <- to_return[[i]]$x.c.g.ids
-      y.c.g.ids <- to_return[[i]]$y.c.g.ids
+  for (i in 1:config$batches){
 
-      x.c.v.ids <- to_return[[i]]$x.c.v.ids
-      y.c.v.ids <- to_return[[i]]$y.c.v.ids
-
-
-
-      parameters$alpha.L.J.star.alpha.L.J.final[,x.g.ids] <- a.b*parameters$alpha.L.J.star.alpha.L.J.final[,x.g.ids] + b.a*alpha.L.J.star.alpha.L.J
-      parameters$V.star.inv.alpha.L.J.final[x.g.ids,x.g.ids] <- a.b*parameters$V.star.inv.alpha.L.J.final[x.g.ids,x.g.ids] + b.a*V.star.inv.alpha.L.J
-
-      parameters$alpha.L.K.star.alpha.L.K.final[,y.g.ids] <- a.b*parameters$alpha.L.K.star.alpha.L.K.final[,y.g.ids] + b.a*alpha.L.K.star.alpha.L.K
-      parameters$V.star.inv.alpha.L.K.final[y.g.ids,y.g.ids] <- a.b*parameters$V.star.inv.alpha.L.K.final[y.g.ids,y.g.ids] + b.a*V.star.inv.alpha.L.K
-
-      parameters$u.beta.star.beta.final[x.v.ids,] <- a.b*parameters$u.beta.star.beta.final[x.v.ids,] + b.a*u.beta.star.beta
-      parameters$u.V.star.inv.beta.final[x.v.ids,x.v.ids] <- a.b*parameters$u.V.star.inv.beta.final[x.v.ids,x.v.ids] + b.a*u.V.star.inv.beta
-
-      parameters$v.beta.star.beta.final[y.v.ids,] <- a.b*parameters$v.beta.star.beta.final[y.v.ids,] + b.a*v.beta.star.beta
-      parameters$v.V.star.inv.beta.final[y.v.ids,y.v.ids] <- a.b*parameters$v.V.star.inv.beta.final[y.v.ids,y.v.ids] + b.a*v.V.star.inv.beta
-
-      parameters$y.gamma.final[y.c.g.ids,y.v.ids] <- a.b*parameters$y.gamma.final[y.c.g.ids,y.v.ids] + b.a*y.gamma
-      parameters$y.delta.final[y.c.v.ids,y.g.ids] <- a.b*parameters$y.delta.final[y.c.v.ids,y.g.ids] + b.a*y.delta
-      parameters$x.gamma.final[x.c.g.ids,x.v.ids] <- a.b*parameters$x.gamma.final[x.c.g.ids,x.v.ids] + b.a*x.gamma
-      parameters$x.delta.final[x.c.v.ids,x.g.ids] <- a.b*parameters$x.delta.final[x.c.v.ids,x.g.ids] + b.a*x.delta
-
-
+    if (is.character(to_return[[i]])){
+      to_return[[i]] <- internal_list
     }
+
+    Y_code.part <- to_return[[i]]$Y_code
+    X_code.part <- to_return[[i]]$X_code
+
+    D_Y_code <- to_return[[i]]$D_Y_code
+    D_X_code <- to_return[[i]]$D_X_code
+
+    alpha.L.J.star.alpha.L.J <- to_return[[i]]$alpha.L.J.star.alpha.L.J
+    alpha.L.K.star.alpha.L.K <- to_return[[i]]$alpha.L.K.star.alpha.L.K
+    V.star.inv.alpha.L.J <- to_return[[i]]$V.star.inv.alpha.L.J
+    V.star.inv.alpha.L.K <- to_return[[i]]$V.star.inv.alpha.L.K
+
+    v.beta.star.beta <- to_return[[i]]$v.beta.star.beta
+    u.beta.star.beta <- to_return[[i]]$u.beta.star.beta
+    u.V.star.inv.beta <- to_return[[i]]$u.V.star.inv.beta
+    v.V.star.inv.beta <- to_return[[i]]$v.V.star.inv.beta
+
+    y.gamma <- to_return[[i]]$y.gamma
+    y.delta <- to_return[[i]]$y.delta
+    x.gamma <- to_return[[i]]$x.gamma
+    x.delta <- to_return[[i]]$x.delta
+
+    x.g.ids <- to_return[[i]]$x.g.ids
+    y.g.ids <- to_return[[i]]$y.g.ids
+
+    x.v.ids <- to_return[[i]]$x.v.ids
+    y.v.ids <- to_return[[i]]$y.v.ids
+
+
+    x.c.g.ids <- to_return[[i]]$x.c.g.ids
+    y.c.g.ids <- to_return[[i]]$y.c.g.ids
+
+    x.c.v.ids <- to_return[[i]]$x.c.v.ids
+    y.c.v.ids <- to_return[[i]]$y.c.v.ids
+
+    code$Y_code.final <- a.b*code$Y_code.final + b.a*Y_code.part
+    code$X_code.final <- a.b*code$X_code.final + b.a*X_code.part
+
+    parameters$D_Y_code.final[y.g.ids,y.g.ids] <- a.b*parameters$D_Y_code.final[y.g.ids,y.g.ids] + b.a*D_Y_code
+    parameters$D_X_code.final[x.g.ids,x.g.ids] <- a.b*parameters$D_X_code.final[x.g.ids,x.g.ids] + b.a*D_X_code
+
+    parameters$alpha.L.J.star.alpha.L.J.final[,x.g.ids] <- a.b*parameters$alpha.L.J.star.alpha.L.J.final[,x.g.ids] + b.a*alpha.L.J.star.alpha.L.J
+    parameters$V.star.inv.alpha.L.J.final[x.g.ids,x.g.ids] <- a.b*parameters$V.star.inv.alpha.L.J.final[x.g.ids,x.g.ids] + b.a*V.star.inv.alpha.L.J
+
+    parameters$alpha.L.K.star.alpha.L.K.final[,y.g.ids] <- a.b*parameters$alpha.L.K.star.alpha.L.K.final[,y.g.ids] + b.a*alpha.L.K.star.alpha.L.K
+    parameters$V.star.inv.alpha.L.K.final[y.g.ids,y.g.ids] <- a.b*parameters$V.star.inv.alpha.L.K.final[y.g.ids,y.g.ids] + b.a*V.star.inv.alpha.L.K
+
+    parameters$u.beta.star.beta.final[x.v.ids,] <- a.b*parameters$u.beta.star.beta.final[x.v.ids,] + b.a*u.beta.star.beta
+    parameters$u.V.star.inv.beta.final[x.v.ids,x.v.ids] <- a.b*parameters$u.V.star.inv.beta.final[x.v.ids,x.v.ids] + b.a*u.V.star.inv.beta
+
+    parameters$v.beta.star.beta.final[y.v.ids,] <- a.b*parameters$v.beta.star.beta.final[y.v.ids,] + b.a*v.beta.star.beta
+    parameters$v.V.star.inv.beta.final[y.v.ids,y.v.ids] <- a.b*parameters$v.V.star.inv.beta.final[y.v.ids,y.v.ids] + b.a*v.V.star.inv.beta
+
+    parameters$y.gamma.final[y.c.g.ids,y.v.ids] <- a.b*parameters$y.gamma.final[y.c.g.ids,y.v.ids] + b.a*y.gamma
+    parameters$y.delta.final[y.c.v.ids,y.g.ids] <- a.b*parameters$y.delta.final[y.c.v.ids,y.g.ids] + b.a*y.delta
+    parameters$x.gamma.final[x.c.g.ids,x.v.ids] <- a.b*parameters$x.gamma.final[x.c.g.ids,x.v.ids] + b.a*x.gamma
+    parameters$x.delta.final[x.c.v.ids,x.g.ids] <- a.b*parameters$x.delta.final[x.c.v.ids,x.g.ids] + b.a*x.delta
+
 
   }
 
-  if (check_anchors==T){
 
-    parameters$alpha.L.J.star.alpha.L.J.final <- if (is.null(anchors$anchor_x.sample)){parameters$alpha.L.J.star.alpha.L.J.final}else{anchors$anchor_x.sample}
-    parameters$alpha.L.K.star.alpha.L.K.final <- if (is.null(anchors$anchor_y.sample)){parameters$alpha.L.K.star.alpha.L.K.final}else{anchors$anchor_y.sample}
 
-    parameters$u.beta.star.beta.final <- if (is.null(anchors$anchor_x.feature)){parameters$u.beta.star.beta.final}else{anchors$anchor_x.feature}
-    parameters$v.beta.star.beta.final <- if (is.null(anchors$anchor_y.feature)){parameters$v.beta.star.beta.final}else{anchors$anchor_y.feature}
 
+  parameters$alpha.L.J.star.alpha.L.J.final <- if (is.null(anchors$anchor_x.sample)){parameters$alpha.L.J.star.alpha.L.J.final}else{anchors$anchor_x.sample}
+  parameters$alpha.L.K.star.alpha.L.K.final <- if (is.null(anchors$anchor_y.sample)){parameters$alpha.L.K.star.alpha.L.K.final}else{anchors$anchor_y.sample}
+
+  parameters$u.beta.star.beta.final <- if (is.null(anchors$anchor_x.feature)){parameters$u.beta.star.beta.final}else{anchors$anchor_x.feature}
+  parameters$v.beta.star.beta.final <- if (is.null(anchors$anchor_y.feature)){parameters$v.beta.star.beta.final}else{anchors$anchor_y.feature}
+
+
+
+
+
+  cov.y.s.p <- (t(covariates_data$covariates_y.sample)%*%parameters$y.gamma.final)
+  cov.x.s.p <- (t(covariates_data$covariates_x.sample)%*%parameters$x.gamma.final)
+
+  cov.y.f.p <- t(covariates_data$covariates_y.feature%*%parameters$y.delta.final)
+  cov.x.f.p <- t(covariates_data$covariates_x.feature%*%parameters$x.delta.final)
+
+
+  y_encode <- (parameters$alpha.L.K.star.alpha.L.K.final%*%( y )%*%(parameters$v.beta.star.beta.final))
+  x_encode <- (parameters$alpha.L.J.star.alpha.L.J.final%*%( x )%*%(parameters$u.beta.star.beta.final))
+
+  cov.y_encode <- (parameters$alpha.L.K.star.alpha.L.K.final%*%( (cov.y.s.p + cov.y.f.p) )%*%(parameters$v.beta.star.beta.final))
+  cov.x_encode <- (parameters$alpha.L.J.star.alpha.L.J.final%*%( (cov.x.s.p + cov.x.f.p) )%*%(parameters$u.beta.star.beta.final))
+
+  code$Y_encode <- y_encode - cov.y_encode
+  code$X_encode <- x_encode - cov.x_encode
+
+  code$Y_code <- (MASS::ginv((parameters$alpha.L.K.star.alpha.L.K.final)%*%t(parameters$alpha.L.K.star.alpha.L.K.final))%*%(y_encode)%*%MASS::ginv(t(parameters$v.beta.star.beta.final)%*%(parameters$v.beta.star.beta.final)))
+  code$X_code <- (MASS::ginv((parameters$alpha.L.J.star.alpha.L.J.final)%*%t(parameters$alpha.L.J.star.alpha.L.J.final))%*%(x_encode)%*%MASS::ginv(t(parameters$u.beta.star.beta.final)%*%(parameters$u.beta.star.beta.final)))
+
+  predict$y.dim_red <- y%*%parameters$v.beta.star.beta.final
+  predict$x.dim_red <- x%*%parameters$u.beta.star.beta.final
+
+  code$Y_decoded <- t(parameters$alpha.L.K.star.alpha.L.K.final)%*%code$Y_code.final%*%t(parameters$v.beta.star.beta.final)
+  code$X_decoded <- t(parameters$alpha.L.J.star.alpha.L.J.final)%*%code$X_code.final%*%t(parameters$u.beta.star.beta.final)
+
+  if (!is.null(predict$y)){
+    predict$predict.y <- code$Y_decoded
+    y[which(predict$y==1,arr.ind = T)] <- predict$predict.y[which(predict$y==1,arr.ind = T)]
+  }
+  if (!is.null(predict$x)){
+    predict$predict.x <- code$X_decoded
+    x[which(predict$x==1,arr.ind = T)] <- predict$predict.x[which(predict$x==1,arr.ind = T)]
   }
 
 
-  if (epoch_run==T){
-
-    cov.y.s.p <- (t(covariates_data$covariates_y.sample)%*%parameters$y.gamma.final)
-    cov.x.s.p <- (t(covariates_data$covariates_x.sample)%*%parameters$x.gamma.final)
-
-    cov.y.f.p <- t(covariates_data$covariates_y.feature%*%parameters$y.delta.final)
-    cov.x.f.p <- t(covariates_data$covariates_x.feature%*%parameters$x.delta.final)
 
 
-    y_encode <- (parameters$alpha.L.K.star.alpha.L.K.final%*%( y )%*%(parameters$v.beta.star.beta.final))
-    x_encode <- (parameters$alpha.L.J.star.alpha.L.J.final%*%( x )%*%(parameters$u.beta.star.beta.final))
+  y_hat <- predict$predict.x
+  y_hat <- y_hat[-1,-1]
 
-    cov.y_encode <- (parameters$alpha.L.K.star.alpha.L.K.final%*%( (cov.y.s.p + cov.y.f.p) )%*%(parameters$v.beta.star.beta.final))
-    cov.x_encode <- (parameters$alpha.L.J.star.alpha.L.J.final%*%( (cov.x.s.p + cov.x.f.p) )%*%(parameters$u.beta.star.beta.final))
-
-    code$Y_encode <- y_encode - cov.y_encode
-    code$X_encode <- x_encode - cov.x_encode
-
-    code$Y_code <- (MASS::ginv((parameters$alpha.L.K.star.alpha.L.K.final)%*%t(parameters$alpha.L.K.star.alpha.L.K.final))%*%(y_encode)%*%MASS::ginv(t(parameters$v.beta.star.beta.final)%*%(parameters$v.beta.star.beta.final)))
-    code$X_code <- (MASS::ginv((parameters$alpha.L.J.star.alpha.L.J.final)%*%t(parameters$alpha.L.J.star.alpha.L.J.final))%*%(x_encode)%*%MASS::ginv(t(parameters$u.beta.star.beta.final)%*%(parameters$u.beta.star.beta.final)))
-
-    code$Y_decoded <- t(parameters$alpha.L.K.star.alpha.L.K.final)%*%(code$Y_code)%*%t(parameters$v.beta.star.beta.final)
-    code$X_decoded <- (t(parameters$alpha.L.J.star.alpha.L.J.final)%*%(code$X_code)%*%t(parameters$u.beta.star.beta.final))
-
-    if (!is.null(predict$y)){
-      predict$predict.y <- code$Y_decoded
-      y[which(predict$y==1,arr.ind = T)] <- predict$predict.y[which(predict$y==1,arr.ind = T)]
-    }
-    if (!is.null(predict$x)){
-      predict$predict.x <- code$X_decoded
-      x[which(predict$x==1,arr.ind = T)] <- predict$predict.x[which(predict$x==1,arr.ind = T)]
-    }
-
-  }
+  plot(y_hat[-train_id,id_col],data___x[-train_id,id_col],main=sum(abs(y_hat[-train_id,id_col]-data___x[-train_id,id_col])))
 
 
 
