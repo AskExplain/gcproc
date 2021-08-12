@@ -4,7 +4,7 @@
 \alias{extract_config}
 \title{Generalised Canonical Procrustes}
 \usage{
-extract_config(verbose = T)
+extract_config(method = NULL, verbose = T)
 }
 \arguments{
 \item{verbose}{Print statements?}

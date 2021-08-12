@@ -17,21 +17,42 @@
 #' @param init Initialisation method for the model ("svd","eigen-sparse","eigen-dense")
 #' @return  Configuration parameters for gcproc
 #' @export
-extract_config <- function(verbose=T){
-  config <- list(
-       k_dim = 70,
-       j_dim = 70,
-       eta=5e-3,
-       max_iter=1500,
-       min_iter = 15,
-       tol=1e-3,
-       log=F,
-       center=T,
-       scale.z=T,
-       batches=16,
-       cores=2,
-       verbose=T,
-       init="svd-quick")
+extract_config <- function(method=NULL,verbose=T){
+  if (method=="prediction"){
+    config <- list(
+      k_dim = 70,
+      j_dim = 70,
+      eta=1e-2,
+      max_iter=15,
+      min_iter = 5,
+      tol=1e-3,
+      log=F,
+      center=F,
+      scale.z=F,
+      batches=2,
+      batch_size=700,
+      cores=2,
+      verbose=T,
+      init="svd-quick")
+  }
+  if (method=="clustering"){
+    config <- list(
+      k_dim = 70,
+      j_dim = 70,
+      eta=1e-2,
+      max_iter=150,
+      min_iter = 15,
+      tol=1e-3,
+      log=F,
+      center=F,
+      scale.z=F,
+      batches=64,
+      batch_size=64,
+      cores=2,
+      verbose=T,
+      init="svd-quick")
+  }
+
 
   if (verbose == T){
     print(config)
