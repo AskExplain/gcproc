@@ -3,6 +3,9 @@ A generative encoding method - ideas stemming from the geometric Procrustes, the
 
 A method that uses a likelihood model to align two datasets via an encoding in a lower dimensional space
 
+Documentation and Example code
+https://askexplain.github.io/gcproc/
+
 Current Paper
 https://www.biorxiv.org/content/10.1101/2021.07.09.451779v1
 
