@@ -13,3 +13,7 @@ https://www.biorxiv.org/content/10.1101/2021.07.09.451779v1
 
 A brief talk on the method 
 https://www.youtube.com/watch?v=wUM9zpGWuyA
+
+A more technical paper on the conceptual statistics and maths (pending arXiv)
+https://www.askexplain.com/generative-encoding
+
