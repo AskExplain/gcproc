@@ -249,10 +249,10 @@ gcproc <- function(x,
     code$Y_code <- (MASS::ginv((main.parameters$alpha.K)%*%t(main.parameters$alpha.K))%*%(code$Y_encode)%*%MASS::ginv(t(main.parameters$v.beta)%*%(main.parameters$v.beta)))
     code$X_code <- (MASS::ginv((main.parameters$alpha.L)%*%t(main.parameters$alpha.L))%*%(code$X_encode)%*%MASS::ginv(t(main.parameters$u.beta)%*%(main.parameters$u.beta)))
 
-    if (reference %in% "y"){
+    if (reference == "y"){
       code$main_code <- (code$Y_code)
     }
-    if (reference %in% "x"){
+    if (reference == "x"){
       code$main_code <- (code$X_code)
     }
 
