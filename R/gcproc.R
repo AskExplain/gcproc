@@ -205,7 +205,6 @@ gcproc <- function(x,
       X.x <- scale(x)
 
 
-
       x[which((rowSums(predict$x)>0)==T),]  <- do.call('rbind',parallel::mclapply(c(which((rowSums(predict$x)>0)==T)),function(id_row){
 
         test_id <- as.logical(predict$x[id_row,])
