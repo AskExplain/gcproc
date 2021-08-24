@@ -41,7 +41,7 @@ segerstolpe_prepare <- prepare_data(segerstolpe,log = F,center = T,scale.norm = 
 
 ### Step 2 - Initialise gcproc parameters
 
-Default parameters are retrieved using the function. The number of cores are changed to 8. The verbose print function for explanation of internal running of the code is turned off. Other default parameters are visible by printing the retrieved config variable. Asking the help function via ?extract_config will provide more information about the parameters. 
+Default parameters are retrieved using the function. The verbose print function for explanation of internal running of the code is turned off. Other default parameters are visible by printing the retrieved config variable. Asking the help function via ?extract_config will provide more information about the parameters. 
 
 ```{r step_2}
 
@@ -55,7 +55,9 @@ config$verbose <- F
 
 ### Step 3 - Run gcproc on all datasets
 
-Given gcproc can only align two datasets at a time, Xin is used as a reference for the alignment of Baron and Segerstolpe. They are combined to enrich the encoding of the gene dimension into an informative and shared subspace for the cell axis to be interpreted.
+Given gcproc can only align two datasets at a time, Baron is used as a reference for the alignment of Xin and Segerstolpe. They are combined to enrich the encoding of the gene dimension into an informative and shared subspace for the cell axis to be interpreted.
+
+The covariates for the Xin and Segerstolpe datasets are removed by subtracting the difference at the code level. The code is the latent structure each dataset retains that represents the data generating process. By taking the difference between the scRNA-seq and the covariates codes, the relevant structure will be left. With the residual code, it is decoded to recover the covariate adjusted scRNAseq data.
 
 ```{r step_3}
 

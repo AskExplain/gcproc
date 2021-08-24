@@ -22,8 +22,6 @@ Here, a novel dataset from a variety of experimental methods called Spatial Tran
 
 2 - Predict gene expression using histology tissue with a few gene biomarkers relevant to the tissue
 
-3 - Align via transfer learning from Single Cell RNA to histology tissue 
-
 
 ### Step 0 - Prepare libraries
 
@@ -38,7 +36,7 @@ library(irlba)
 
 Kidney spatial data is gratefully taken from the NanoString Hackathon @ DevPost. Here, 231 regions of interest have had gene expression measured at a spatial resolution. Corresponding overlapping image information of immunofluorescent kidney tissue is converted to a pixel by tile matrix, where each tile is 32 by 32 pixels by 3 Red-Green-Blue channels. 
 
-Single cell kidney data is also taken from [Wu et al (2018)](https://pubmed.ncbi.nlm.nih.gov/29980650/) to be aligned to immunofluorescent kidney tissue with no prior gene expression measurements. Here, the top 2000 shared variably genes are taken for all datasets containing gene expression.
+Single cell kidney data is also taken from [Wu et al (2018)](https://pubmed.ncbi.nlm.nih.gov/29980650/) to be aligned to immunofluorescent kidney tissue. Here, the top 2000 shared variably genes are taken for all datasets containing gene expression.
 
 ```{r step_1}
 
@@ -84,7 +82,7 @@ config.predict$verbose <- F
 config.predict$init <- "svd-quick"
 
 config.align <- gcproc::extract_config(verbose=F)
-config.align$i_dim <- 150
+config.align$i_dim <- 100
 config.align$j_dim <- 15
 config.align$verbose <- F
 config.align$init <- "svd-quick"
@@ -94,7 +92,7 @@ config.align$init <- "svd-quick"
 
 ### Step 3 - Run gcproc on histology immunofluorescent images to extract features from pixel data
 
-Spatial Transcriptomic regions of interest (with gene expression measurements) of immunofluorescent kidney histology images are converted to tabular form by cutting the image into tiles of 32 by 32 pixels, and taking each tile as a sample, with pixels as the features. To extract relevant features that are not based on highly variable image noise and perturbations (e.g. rotation, pixel intensity, ...), the pixel dimension is encoded into a reduced subspace to give information of more quality.
+Spatial Transcriptomic regions of interest (with gene expression measurements) of immunofluorescent kidney histology images are converted to tabular form by cutting the image into tiles of 32 by 32 pixels, and taking each tile as a sample, with pixels as the features. To extract relevant features that are not based on highly variable image noise and perturbations (e.g. rotation, pixel intensity, ...), the pixel dimension is encoded into a reduced subspace to give information of higher quality.
 
 The top 21 components out of 70 are plotted to reveal the structure and profile of the tile, each representing the spatial tissue and cell morphology.
 
@@ -161,9 +159,11 @@ plot(gg1)
 
 ### Step 4 - Predict gene expression on histology tissue with a few gene markers present
 
-With the pixel information encoded to better represent the immunofluorescent kidney tissue, the newly encoded features can be used for further analysis. An example analysis is the recovery of missing gene expression, imputed from image-based histology with a few kidney gene markers. 
+With the pixel information encoded to better represent the immunofluorescent kidney tissue, the newly encoded features can be used for further analysis. The transfer of parameters can be done via the anchor framework. Just as an anchor would position a ship at sea, an anchored parameter would freeze the parameter in place, while learning other parameters jointly in relation to the fixeded anchor.
 
-Here, 201 regions of interest (with pixel and all gene data) are randomly sampled from the total of 231 regions and treated as the training set. Thus, 30 regions are taken as missing and treated as the test set (with only pixel data and a list of key gene kidney markers). The key kidney gene markers assumed present in both training and test sets are PODXL, WT1, KRT8, CD45, CD74 and NPHS1 all known to be present in kidney cells. 
+An example analysis is the recovery of missing gene expression, imputed from image-based histology with a few kidney gene markers. 
+
+Here, 201 regions of interest (with pixel and all gene data) are randomly sampled from the total of 231 regions and treated as the training set. Thus, 30 regions are taken as missing and treated as the test set (with only pixel data and a list of key gene kidney markers). The key kidney gene markers assumed present in both training and test sets are PODXL, WT1, PAX2, VIM, AQP1, NPHS1, and B2M all known to be present in kidney cells. 
 
 The aim is to predict all other non-key genes via the pixels within the 30 regions in the test set, while taking the 201 other regions as the training set to be the main modelling source.
 
@@ -220,154 +220,6 @@ for (i in which(colnames(kidney_nanostring_rnaseq_train.select.copy)%in%c("HLA-A
 
 ```
 
-The transfer of parameters can be done via the anchor framework. Just as an anchor would position a ship at sea, an anchored parameter would freeze the parameter in place, while learning other parameters jointly in relation to the fixeded anchor.
 
-
-### Step 5 - Align single cell RNA to histology tissue by transferring learned information
-
-Another example analysis is the alignment of single cells to histology only, without prior gene measurements. Here, while the parameters in the previous steps can be transferred and anchored in this alignment step, it was discovered that gcproc can handle the alignment well without prior knowledge - using only the biological gene levels and variability from each dataset.
-
-```{r step_5, warning=F}
-
-prepared.kidney_sc_rnaseq.select <- prepare_data(x = kidney_sc_rnaseq.select,log = T,center = T,scale.norm = T)
-
-gcproc.align <- gcproc::gcproc(
-                      x=as.matrix(prepared.kidney_sc_rnaseq.select),
-                      y=as.matrix(kidney_nanostring_pixel_test),
-                      config=config.align,
-                      reference = "y"
-                      )
-
-gene.param <- gcproc.align$main.parameters$u.beta
-pixel.param <- gcproc.align$main.parameters$v.beta
-
-transform_gene.to.pixel <- gene.param%*%t(pixel.param)%*%MASS::ginv(pixel.param%*%t(pixel.param))
-  inv.transform_pixel.to.gene <- pixel.param%*%t(gene.param)%*%MASS::ginv(gene.param%*%t(gene.param))
-
-histology.as.genes <- as.matrix(kidney_nanostring_pixel_test)%*%inv.transform_pixel.to.gene
-colnames(histology.as.genes) <- colnames(kidney_sc_rnaseq.select)
-
-genes.as.histology <- prepared.kidney_sc_rnaseq.select%*%transform_gene.to.pixel
-
-```
-
-
-These first set of plots converts a large histology image composed of multiple tiles into a gene expression heatmap from single cell RNA alignment. In the immunofluorescent histology tissue, pink represents WT1 staining for podocytes, blue represents CD45 staining for immune cells, and yellow represents Pan-Cytokeratin staining for renal tubules. Genes are also plotted (PODXL, WT1, HLA-A, B2M, KRT8, VIM respectively) to show the alignment.
-
-Notice in the large histology image, the top and bottom are streaked with immune cells, while the middle is stained for podocytes, and the middle to bottom showing renal tubules.
-
-![NanoString GeoMX Immunofluorescent tissue, courtesy of NanoString Hackathon @ DevPost](https://raw.githubusercontent.com/AskExplain/modL/main/data_nanostring_github/external/train_test_tiles/normal4_eg_1280.png)
-
-```{r step_5a, fig.width = 8, fig.height= 8}
-
-library(reshape2)
-
-gene_of_interest <- "PODXL"
-g <- melt(convert_to_HEAT(t(apply(matrix(((histology.as.genes[,gene_of_interest])),nrow=40,ncol=40,byrow = T),2,rev))))
-p2 <- ggplot2::ggplot(data=g, aes(x=Var1, y=Var2, fill=value))+ 
-  geom_tile(color="white") +
-  scale_fill_gradient2(low = "white", high = "red",midpoint=0.3,limit = c(0,1)) +
-  ggtitle(gene_of_interest)
-p2
-
-gene_of_interest <- "WT1"
-g <- melt(convert_to_HEAT(t(apply(matrix(((histology.as.genes[,gene_of_interest])),nrow=40,ncol=40,byrow = T),2,rev))))
-p2 <- ggplot2::ggplot(data=g, aes(x=Var1, y=Var2, fill=value))+ 
-  geom_tile(color="white") +
-  scale_fill_gradient2(low = "white", high = "red",midpoint=0.3,limit = c(0,1)) +
-  ggtitle(gene_of_interest)
-p2
-
-gene_of_interest <- "HLA-A"
-g <- melt(convert_to_HEAT(t(apply(matrix(((histology.as.genes[,gene_of_interest])),nrow=40,ncol=40,byrow = T),2,rev))))
-p2 <- ggplot2::ggplot(data=g, aes(x=Var1, y=Var2, fill=value))+ 
-  geom_tile(color="white") +
-  scale_fill_gradient2(low = "white", high = "red",midpoint=0.3,limit = c(0,1)) +
-  ggtitle(gene_of_interest)
-p2
-
-gene_of_interest <- "B2M"
-g <- melt(convert_to_HEAT(t(apply(matrix(((histology.as.genes[,gene_of_interest])),nrow=40,ncol=40,byrow = T),2,rev))))
-p2 <- ggplot2::ggplot(data=g, aes(x=Var1, y=Var2, fill=value))+ 
-  geom_tile(color="white") +
-  scale_fill_gradient2(low = "white", high = "red",midpoint=0.3,limit = c(0,1)) +
-  ggtitle(gene_of_interest)
-p2
-
-gene_of_interest <- "KRT8"
-g <- melt(convert_to_HEAT(t(apply(matrix(((histology.as.genes[,gene_of_interest])),nrow=40,ncol=40,byrow = T),2,rev))))
-p2 <- ggplot2::ggplot(data=g, aes(x=Var1, y=Var2, fill=value))+ 
-  geom_tile(color="white") +
-  scale_fill_gradient2(low = "white", high = "red",midpoint=0.3,limit = c(0,1)) +
-  ggtitle(gene_of_interest)
-p2
-
-gene_of_interest <- "VIM"
-g <- melt(convert_to_HEAT(t(apply(matrix(((histology.as.genes[,gene_of_interest])),nrow=40,ncol=40,byrow = T),2,rev))))
-p2 <- ggplot2::ggplot(data=g, aes(x=Var1, y=Var2, fill=value))+ 
-  geom_tile(color="white") +
-  scale_fill_gradient2(low = "white", high = "red",midpoint=0.3,limit = c(0,1)) +
-  ggtitle(gene_of_interest)
-p2
-
-```
-
-The second set of plots show the top 5 expressing cells for each of podocyte (PODXL, WT1, PAX2), immune (B2M, IGKC, CD74) and renal tubule (KRT7, KRT8, KRT19) markers. Notice the colors corresponding to the histology (pink for podocyte in the top row, blue for immune in the middle row, and yellow for renal tubules in the last row).
-
-```{r step_5b, fig.width = 10, fig.height= 6}
-
-top_5_Podocyte.ids <- order(rowSums(prepared.kidney_sc_rnaseq.select[,c("PODXL","WT1","PAX2")]),decreasing = T)[1:5]
-top_5_Immune.ids <- order(rowSums(prepared.kidney_sc_rnaseq.select[,c("B2M","IGKC","CD74")]),decreasing = T)[1:5]
-top_5_Tubule.ids <- order(rowSums(prepared.kidney_sc_rnaseq.select[,c("KRT7","KRT8","KRT19")]),decreasing = T)[1:5]
-
-gl <- c(
-  g.wt1 <- lapply(c(1:5),function(i){
-  g <- (convert_to_HEAT(aperm(array(genes.as.histology[top_5_Podocyte.ids[i],],dim=c(3,32,32)),c(2,3,1))))
-  g <- rasterGrob(g, interpolate=TRUE)
-  p.main <- ggplot2::qplot(1:10, 1:10, geom="blank") +
-    annotation_custom(g, xmin=-Inf, xmax=Inf, ymin=-Inf, ymax=Inf)
-  p.main
-})
-,
-g.cd74 <- lapply(c(1:5),function(i){
-  g <- (convert_to_HEAT(aperm(array(genes.as.histology[top_5_Immune.ids[i],],dim=c(3,32,32)),c(2,3,1))))
-  g <- rasterGrob(g, interpolate=TRUE)
-  p.main <- ggplot2::qplot(1:10, 1:10, geom="blank") +
-    annotation_custom(g, xmin=-Inf, xmax=Inf, ymin=-Inf, ymax=Inf)
-  p.main
-})
-,
-g.krt8 <- lapply(c(1:5),function(i){
-  g <- (convert_to_HEAT(aperm(array(genes.as.histology[top_5_Tubule.ids[i],],dim=c(3,32,32)),c(2,3,1))))
-  g <- rasterGrob(g, interpolate=TRUE)
-  p.main <- ggplot2::qplot(1:10, 1:10, geom="blank") +
-    annotation_custom(g, xmin=-Inf, xmax=Inf, ymin=-Inf, ymax=Inf)
-  p.main
-})
-)
-
-gl <- lapply(gl,function(X){
-    X + theme(axis.line=element_blank(),axis.text.x=element_blank(),
-              axis.text.y=element_blank(),axis.ticks=element_blank(),
-              axis.title.x=element_blank(),
-              axis.title.y=element_blank(),legend.position="none",
-              panel.background=element_blank(),panel.border=element_blank(),panel.grid.major=element_blank(),
-              panel.grid.minor=element_blank(),plot.background=element_blank())
-    
-  })
-  
-
-lm <- rbind(c(1,2,3,4,5),
-            c(6,7,8,9,10),
-            c(11,12,13,14,15)
-            )
-
-gg1 <- arrangeGrob(
-  grobs = gl,
-  layout_matrix = lm
-)
-
-plot(gg1)
-```
 
 

@@ -72,10 +72,8 @@ predict.list[[4]] <- as.matrix(oliveoil[,-c(1,2)])
 
 ### Step 3 - Run gcproc, glmnet and linear model on test datasets
 
-Three models are run: gcproc, glmnet and lm - respectively they are Generalised Canonical Procrustes, a Regularised Generalised Linear Model, and a Standard Linear Model. On smaller datasets, it is expected for a linear model to perform well, whereas on larger datasets with more features, it is expected a regularised method such as glmnet or gcproc to perform well.  The root mean squared error is reported, along with the pearson correlation.
-
-It should be mentioned that by encoding the sample and feature space simultaneously, gcproc acts similar to a regularized method without the optimization of a penalty term usually called the regularization penalty. It does this by encoding the samples, which reduces the effective number of "data points" once projected and constrains the feature parameter in gcproc to find a suitable transformation that reflects the enhanced information quality via the encoding and noise reduction in the sample parameter. It is for this reason it is expected to do well on larger datasets.
-
+Three models are run: gcproc, glmnet and lm - respectively they are Generalised Canonical Procrustes, a Regularised Generalised Linear Model, and a Standard Linear Model. On smaller datasets, it is expected for a linear model to perform well, whereas on larger datasets with more features it is expected a regularised method such as glmnet to perform well.  The root mean squared error is reported, along with the pearson correlation.
+  
 Four datasets are used in this regression to predict missing values. The most variable feature is listed as the variable to be predicted, while all other variables are listed as the covariates.
 
 ```{r step_3,warning=FALSE}
