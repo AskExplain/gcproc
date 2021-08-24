@@ -18,12 +18,12 @@ initialise.gcproc <- function(x,y,i_dim=70,j_dim=70,init="svd-quick",verbose=F){
   if (init=="svd-quick"){
     cov_x <- Matrix::crossprod(x,x)
     u.beta.svd <- irlba::irlba(
-      cov_x,j_dim,tol=1e-10,maxit = 10000,verbose = verbose)
+      cov_x,j_dim,tol=1e-30,maxit = 10000,verbose = verbose)
     rm(cov_x)
 
     cov_y <- Matrix::crossprod(y,y)
     v.beta.svd <- irlba::irlba(
-      cov_y,j_dim,tol=1e-10,maxit = 10000,verbose = verbose)
+      cov_y,j_dim,tol=1e-30,maxit = 10000,verbose = verbose)
     rm(cov_y)
 
     u.beta <- u.beta.svd$v
@@ -31,12 +31,12 @@ initialise.gcproc <- function(x,y,i_dim=70,j_dim=70,init="svd-quick",verbose=F){
 
     cov_tx <- Matrix::crossprod(Matrix::t(x),Matrix::t(x))
     alpha.L.J.svd <- irlba::irlba(
-      cov_tx,i_dim,tol=1e-10,maxit = 10000,verbose = verbose)
+      cov_tx,i_dim,tol=1e-30,maxit = 10000,verbose = verbose)
     rm(cov_tx)
 
     cov_ty <- Matrix::crossprod(Matrix::t(y),Matrix::t(y))
     alpha.L.K.svd <- irlba::irlba(
-      cov_ty,i_dim,tol=1e-10,maxit = 10000,verbose = verbose)
+      cov_ty,i_dim,tol=1e-30,maxit = 10000,verbose = verbose)
     rm(cov_ty)
 
     alpha.L = t(alpha.L.J.svd$u)

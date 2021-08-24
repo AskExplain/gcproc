@@ -2,4 +2,8 @@
 
 export(extract_anchors_framework)
 export(extract_config)
+export(extract_pivots_framework)
+export(extract_prediction_framework)
 export(gcproc)
+export(initialise.gcproc)
+export(prepare_data)

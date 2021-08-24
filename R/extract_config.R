@@ -4,23 +4,18 @@
 #' @param j_dim Dimension reduction for features (assumed to be along columns)
 #' @param max_iter Maximum iteration of gcproc
 #' @param tol Tolerance threshold for convergence (metric: Root Mean Squared Error)
-#' @param cores Number of cores the batches are split over each run
 #' @param verbose Print statements?
 #' @param init Initialisation method for the model ("svd","eigen-sparse","eigen-dense")
 #' @return  Configuration parameters for gcproc
 #' @export
 extract_config <- function(verbose=T){
   config <- list(
-    i_dim = 100,
+    i_dim = 30,
     j_dim = NULL,
-    min_iter=35,
     max_iter=150,
     tol=1e-5,
     verbose=T,
-    init="svd-quick",
-    log=F,
-    center=T,
-    scale.norm=T)
+    init="svd-quick")
 
   if (verbose == T){
     print(config)
@@ -103,8 +98,6 @@ extract_prediction_framework <- function(verbose=T){
 
   return(prediction)
 }
-
-
 
 
 
