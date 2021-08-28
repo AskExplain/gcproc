@@ -210,9 +210,9 @@
 <span class="fu"><a href="https://rdrr.io/r/graphics/plot.default.html">plot</a></span><span class="op">(</span><span class="va">gg1</span><span class="op">)</span></code></pre></div>
 <p><img src="Aligning_scRNAseq_to_Spatial_Transcriptomics_files/figure-html/step_3-1.png" width="960"></p>
 </div>
-<div id="step-4---recover-gene-expression-on-histology-tissue-with-a-few-gene-markers-present" class="section level3">
+<div id="step-4---Recover-gene-expression-on-histology-tissue-with-a-few-gene-markers-present" class="section level3">
 <h3 class="hasAnchor">
-<a href="#step-4---recover-gene-expression-on-histology-tissue-with-a-few-gene-markers-present" class="anchor"></a>Step 4 - recover gene expression on histology tissue with a few gene markers present</h3>
+<a href="#step-4---Recover-gene-expression-on-histology-tissue-with-a-few-gene-markers-present" class="anchor"></a>Step 4 - Recover gene expression on histology tissue with a few gene markers present</h3>
 <p>With the pixel information encoded to better represent the immunofluorescent kidney tissue, the newly encoded features can be used for further analysis. The transfer of parameters can be done via the anchor framework. Just as an anchor would position a ship at sea, an anchored parameter would freeze the parameter in place, while learning other parameters jointly in relation to the fixeded anchor.</p>
 <p>An example analysis is the recovery of missing gene expression, imputed from image-based histology with a few kidney gene markers.</p>
 <p>Here, 201 regions of interest (with pixel and all gene data) are randomly sampled from the total of 231 regions and treated as the training set. Thus, 30 regions are taken as missing and treated as the test set (with only pixel data and a list of key gene kidney markers). The key kidney gene markers assumed present in both training and test sets are PODXL, WT1, PAX2, VIM, AQP1, NPHS1, and B2M all known to be present in kidney cells.</p>
