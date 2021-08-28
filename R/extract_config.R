@@ -10,10 +10,10 @@
 #' @export
 extract_config <- function(verbose=T){
   config <- list(
-    i_dim = 30,
+    i_dim = NULL,
     j_dim = NULL,
     max_iter=150,
-    tol=1e-5,
+    tol=1e-2,
     verbose=T,
     init="svd-quick")
 
@@ -78,25 +78,30 @@ extract_pivots_framework <- function(verbose=T){
 
 
 
-#' Extract prediction framework to put into gcproc
+#' Extract recovery framework to put into gcproc
 #'
-#' Can either impute or predict by replacing missing values
+#' Can recover data points by imputing or predicting missing values
 #'
 #' @param x Design matrix of x where 1 is to predict the test set, 0 is to be modelled as the train set
 #' @param y Design matrix of y where 1 is to predict the test set, 0 is to be modelled as the train set
+#' @param fn Allows user to specify a prediction function
+#' @param param Parameters to be put into prediction function
 #' @return  Prediction framework for gcproc
 #' @export
-extract_prediction_framework <- function(verbose=T){
-  prediction <- list(
+extract_recovery_framework <- function(verbose=T){
+  recover <- list(
+    method = c("matrix.projection"),
     x = NULL,
-    y = NULL
+    y = NULL,
+    fn = NULL,
+    param = NULL
   )
 
   if (verbose == T){
-    print(prediction)
+    print(recover)
   }
 
-  return(prediction)
+  return(recover)
 }
 
 

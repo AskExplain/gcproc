@@ -47,8 +47,7 @@ Default parameters are retrieved using the function. The verbose print function 
 
 config <- gcproc::extract_config()
 config$i_dim <- 100
-config$j_dim <- 10
-config$init <- "random"
+config$j_dim <- 100
 config$verbose <- F
 ```
 
@@ -61,34 +60,22 @@ The covariates for the Xin and Segerstolpe datasets are removed by subtracting t
 
 ```{r step_3}
 
-gcproc.segerstolpe <- gcproc::gcproc(x = t(segerstolpe_covar),
-                             y = segerstolpe_prepare,
-                             config=config,
-                             fixed = list(i_dim=T,j_dim=F),
-                             reference = "y")
 
-gcproc.segerstolpe.decoded <- t(gcproc.segerstolpe$main.parameters$alpha.K)%*%(gcproc.segerstolpe$code$Y_code - gcproc.segerstolpe$code$X_code)%*%t(gcproc.segerstolpe$main.parameters$v.beta)
+config$init <- "svd-quick"
 
-gcproc.xin <- gcproc::gcproc(x = t(xin_covar),
-                             y = xin_prepare,
-                             config=config,
-                             fixed = list(i_dim=T,j_dim=F),
-                             reference = "y")
 
-gcproc.xin.decoded <- t(gcproc.xin$main.parameters$alpha.K)%*%(gcproc.xin$code$Y_code - gcproc.xin$code$X_code)%*%t(gcproc.xin$main.parameters$v.beta)
-
-gcproc.xin_bar <- gcproc::gcproc(x = gcproc.xin.decoded, 
-                                 y = baron_prepare, 
+gcproc.xin_bar <- gcproc::gcproc(x = xin_prepare, 
+                                 y = segerstolpe_prepare, 
                                   config = config,
-                                 reference = "y",
-                                 fixed = list(i_dim=F,j_dim=T)
+                                 reference = "x",
+                                 fixed = list(i_dim=F,j_dim=F)
                                  )
 
-gcproc.seg_bar <- gcproc::gcproc(x = gcproc.segerstolpe.decoded, 
+gcproc.seg_bar <- gcproc::gcproc(x = xin_prepare, 
                                   y = baron_prepare, 
                                   config = config,
-                                  fixed = list(i_dim=F,j_dim=T),
-                                 reference = "y")
+                                  fixed = list(i_dim=F,j_dim=F),
+                                 reference = "x")
 
 
 ```
@@ -103,12 +90,15 @@ Notice the clusters representing cell types are visible in each of the first thr
 ```{r step_4, fig.height=6, fig.width=6}
 
 a <- gcproc.seg_bar$main.parameters$u.beta
+b <- gcproc.seg_bar$main.parameters$v.beta
+
 c <- gcproc.xin_bar$main.parameters$u.beta
+d <- gcproc.xin_bar$main.parameters$v.beta
 
-projection_gcproc <- (a*c)
+projection_gcproc <- (a+b+c+d)
 
-plot(umap::umap(gcproc.xin.decoded%*%projection_gcproc)$layout,
-     col=as.factor(row.names(gcproc.xin.decoded)), 
+plot(umap::umap(xin_prepare%*%projection_gcproc)$layout,
+     col=as.factor(row.names(xin_prepare)), 
      xlab = "UMAP 1", 
      ylab = "UMAP 2", 
      main = "Xin via gcproc and UMAP",
@@ -117,8 +107,8 @@ plot(umap::umap(gcproc.xin.decoded%*%projection_gcproc)$layout,
      xaxt="n",
      yaxt="n")
 
-plot(umap::umap(gcproc.segerstolpe.decoded%*%projection_gcproc)$layout,
-     col=as.factor(row.names(gcproc.segerstolpe.decoded)), 
+plot(umap::umap(segerstolpe_prepare%*%projection_gcproc)$layout,
+     col=as.factor(row.names(segerstolpe_prepare)), 
      xlab = "UMAP 1", 
      ylab = "UMAP 2", 
      main = "Segerstolpe via gcproc and UMAP",
@@ -137,8 +127,8 @@ plot(umap::umap(baron_prepare%*%projection_gcproc)$layout,
      xaxt="n",
      yaxt="n")
 
-plot(umap::umap(rbind(baron_prepare,gcproc.xin.decoded,gcproc.segerstolpe.decoded))$layout,
-     col=as.factor(row.names(rbind(baron_prepare,gcproc.xin.decoded,gcproc.segerstolpe.decoded))), 
+plot(umap::umap(rbind(baron_prepare,xin_prepare,segerstolpe_prepare)%*%projection_gcproc)$layout,
+     col=as.factor(row.names(rbind(baron_prepare,xin_prepare,segerstolpe_prepare))), 
      xlab = "UMAP 1", 
      ylab = "UMAP 2", 
      main = "All 3 datasets via gcproc and UMAP",
@@ -175,12 +165,12 @@ pancreas_genes_of_interest <- c("INS",
                                 "PPP1R1A",
                                 "KRT8")
 
-id_pancreas_genes <- which(colnames(rbind(baron_prepare,gcproc.xin.decoded,gcproc.segerstolpe.decoded)) %in% pancreas_genes_of_interest)
+id_pancreas_genes <- which(colnames(rbind(baron_prepare,xin_prepare,segerstolpe_prepare)) %in% pancreas_genes_of_interest)
 
 print(c("Total length of favourite pancreatic gene list: ", length(id_pancreas_genes)))
 
-plot(umap::umap(rbind(baron_prepare,gcproc.xin.decoded,gcproc.segerstolpe.decoded)[,id_pancreas_genes]%*%(projection_gcproc[id_pancreas_genes,]))$layout,
-     col=as.factor(row.names(rbind(baron_prepare,gcproc.xin.decoded,gcproc.segerstolpe.decoded))), 
+plot(umap::umap(rbind(baron_prepare,xin_prepare,segerstolpe_prepare)[,id_pancreas_genes]%*%(projection_gcproc[id_pancreas_genes,]))$layout,
+     col=as.factor(row.names(rbind(baron_prepare,xin_prepare,segerstolpe_prepare))), 
      xlab = "UMAP 1", 
      ylab = "UMAP 2", 
      main = paste("All 3 datasets via gcproc and UMAP \n with ",length(id_pancreas_genes)," pancreatic genes",sep=""),
@@ -193,12 +183,12 @@ plot(umap::umap(rbind(baron_prepare,gcproc.xin.decoded,gcproc.segerstolpe.decode
 
 
 ribosomal_genes_of_interest <- c("RPS|RPL")
-id_ribosomal_genes <- grep(pattern = ribosomal_genes_of_interest, x = colnames(rbind(baron_prepare,gcproc.xin.decoded,gcproc.segerstolpe.decoded)))
+id_ribosomal_genes <- grep(pattern = ribosomal_genes_of_interest, x = colnames(rbind(baron_prepare,xin_prepare,segerstolpe_prepare)))
 
 print(c("Total length of ribosomal gene list: ", length(id_ribosomal_genes)))
 
-plot(umap::umap(rbind(baron_prepare,gcproc.xin.decoded,gcproc.segerstolpe.decoded)[,id_ribosomal_genes]%*%(projection_gcproc[id_ribosomal_genes,]))$layout,
-     col=as.factor(row.names(rbind(baron_prepare,gcproc.xin.decoded,gcproc.segerstolpe.decoded))), 
+plot(umap::umap(rbind(baron_prepare,xin_prepare,segerstolpe_prepare)[,id_ribosomal_genes]%*%(projection_gcproc[id_ribosomal_genes,]))$layout,
+     col=as.factor(row.names(rbind(baron_prepare,xin_prepare,segerstolpe_prepare))), 
      xlab = "UMAP 1", 
      ylab = "UMAP 2", 
      main = paste("All 3 datasets via gcproc and UMAP \n with ",length(id_ribosomal_genes)," RPS or RPL genes",sep=""),
