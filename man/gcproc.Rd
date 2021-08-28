@@ -12,7 +12,7 @@ gcproc(
   config = gcproc::extract_config(verbose = F),
   anchors = gcproc::extract_anchors_framework(verbose = F),
   pivots = gcproc::extract_pivots_framework(verbose = F),
-  predict = gcproc::extract_prediction_framework(verbose = F)
+  recover = gcproc::extract_recovery_framework(verbose = F)
 )
 }
 \arguments{
@@ -30,14 +30,14 @@ gcproc(
 
 \item{pivots}{Initialisation of model parameters (not required)}
 
-\item{predict}{A binary matrix representing data points to be predicted. Here a matrix representing the dimensions of x and y are provided, where 0 represents the training set, and 1 represents the test set (not required)}
+\item{recover}{Important information for prediction or imputation (not required)}
 }
 \value{
 Main parameters contains the learned model parameters. The alpha and beta matrix multiply x and y by, (K)(Y)(v) and (J)(X)(u). By multiplying with the parameter, the dimension of the samples and features can be dimensionally reduced for further visualisation analysis such as embedding or projection.
 
 Code contains the learned shared encoding space. The encoded space refers to the full dimension reduction of both samples and features after matrix multiplication by parameters K and v for y, as well as, J and u for x. The decode is an estimation of the full matrix dataset, where the code is used and matrix multiplied as t(K)(Y_code)t(v), and t(J)(X_code)t(u) to calculate the decoded estimation.
 
-Prediction contains the predictions for the test dataset as indicated by a 1 in the binary prediction matrices. In addition to the x and y variables within this list that correspond to the input binary design matrix, the predict.y and predict.x datasets represent the decoded estimation, and predicts any missing test data.
+Recover contains the predictions for the test dataset as indicated by a 1 in the binary prediction matrices. In addition to the x and y variables within this list that correspond to the input binary design matrix, the predict.y and predict.x datasets represent the decoded estimation, and predicts any missing test data.
 }
 \description{
 A method that uses a likelihood model to align two datasets via an encoding in a lower dimensional space. The coding of the datasets simultaneously can be used to reconstruct the data to predict missing test points. The parameters can be used to reduce either the feature or the sample dimensions into a smaller subspace for further embedding or projection. To run as default, only requires x and y as inputs.

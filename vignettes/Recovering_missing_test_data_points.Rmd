@@ -29,11 +29,8 @@ library(irlba,quietly = T)
 ### Step 1 - Initialise config
 ```{r step_1}
 
-config.predict <- gcproc::extract_config(T)
-config.predict$i_dim <- 30
-config.predict$tol <- 1e-3
-config.predict$verbose <- F
-config.predict$init <- "svd-quick"
+config.recover <- gcproc::extract_config(T)
+config.recover$verbose <- F
 
 ```
 
@@ -43,7 +40,7 @@ config.predict$init <- "svd-quick"
 ```{r step_2}
 
 predict.list <- list()
-predict.names <- c("wine","diamonds","golub","oliveoil")
+predict.names <- c("wine","QuickStartExample","golub","oliveoil")
 
 library(pdfCluster)
 data("wine")
@@ -72,9 +69,9 @@ predict.list[[4]] <- as.matrix(oliveoil[,-c(1,2)])
 
 ### Step 3 - Run gcproc, glmnet and linear model on test datasets
 
-Three models are run: gcproc, glmnet and lm - respectively they are Generalised Canonical Procrustes, a Regularised Generalised Linear Model, and a Standard Linear Model. On smaller datasets, it is expected for a linear model to perform well, whereas on larger datasets with more features it is expected a regularised method such as glmnet to perform well.  The root mean squared error is reported, along with the pearson correlation.
+Three models are run: gcproc, glmnet and lm - respectively they are Generalised Canonical Procrustes, a Regularised Generalised Linear Model, and a Standard Linear Model. The root mean squared error is reported, along with the pearson correlation.
   
-Four datasets are used in this regression to predict missing values. The most variable feature is listed as the variable to be predicted, while all other variables are listed as the covariates.
+Four datasets are used in this regression to recover missing values. The most variable feature is listed as the variable to be predicted, while all other variables are listed as the covariates.
 
 ```{r step_3,warning=FALSE}
 
@@ -87,7 +84,7 @@ for (list_id in c(1:length(predict.list))){
   
   main_scores.1 <- c()
   
-  for (seed in c(1:10)){
+  for (seed in c(1:100)){
     
     # Set up training ids
     set.seed(seed)
@@ -104,30 +101,29 @@ for (list_id in c(1:length(predict.list))){
     
     # Set up gcproc
     
-    # Set up prediction for gcproc
-    predict <- gcproc::extract_prediction_framework(F)
-    predict$x <- predict$y <- array(0,dim=dim(data___x))
-    predict$x[-train_id,y_predict.id_col] <- predict$y[-train_id,y_predict.id_col] <- 1
+    # Set up recovery for gcproc
+    recover <- gcproc::extract_recovery_framework(F)
+    recover$x <- recover$y <- array(0,dim=dim(data___x))
+    recover$x[-train_id,y_predict.id_col] <- recover$y[-train_id,y_predict.id_col] <- 1
     
-    # Initialise missing values given by prediction design matrix with median feature value
+    # Initialise missing values given by recovery design matrix with median feature value
     x.x.check <- as.matrix(data___x)
-    x.x.check <- x.x.check*(1-predict$y) + do.call('cbind',lapply(c(1:dim(x.x.check*(1-predict$y))[2]),function(X){(predict$y[,X])*median(x.x.check[which((1-predict$y)[,X]==1),X])}))
+    x.x.check <- x.x.check*(1-recover$y) + do.call('cbind',lapply(c(1:dim(x.x.check*(1-recover$y))[2]),function(X){(recover$y[,X])*median(x.x.check[which((1-recover$y)[,X]==1),X])}))
     
     # Run gcproc
     gcproc.model <- gcproc::gcproc(x=x.x.check,
                                    y=x.x.check,
-                                   config = config.predict,
-                                   predict = predict,
+                                   config = config.recover,
+                                   recover = recover,
                                    fixed = list(i_dim = T, j_dim = T),
                                    reference = "x"
     )
     
-    
     # Extract predicted values
-    gcproc.predict <- gcproc.model$predict$predict.y
+    gcproc.recover <- gcproc.model$recover$predict.y
     
-    y_hat.plot <- gcproc.predict[which(predict$y==1,arr.ind = T)]
-    data___x.plot <- data___x[which((predict$y)==1,arr.ind = T)]
+    y_hat.plot <- gcproc.recover[which(recover$y==1,arr.ind = T)]
+    data___x.plot <- data___x[which((recover$y)==1,arr.ind = T)]
     
     # Set up table for plotting
     vals <- data.frame(rbind(data.frame(seed,"Feature Column"=colnames(data___x)[y_predict.id_col],Metric="Loss: Root Mean Squared Error",
@@ -179,7 +175,7 @@ for (list_id in c(1:length(predict.list))){
 
   main_scores.2<-c()
   
-  for (seed in 1:3){
+  for (seed in 1:100){
     
     set.seed(seed)
     
@@ -189,28 +185,28 @@ for (list_id in c(1:length(predict.list))){
     data___x.check <- mice::mice(data___x.check$amp,printFlag = F)
     mice.pred <- mice::complete(data___x.check)
     
-    # Set up prediction design matrix
-    predict <- gcproc::extract_prediction_framework(F)
-    predict$y <- predict$x <- (data___x.check$where)
-    
-    # Initialise missing values given by prediction design matrix with median feature value
+    # Set up recovery design matrix
+    recover <- gcproc::extract_recovery_framework(F)
+    recover$y <- recover$x <- (data___x.check$where)
+
+    # Initialise missing values given by recovery design matrix with median feature value
     x.x.check <- as.matrix(data___x)
-    x.x.check <- x.x.check*(1-predict$y) + do.call('cbind',lapply(c(1:dim(x.x.check*(1-predict$y))[2]),function(X){(predict$y[,X])*median(x.x.check[which((1-predict$y)[,X]==1),X])}))
+    x.x.check <- x.x.check*(1-recover$y) + do.call('cbind',lapply(c(1:dim(x.x.check*(1-recover$y))[2]),function(X){(recover$y[,X])*median(x.x.check[which((1-recover$y)[,X]==1),X])}))
     
     # Run gcproc
     gcproc.model <- gcproc::gcproc(x=x.x.check,
                                    y=x.x.check,
-                                   config = config.predict,
-                                   predict = predict,
+                                   config = config.recover,
+                                   recover = recover,
                                    fixed = list(i_dim = T, j_dim = T),
                                    reference = "y")
     
-    gcproc.predict <- gcproc.model$predict$predict.y
+    gcproc.recover <- gcproc.model$recover$predict.x
     
     # Extract imputed values
-    y_hat.plot <- gcproc.predict[which(predict$x==1,arr.ind = T)]
-    data___x.plot <- data___x[which((predict$x)==1,arr.ind = T)]
-    mice.pred.plot <- mice.pred[which((predict$x)==1,arr.ind = T)]
+    y_hat.plot <- gcproc.recover[which(recover$x==1,arr.ind = T)]
+    data___x.plot <- data___x[which((recover$x)==1,arr.ind = T)]
+    mice.pred.plot <- mice.pred[which((recover$x)==1,arr.ind = T)]
     
     # Set up table for plotting
     vals <- data.frame(rbind(data.frame(seed,Metric="Loss: Root Mean Squared Error",
@@ -241,6 +237,7 @@ for (list_id in c(1:length(predict.list))){
 }
 
 ```
+
 
 
 
