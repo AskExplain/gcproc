@@ -138,7 +138,7 @@
   config <span class='op'>=</span> <span class='fu'>gcproc</span><span class='fu'>::</span><span class='fu'><a href='extract_config.html'>extract_config</a></span><span class='op'>(</span>verbose <span class='op'>=</span> <span class='cn'>F</span><span class='op'>)</span>,
   anchors <span class='op'>=</span> <span class='fu'>gcproc</span><span class='fu'>::</span><span class='fu'><a href='extract_anchors_framework.html'>extract_anchors_framework</a></span><span class='op'>(</span>verbose <span class='op'>=</span> <span class='cn'>F</span><span class='op'>)</span>,
   pivots <span class='op'>=</span> <span class='fu'>gcproc</span><span class='fu'>::</span><span class='fu'><a href='extract_pivots_framework.html'>extract_pivots_framework</a></span><span class='op'>(</span>verbose <span class='op'>=</span> <span class='cn'>F</span><span class='op'>)</span>,
-  predict <span class='op'>=</span> <span class='fu'>gcproc</span><span class='fu'>::</span><span class='fu'><a href='extract_prediction_framework.html'>extract_prediction_framework</a></span><span class='op'>(</span>verbose <span class='op'>=</span> <span class='cn'>F</span><span class='op'>)</span>
+  recover <span class='op'>=</span> <span class='fu'>gcproc</span><span class='fu'>::</span><span class='fu'><a href='extract_recovery_framework.html'>extract_recovery_framework</a></span><span class='op'>(</span>verbose <span class='op'>=</span> <span class='cn'>F</span><span class='op'>)</span>
 <span class='op'>)</span></pre>
 
     <h2 class="hasAnchor" id="arguments"><a class="anchor" href="#arguments"></a>Arguments</h2>
@@ -173,8 +173,8 @@
       <td><p>Initialisation of model parameters (not required)</p></td>
     </tr>
     <tr>
-      <th>predict</th>
-      <td><p>A binary matrix representing data points to be predicted. Here a matrix representing the dimensions of x and y are provided, where 0 represents the training set, and 1 represents the test set (not required)</p></td>
+      <th>recover</th>
+      <td><p>Important information for prediction or imputation (not required)</p></td>
     </tr>
     </table>
 
@@ -182,7 +182,7 @@
 
     <p>Main parameters contains the learned model parameters. The alpha and beta matrix multiply x and y by, (K)(Y)(v) and (J)(X)(u). By multiplying with the parameter, the dimension of the samples and features can be dimensionally reduced for further visualisation analysis such as embedding or projection.</p>
 <p>Code contains the learned shared encoding space. The encoded space refers to the full dimension reduction of both samples and features after matrix multiplication by parameters K and v for y, as well as, J and u for x. The decode is an estimation of the full matrix dataset, where the code is used and matrix multiplied as t(K)(Y_code)t(v), and t(J)(X_code)t(u) to calculate the decoded estimation.</p>
-<p>Prediction contains the predictions for the test dataset as indicated by a 1 in the binary prediction matrices. In addition to the x and y variables within this list that correspond to the input binary design matrix, the predict.y and predict.x datasets represent the decoded estimation, and predicts any missing test data.</p>
+<p>Recover contains the predictions for the test dataset as indicated by a 1 in the binary prediction matrices. In addition to the x and y variables within this list that correspond to the input binary design matrix, the predict.y and predict.x datasets represent the decoded estimation, and predicts any missing test data.</p>
 
   </div>
   <div class="col-md-3 hidden-xs hidden-sm" id="pkgdown-sidebar">
