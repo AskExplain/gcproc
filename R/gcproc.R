@@ -125,8 +125,6 @@ gcproc <- function(x,
     code$Y_code <- (MASS::ginv((main.parameters$alpha.K)%*%t(main.parameters$alpha.K))%*%(code$Y_encode)%*%MASS::ginv(t(main.parameters$v.beta)%*%(main.parameters$v.beta)))
     code$X_code <- (MASS::ginv((main.parameters$alpha.L)%*%t(main.parameters$alpha.L))%*%(code$X_encode)%*%MASS::ginv(t(main.parameters$u.beta)%*%(main.parameters$u.beta)))
 
-
-
     if (reference == "y"){
       code$main_code <- code$Y_code
     }
@@ -140,9 +138,13 @@ gcproc <- function(x,
 
       if (fixed$i_dim == T){
         main.parameters$alpha.K <- main.parameters$alpha.L
+      } else {
+        main.parameters$alpha.K <- if(is.null(anchors$anchor_y.sample)){t(y%*%t((code$main_code)%*%t(main.parameters$v.beta))%*%MASS::ginv(((code$main_code)%*%t(main.parameters$v.beta))%*%t((code$main_code)%*%t(main.parameters$v.beta))))}else{anchors$anchor_y.sample}
       }
       if (fixed$j_dim == T){
         main.parameters$v.beta <- main.parameters$u.beta
+      } else {
+        main.parameters$v.beta <- if(is.null(anchors$anchor_y.feature)){t(MASS::ginv(t((t(main.parameters$alpha.K)%*%(code$main_code)))%*%((t(main.parameters$alpha.K)%*%(code$main_code))))%*%t(t(main.parameters$alpha.K)%*%(code$main_code))%*%y)}else{anchors$anchor_y.feature}
       }
     }
 
@@ -153,23 +155,15 @@ gcproc <- function(x,
 
       if (fixed$i_dim == T){
         main.parameters$alpha.L <- main.parameters$alpha.K
+      } else {
+        main.parameters$alpha.L <- if(is.null(anchors$anchor_x.sample)){t(x%*%t((code$main_code)%*%t(main.parameters$u.beta))%*%MASS::ginv(((code$main_code)%*%t(main.parameters$u.beta))%*%t((code$main_code)%*%t(main.parameters$u.beta))))}else{anchors$anchor_x.sample}
       }
       if (fixed$j_dim == T){
         main.parameters$u.beta <- main.parameters$v.beta
+      } else {
+        main.parameters$u.beta <- if(is.null(anchors$anchor_x.feature)){t(MASS::ginv(t((t(main.parameters$alpha.L)%*%(code$main_code)))%*%((t(main.parameters$alpha.L)%*%(code$main_code))))%*%t(t(main.parameters$alpha.L)%*%(code$main_code))%*%x)}else{anchors$anchor_x.feature}
       }
     }
-
-
-    if (fixed$i_dim == F & fixed$j_dim == F){
-
-      main.parameters$alpha.K <- if(is.null(anchors$anchor_y.sample)){t(y%*%t((code$main_code)%*%t(main.parameters$v.beta))%*%MASS::ginv(((code$main_code)%*%t(main.parameters$v.beta))%*%t((code$main_code)%*%t(main.parameters$v.beta))))}else{anchors$anchor_y.sample}
-      main.parameters$alpha.L <- if(is.null(anchors$anchor_x.sample)){t(x%*%t((code$main_code)%*%t(main.parameters$u.beta))%*%MASS::ginv(((code$main_code)%*%t(main.parameters$u.beta))%*%t((code$main_code)%*%t(main.parameters$u.beta))))}else{anchors$anchor_x.sample}
-
-      main.parameters$v.beta <- if(is.null(anchors$anchor_y.feature)){t(MASS::ginv(t((t(main.parameters$alpha.K)%*%(code$main_code)))%*%((t(main.parameters$alpha.K)%*%(code$main_code))))%*%t(t(main.parameters$alpha.K)%*%(code$main_code))%*%y)}else{anchors$anchor_y.feature}
-      main.parameters$u.beta <- if(is.null(anchors$anchor_x.feature)){t(MASS::ginv(t((t(main.parameters$alpha.L)%*%(code$main_code)))%*%((t(main.parameters$alpha.L)%*%(code$main_code))))%*%t(t(main.parameters$alpha.L)%*%(code$main_code))%*%x)}else{anchors$anchor_x.feature}
-
-    }
-
 
 
     # Check convergence
@@ -200,6 +194,9 @@ gcproc <- function(x,
   dimension_reduction$y.v_dim_red <- y%*%main.parameters$v.beta
   dimension_reduction$L.x_dim_red <- t(main.parameters$alpha.L%*%x)
   dimension_reduction$x.u_dim_red <- x%*%main.parameters$u.beta
+
+  recover$predict.x <- Matrix::Matrix(recover$predict.x*recover$x,sparse=T)
+  recover$predict.y <- Matrix::Matrix(recover$predict.y*recover$y,sparse=T)
 
   return(list(
 
