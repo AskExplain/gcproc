@@ -5,7 +5,7 @@
 #' @param max_iter Maximum iteration of gcproc
 #' @param tol Tolerance threshold for convergence (metric: Root Mean Squared Error)
 #' @param verbose Print statements?
-#' @param init Initialisation method for the model ("svd","eigen-sparse","eigen-dense")
+#' @param init Initialisation method for the model ("svd","eigen-quick","eigen-dense","svd-quick","svd-dense")
 #' @return  Configuration parameters for gcproc
 #' @export
 extract_config <- function(verbose=T){
