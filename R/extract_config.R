@@ -5,17 +5,18 @@
 #' @param max_iter Maximum iteration of gcproc
 #' @param tol Tolerance threshold for convergence (metric: Root Mean Squared Error)
 #' @param verbose Print statements?
-#' @param init Initialisation method for the model ("svd","eigen-sparse","eigen-dense")
+#' @param init Initialisation method for the model ("random","eigen-sparse","eigen-dense","svd-quick","svd-dense)
 #' @return  Configuration parameters for gcproc
 #' @export
 extract_config <- function(verbose=T){
   config <- list(
-    i_dim = NULL,
-    j_dim = NULL,
+    all.i_dim = c(30,25),
+    all.j_dim = c(30,25),
+    layers = 2,
     max_iter=150,
     tol=1e-2,
     verbose=T,
-    init="svd-quick")
+    init="random")
 
   if (verbose == T){
     print(config)

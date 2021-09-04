@@ -29,25 +29,28 @@ gcproc <- function(x,
 ){
 
 
-  if (is.null(config$i_dim)){
-    eig.val_x <- RSpectra::eigs(crossprod(t(x),t(x)),k = min(nrow(x)-2,30))$values
-    eig.val_y <- RSpectra::eigs(crossprod(t(y),t(y)),k = min(nrow(y)-2,30))$values
 
-    main_dim <- sum(cumsum(((eig.val_x)/sum((eig.val_x))+(eig.val_y)/sum((eig.val_y)))/2)<(1-1e-2))
+  # if (is.null(config$i_dim)){
+  #   eig.val_x <- RSpectra::eigs(crossprod(t(x),t(x)),k = min(nrow(x)-2,30))$values
+  #   eig.val_y <- RSpectra::eigs(crossprod(t(y),t(y)),k = min(nrow(y)-2,30))$values
+  #
+  #   main_dim <- sum(cumsum(((eig.val_x)/sum((eig.val_x))+(eig.val_y)/sum((eig.val_y)))/2)<(1-1e-2))
+  #
+  #   config$i_dim <- max(5,main_dim)
+  # }
+  #
+  #
+  # if (is.null(config$j_dim)){
+  #   eig.val_x <- RSpectra::eigs(crossprod((x),(x)),k = min(ncol(x)-2,30))$values
+  #   eig.val_y <- RSpectra::eigs(crossprod((y),(y)),k = min(ncol(y)-2,30))$values
+  #
+  #   main_dim <- sum(cumsum(((eig.val_x)/sum((eig.val_x))+(eig.val_y)/sum((eig.val_y)))/2)<(1-1e-2))
+  #
+  #   config$j_dim <- max(5,main_dim)
+  # }
 
-    config$i_dim <- max(5,main_dim)
-  }
-
-
-  if (is.null(config$j_dim)){
-    eig.val_x <- RSpectra::eigs(crossprod((x),(x)),k = min(ncol(x)-2,30))$values
-    eig.val_y <- RSpectra::eigs(crossprod((y),(y)),k = min(ncol(y)-2,30))$values
-
-    main_dim <- sum(cumsum(((eig.val_x)/sum((eig.val_x))+(eig.val_y)/sum((eig.val_y)))/2)<(1-1e-2))
-
-    config$j_dim <- max(5,main_dim)
-  }
-
+  config$init.i_dim <- config$i_dim
+  config$init.j_dim <- config$j_dim
 
 
   prepare_data = TRUE
@@ -81,16 +84,19 @@ gcproc <- function(x,
     recover$predict.y <- recover$y
     recover$predict.x <- recover$x
 
-    initialise.model <- initialise.gcproc(x = x,
-                                          y = y,
-                                          fixed = fixed,
-                                          reference = reference,
-                                          config = config,
-                                          anchors = anchors,
-                                          pivots = pivots)
+    initial.parameters <- update.parameters(  x=x,
+                                               y=y,
+                                               config=config,
+                                               reference=reference,
+                                               fixed=fixed,
+                                               anchors=anchors,
+                                               pivots=pivots)
 
-    main.parameters <- initialise.model$main.parameters
-    code <- initialise.model$code
+    config <- initial.parameters$config
+    all.parameters <- initial.parameters$parameters$all.parameters
+    main.parameters <- initial.parameters$parameters$main.parameters
+    code <- initial.parameters$code
+
   }
 
   if (config$verbose){
@@ -119,55 +125,23 @@ gcproc <- function(x,
     }
 
 
-    code$Y_encode <- (main.parameters$alpha.K%*%( y )%*%(main.parameters$v.beta))
-    code$X_encode <- (main.parameters$alpha.L%*%( x )%*%(main.parameters$u.beta))
+    new.update.parameters <- update.parameters(  x=x,
+                                              y=y,
+                                              main.all.parameters = all.parameters,
+                                              code = code,
+                                              config=config,
+                                              reference=reference,
+                                              fixed=fixed,
+                                              anchors=anchors,
+                                              pivots=pivots)
 
-    code$Y_code <- (MASS::ginv((main.parameters$alpha.K)%*%t(main.parameters$alpha.K))%*%(code$Y_encode)%*%MASS::ginv(t(main.parameters$v.beta)%*%(main.parameters$v.beta)))
-    code$X_code <- (MASS::ginv((main.parameters$alpha.L)%*%t(main.parameters$alpha.L))%*%(code$X_encode)%*%MASS::ginv(t(main.parameters$u.beta)%*%(main.parameters$u.beta)))
-
-    if (reference == "y"){
-      code$main_code <- code$Y_code
-    }
-    if (reference == "x"){
-      code$main_code <- code$X_code
-    }
-
-    if (reference=="x"){
-      main.parameters$alpha.L <- if(is.null(anchors$anchor_x.sample)){t(x%*%t((code$main_code)%*%t(main.parameters$u.beta))%*%MASS::ginv(((code$main_code)%*%t(main.parameters$u.beta))%*%t((code$main_code)%*%t(main.parameters$u.beta))))}else{anchors$anchor_x.sample}
-      main.parameters$u.beta <- if(is.null(anchors$anchor_x.feature)){t(MASS::ginv(t((t(main.parameters$alpha.L)%*%(code$main_code)))%*%((t(main.parameters$alpha.L)%*%(code$main_code))))%*%t(t(main.parameters$alpha.L)%*%(code$main_code))%*%x)}else{anchors$anchor_x.feature}
-
-      if (fixed$i_dim == T){
-        main.parameters$alpha.K <- main.parameters$alpha.L
-      } else {
-        main.parameters$alpha.K <- if(is.null(anchors$anchor_y.sample)){t(y%*%t((code$main_code)%*%t(main.parameters$v.beta))%*%MASS::ginv(((code$main_code)%*%t(main.parameters$v.beta))%*%t((code$main_code)%*%t(main.parameters$v.beta))))}else{anchors$anchor_y.sample}
-      }
-      if (fixed$j_dim == T){
-        main.parameters$v.beta <- main.parameters$u.beta
-      } else {
-        main.parameters$v.beta <- if(is.null(anchors$anchor_y.feature)){t(MASS::ginv(t((t(main.parameters$alpha.K)%*%(code$main_code)))%*%((t(main.parameters$alpha.K)%*%(code$main_code))))%*%t(t(main.parameters$alpha.K)%*%(code$main_code))%*%y)}else{anchors$anchor_y.feature}
-      }
-    }
-
-
-    if (reference=="y"){
-      main.parameters$alpha.K <- if(is.null(anchors$anchor_y.sample)){t(y%*%t((code$main_code)%*%t(main.parameters$v.beta))%*%MASS::ginv(((code$main_code)%*%t(main.parameters$v.beta))%*%t((code$main_code)%*%t(main.parameters$v.beta))))}else{anchors$anchor_y.sample}
-      main.parameters$v.beta <- if(is.null(anchors$anchor_y.feature)){t(MASS::ginv(t((t(main.parameters$alpha.K)%*%(code$main_code)))%*%((t(main.parameters$alpha.K)%*%(code$main_code))))%*%t(t(main.parameters$alpha.K)%*%(code$main_code))%*%y)}else{anchors$anchor_y.feature}
-
-      if (fixed$i_dim == T){
-        main.parameters$alpha.L <- main.parameters$alpha.K
-      } else {
-        main.parameters$alpha.L <- if(is.null(anchors$anchor_x.sample)){t(x%*%t((code$main_code)%*%t(main.parameters$u.beta))%*%MASS::ginv(((code$main_code)%*%t(main.parameters$u.beta))%*%t((code$main_code)%*%t(main.parameters$u.beta))))}else{anchors$anchor_x.sample}
-      }
-      if (fixed$j_dim == T){
-        main.parameters$u.beta <- main.parameters$v.beta
-      } else {
-        main.parameters$u.beta <- if(is.null(anchors$anchor_x.feature)){t(MASS::ginv(t((t(main.parameters$alpha.L)%*%(code$main_code)))%*%((t(main.parameters$alpha.L)%*%(code$main_code))))%*%t(t(main.parameters$alpha.L)%*%(code$main_code))%*%x)}else{anchors$anchor_x.feature}
-      }
-    }
-
+    config <- new.update.parameters$config
+    all.parameters <- new.update.parameters$parameters$all.parameters
+    main.parameters <- new.update.parameters$parameters$main.parameters
+    code <- new.update.parameters$code
 
     # Check convergence
-    matrix.residuals <- (code$Y_code - code$X_code)
+    matrix.residuals <- (code[[config$layers]]$Y_code - code[[config$layers]]$X_code)
     llik.vec <- c(llik.vec, mean(mclust::dmvnorm((matrix.residuals),sigma = diag(diag(t(matrix.residuals)%*%(matrix.residuals)/dim(matrix.residuals)[2])),log = T)))
     score.vec <- c(score.vec, (mean(abs(matrix.residuals))))
     MSE <- mean(tail(score.vec,accept_score))
@@ -195,8 +169,8 @@ gcproc <- function(x,
   dimension_reduction$L.x_dim_red <- t(main.parameters$alpha.L%*%x)
   dimension_reduction$x.u_dim_red <- x%*%main.parameters$u.beta
 
-  recover$predict.x <- Matrix::Matrix(recover$predict.x*recover$x,sparse=T)
-  recover$predict.y <- Matrix::Matrix(recover$predict.y*recover$y,sparse=T)
+  # recover$predict.x <- Matrix::Matrix(recover$predict.x*recover$x,sparse=T)
+  # recover$predict.y <- Matrix::Matrix(recover$predict.y*recover$y,sparse=T)
 
   return(list(
 
@@ -225,3 +199,142 @@ gcproc <- function(x,
 
 
 }
+
+
+
+update.parameters <- function(x,
+                              y,
+                              main.all.parameters = NULL,
+                              code = NULL,
+                              config,
+                              reference,
+                              fixed,
+                              anchors,
+                              pivots){
+
+  side.config <- config
+
+  if (is.null(main.all.parameters)){
+    all.parameters <- list()
+  } else {
+    all.parameters <- main.all.parameters
+  }
+
+
+  if (is.null(code)){
+    all.code <- list()
+  } else {
+    all.code <- code
+  }
+
+
+  for (layer in c(1:config$layers)){
+
+    side.config$i_dim <- side.config$all.i_dim[layer]
+    side.config$j_dim <- side.config$all.j_dim[layer]
+
+    if (is.null(code) & is.null(main.all.parameters)){
+      initialise.model <- initialise.gcproc(x = x,
+                                            y = y,
+                                            fixed = fixed,
+                                            reference = reference,
+                                            config = side.config,
+                                            anchors = anchors,
+                                            pivots = pivots)
+
+      all.parameters[[layer]] <- initialise.model$main.parameters
+      all.code[[layer]] <- initialise.model$code
+    }
+
+    all.code[[layer]]$Y_encode <- (all.parameters[[layer]]$alpha.K%*%( y )%*%(all.parameters[[layer]]$v.beta))
+    all.code[[layer]]$X_encode <- (all.parameters[[layer]]$alpha.L%*%( x )%*%(all.parameters[[layer]]$u.beta))
+
+    all.code[[layer]]$Y_code <- (MASS::ginv((all.parameters[[layer]]$alpha.K)%*%t(all.parameters[[layer]]$alpha.K))%*%(all.code[[layer]]$Y_encode)%*%MASS::ginv(t(all.parameters[[layer]]$v.beta)%*%(all.parameters[[layer]]$v.beta)))
+    all.code[[layer]]$X_code <- (MASS::ginv((all.parameters[[layer]]$alpha.L)%*%t(all.parameters[[layer]]$alpha.L))%*%(all.code[[layer]]$X_encode)%*%MASS::ginv(t(all.parameters[[layer]]$u.beta)%*%(all.parameters[[layer]]$u.beta)))
+
+    if (reference == "y"){
+      all.code[[layer]]$main_code <- all.code[[layer]]$Y_code
+    }
+    if (reference == "x"){
+      all.code[[layer]]$main_code <- all.code[[layer]]$X_code
+    }
+
+    if (reference=="x"){
+      all.parameters[[layer]]$alpha.L <- if(is.null(anchors$anchor_x.sample)){t(x%*%t((all.code[[layer]]$main_code)%*%t(all.parameters[[layer]]$u.beta))%*%MASS::ginv(((all.code[[layer]]$main_code)%*%t(all.parameters[[layer]]$u.beta))%*%t((all.code[[layer]]$main_code)%*%t(all.parameters[[layer]]$u.beta))))}else{anchors$anchor_x.sample}
+      all.parameters[[layer]]$u.beta <- if(is.null(anchors$anchor_x.feature)){t(MASS::ginv(t((t(all.parameters[[layer]]$alpha.L)%*%(all.code[[layer]]$main_code)))%*%((t(all.parameters[[layer]]$alpha.L)%*%(all.code[[layer]]$main_code))))%*%t(t(all.parameters[[layer]]$alpha.L)%*%(all.code[[layer]]$main_code))%*%x)}else{anchors$anchor_x.feature}
+
+      if (fixed$i_dim == T){
+        all.parameters[[layer]]$alpha.K <- all.parameters[[layer]]$alpha.L
+      } else {
+        all.parameters[[layer]]$alpha.K <- if(is.null(anchors$anchor_y.sample)){t(y%*%t((all.code[[layer]]$main_code)%*%t(all.parameters[[layer]]$v.beta))%*%MASS::ginv(((all.code[[layer]]$main_code)%*%t(all.parameters[[layer]]$v.beta))%*%t((all.code[[layer]]$main_code)%*%t(all.parameters[[layer]]$v.beta))))}else{anchors$anchor_y.sample}
+      }
+      if (fixed$j_dim == T){
+        all.parameters[[layer]]$v.beta <- all.parameters[[layer]]$u.beta
+      } else {
+        all.parameters[[layer]]$v.beta <- if(is.null(anchors$anchor_y.feature)){t(MASS::ginv(t((t(all.parameters[[layer]]$alpha.K)%*%(all.code[[layer]]$main_code)))%*%((t(all.parameters[[layer]]$alpha.K)%*%(all.code[[layer]]$main_code))))%*%t(t(all.parameters[[layer]]$alpha.K)%*%(all.code[[layer]]$main_code))%*%y)}else{anchors$anchor_y.feature}
+      }
+    }
+
+
+    if (reference=="y"){
+      all.parameters[[layer]]$alpha.K <- if(is.null(anchors$anchor_y.sample)){t(y%*%t((all.code[[layer]]$main_code)%*%t(all.parameters[[layer]]$v.beta))%*%MASS::ginv(((all.code[[layer]]$main_code)%*%t(all.parameters[[layer]]$v.beta))%*%t((all.code[[layer]]$main_code)%*%t(all.parameters[[layer]]$v.beta))))}else{anchors$anchor_y.sample}
+      all.parameters[[layer]]$v.beta <- if(is.null(anchors$anchor_y.feature)){t(MASS::ginv(t((t(all.parameters[[layer]]$alpha.K)%*%(all.code[[layer]]$main_code)))%*%((t(all.parameters[[layer]]$alpha.K)%*%(all.code[[layer]]$main_code))))%*%t(t(all.parameters[[layer]]$alpha.K)%*%(all.code[[layer]]$main_code))%*%y)}else{anchors$anchor_y.feature}
+
+      if (fixed$i_dim == T){
+        all.parameters[[layer]]$alpha.L <- all.parameters[[layer]]$alpha.K
+      } else {
+        all.parameters[[layer]]$alpha.L <- if(is.null(anchors$anchor_x.sample)){t(x%*%t((all.code[[layer]]$main_code)%*%t(all.parameters[[layer]]$u.beta))%*%MASS::ginv(((all.code[[layer]]$main_code)%*%t(all.parameters[[layer]]$u.beta))%*%t((all.code[[layer]]$main_code)%*%t(all.parameters[[layer]]$u.beta))))}else{anchors$anchor_x.sample}
+      }
+      if (fixed$j_dim == T){
+        all.parameters[[layer]]$u.beta <- all.parameters[[layer]]$v.beta
+      } else {
+        all.parameters[[layer]]$u.beta <- if(is.null(anchors$anchor_x.feature)){t(MASS::ginv(t((t(all.parameters[[layer]]$alpha.L)%*%(all.code[[layer]]$main_code)))%*%((t(all.parameters[[layer]]$alpha.L)%*%(all.code[[layer]]$main_code))))%*%t(t(all.parameters[[layer]]$alpha.L)%*%(all.code[[layer]]$main_code))%*%x)}else{anchors$anchor_x.feature}
+      }
+    }
+
+    x <- all.code[[layer]]$X_code
+    y <- all.code[[layer]]$Y_code
+
+  }
+
+
+  main.parameters <- list()
+
+  for (layer in c(1:config$layers)){
+
+    if (layer == 1){
+      main.parameters$alpha.K <- all.parameters[[layer]]$alpha.K
+      main.parameters$alpha.L <- all.parameters[[layer]]$alpha.L
+      main.parameters$v.beta <- all.parameters[[layer]]$v.beta
+      main.parameters$u.beta <- all.parameters[[layer]]$u.beta
+    }
+    if (layer > 1){
+      main.parameters$alpha.K <- all.parameters[[layer]]$alpha.K%*%main.parameters$alpha.K
+      main.parameters$alpha.L <- all.parameters[[layer]]$alpha.L%*%main.parameters$alpha.L
+      main.parameters$v.beta <- main.parameters$v.beta%*%all.parameters[[layer]]$v.beta
+      main.parameters$u.beta <- main.parameters$u.beta%*%all.parameters[[layer]]$u.beta
+    }
+
+
+  }
+
+
+  return(list(
+
+    config = config,
+
+    code = all.code,
+
+    parameters = list (
+
+      main.parameters = main.parameters,
+
+      all.parameters = all.parameters
+
+    )
+
+  ))
+
+
+}
+

@@ -7,11 +7,6 @@ initialise.gcproc <- function(x,
                               anchors=NULL,
                               pivots=NULL){
 
-
-  if (config$verbose){
-    print("Initialising data")
-  }
-
   # Initialise parameters
   if (any(do.call('c',lapply(pivots,function(piv){is.null(piv)})))){
     initial.param <-initialise.parameters(x=x,y=y,i_dim=config$i_dim,j_dim=config$j_dim,init=config$init,verbose=config$verbose)
