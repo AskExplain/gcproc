@@ -148,7 +148,7 @@ plot(gg1)
 
 ```
 
-### Step 4 - recover gene expression on histology tissue with a few gene markers present
+### Step 4 - Recover gene expression on histology tissue with a few gene markers present
 
 With the pixel information encoded to better represent the immunofluorescent kidney tissue, the newly encoded features can be used for further analysis. The transfer of parameters can be done via the anchor framework. Just as an anchor would position a ship at sea, an anchored parameter would freeze the parameter in place, while learning other parameters jointly in relation to the fixeded anchor.
 

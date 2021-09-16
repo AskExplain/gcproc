@@ -6,7 +6,7 @@
 <meta http-equiv="X-UA-Compatible" content="IE=edge">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-<title>Extract configuration parameters of gcproc — extract_config • gcproc</title>
+<title>Recover missing data points via imputation or prediction — recover_points • gcproc</title>
 
 
 <!-- jquery -->
@@ -39,8 +39,8 @@
 
 
 
-<meta property="og:title" content="Extract configuration parameters of gcproc — extract_config" />
-<meta property="og:description" content="Extract configuration parameters of gcproc" />
+<meta property="og:title" content="Recover missing data points via imputation or prediction — recover_points" />
+<meta property="og:description" content="Main function to recover missing points. Used internally, but can be re-purposed by the user." />
 
 
 
@@ -121,49 +121,49 @@
 <div class="row">
   <div class="col-md-9 contents">
     <div class="page-header">
-    <h1>Extract configuration parameters of gcproc</h1>
+    <h1>Recover missing data points via imputation or prediction</h1>
     
-    <div class="hidden name"><code>extract_config.Rd</code></div>
+    <div class="hidden name"><code>recover_points.Rd</code></div>
     </div>
 
     <div class="ref-description">
-    <p>Extract configuration parameters of gcproc</p>
+    <p>Main function to recover missing points. Used internally, but can be re-purposed by the user.</p>
     </div>
 
-    <pre class="usage"><span class='fu'>extract_config</span><span class='op'>(</span>verbose <span class='op'>=</span> <span class='cn'>T</span><span class='op'>)</span></pre>
+    <pre class="usage"><span class='fu'>recover_points</span><span class='op'>(</span><span class='va'>x</span>, <span class='va'>y</span>, <span class='va'>main.parameters</span>, <span class='va'>config</span>, <span class='va'>recover</span>, <span class='va'>fixed</span><span class='op'>)</span></pre>
 
     <h2 class="hasAnchor" id="arguments"><a class="anchor" href="#arguments"></a>Arguments</h2>
     <table class="ref-arguments">
     <colgroup><col class="name" /><col class="desc" /></colgroup>
     <tr>
-      <th>verbose</th>
-      <td><p>Print statements?</p></td>
+      <th>x</th>
+      <td><p>Matrix of dataset x</p></td>
     </tr>
     <tr>
-      <th>i_dim</th>
-      <td><p>Dimension reduction for samples (assumed to be along rows)</p></td>
+      <th>y</th>
+      <td><p>Matrix of dataset y</p></td>
     </tr>
     <tr>
-      <th>j_dim</th>
-      <td><p>Dimension reduction for features (assumed to be along columns)</p></td>
+      <th>main.parameters</th>
+      <td><p>Main parameters from gcproc</p></td>
     </tr>
     <tr>
-      <th>max_iter</th>
-      <td><p>Maximum iteration of gcproc</p></td>
+      <th>config</th>
+      <td><p>Configuration parameters from gcproc</p></td>
     </tr>
     <tr>
-      <th>tol</th>
-      <td><p>Tolerance threshold for convergence (metric: Root Mean Squared Error)</p></td>
+      <th>recover</th>
+      <td><p>Recover list from gcproc</p></td>
     </tr>
     <tr>
-      <th>init</th>
-      <td><p>Initialisation method for the model ("svd","eigen-quick","eigen-dense","svd-quick","svd-dense")</p></td>
+      <th>fixed</th>
+      <td><p>Fixed parameters from gcproc</p></td>
     </tr>
     </table>
 
     <h2 class="hasAnchor" id="value"><a class="anchor" href="#value"></a>Value</h2>
 
-    <p>Configuration parameters for gcproc</p>
+    <p>Recovered data from imputation or prediction, with the design matrices and any user input parameters and functions</p>
 
   </div>
   <div class="col-md-3 hidden-xs hidden-sm" id="pkgdown-sidebar">

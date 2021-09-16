@@ -13,6 +13,11 @@
 #' 
 #' @return Main parameters contains the learned model parameters. The alpha and beta matrix multiply x and y by, (K)(Y)(v) and (L)(X)(u). By multiplying with the parameter, the dimension of the samples and features can be dimensionally reduced for further visualisation analysis such as embedding or projection.
 #'
+<<<<<<< HEAD
+=======
+#' @return Main parameters contains the learned model parameters. The alpha and beta matrix multiply x and y by, (K)(Y)(v) and (L)(X)(u). By multiplying with the parameter, the dimension of the samples and features can be dimensionally reduced for further visualisation analysis such as embedding or projection.
+#'
+>>>>>>> main
 #' @return Code contains the learned shared encoding space. The encoded space refers to the full dimension reduction of both samples and features after matrix multiplication by parameters K and v for y, as well as, L and u for x. The decode is an estimation of the full matrix dataset, where the code is used and matrix multiplied as t(K)(Y_code)t(v), and t(L)(X_code)t(u) to calculate the decoded estimation.
 #'
 #' @return Recover contains the predictions for the test dataset as indicated by a 1 in the binary prediction matrices. In addition to the x and y variables within this list that correspond to the input binary design matrix, the predict.y and predict.x datasets represent the decoded estimation, and predicts any missing test data.
@@ -122,6 +127,7 @@ gcproc <- function(x,
       
       
     }
+<<<<<<< HEAD
     
   
     
@@ -129,16 +135,40 @@ gcproc <- function(x,
     main.parameters$alpha.L <- if(is.null(anchors$anchor_x.sample)){t(x%*%t((code$main_code)%*%t(main.parameters$u.beta))%*%MASS::ginv(((code$main_code)%*%t(main.parameters$u.beta))%*%t((code$main_code)%*%t(main.parameters$u.beta))))}else{anchors$anchor_x.sample}
     main.parameters$u.beta <- if(is.null(anchors$anchor_x.feature)){t(MASS::ginv(t((t(main.parameters$alpha.L)%*%(code$main_code)))%*%((t(main.parameters$alpha.L)%*%(code$main_code))))%*%t(t(main.parameters$alpha.L)%*%(code$main_code))%*%x)}else{anchors$anchor_x.feature}
     
+=======
+
+
+    code$Y_encode <- (main.parameters$alpha.K%*%( y )%*%(main.parameters$v.beta))
+    code$X_encode <- (main.parameters$alpha.L%*%( x )%*%(main.parameters$u.beta))
+
+    code$Y_code <- (MASS::ginv((main.parameters$alpha.K)%*%t(main.parameters$alpha.K))%*%(code$Y_encode)%*%MASS::ginv(t(main.parameters$v.beta)%*%(main.parameters$v.beta)))
+    code$X_code <- (MASS::ginv((main.parameters$alpha.L)%*%t(main.parameters$alpha.L))%*%(code$X_encode)%*%MASS::ginv(t(main.parameters$u.beta)%*%(main.parameters$u.beta)))
+
+    if (reference == "y"){
+      code$main_code <- code$Y_code
+    }
+>>>>>>> main
     if (reference == "x"){
       
       if (fixed$i_dim == T){
         main.parameters$alpha.K <- main.parameters$alpha.L
+<<<<<<< HEAD
       } 
       
       if (fixed$j_dim == T){
         main.parameters$v.beta <- main.parameters$u.beta
       } 
       
+=======
+      } else {
+        main.parameters$alpha.K <- if(is.null(anchors$anchor_y.sample)){t(y%*%t((code$main_code)%*%t(main.parameters$v.beta))%*%MASS::ginv(((code$main_code)%*%t(main.parameters$v.beta))%*%t((code$main_code)%*%t(main.parameters$v.beta))))}else{anchors$anchor_y.sample}
+      }
+      if (fixed$j_dim == T){
+        main.parameters$v.beta <- main.parameters$u.beta
+      } else {
+        main.parameters$v.beta <- if(is.null(anchors$anchor_y.feature)){t(MASS::ginv(t((t(main.parameters$alpha.K)%*%(code$main_code)))%*%((t(main.parameters$alpha.K)%*%(code$main_code))))%*%t(t(main.parameters$alpha.K)%*%(code$main_code))%*%y)}else{anchors$anchor_y.feature}
+      }
+>>>>>>> main
     }
     
     
@@ -153,6 +183,7 @@ gcproc <- function(x,
       
       if (fixed$i_dim == T){
         main.parameters$alpha.L <- main.parameters$alpha.K
+<<<<<<< HEAD
       } 
       
       if (fixed$j_dim == T){
@@ -184,6 +215,19 @@ gcproc <- function(x,
     
     total.mse <- mean(abs(matrix.residuals))
       
+=======
+      } else {
+        main.parameters$alpha.L <- if(is.null(anchors$anchor_x.sample)){t(x%*%t((code$main_code)%*%t(main.parameters$u.beta))%*%MASS::ginv(((code$main_code)%*%t(main.parameters$u.beta))%*%t((code$main_code)%*%t(main.parameters$u.beta))))}else{anchors$anchor_x.sample}
+      }
+      if (fixed$j_dim == T){
+        main.parameters$u.beta <- main.parameters$v.beta
+      } else {
+        main.parameters$u.beta <- if(is.null(anchors$anchor_x.feature)){t(MASS::ginv(t((t(main.parameters$alpha.L)%*%(code$main_code)))%*%((t(main.parameters$alpha.L)%*%(code$main_code))))%*%t(t(main.parameters$alpha.L)%*%(code$main_code))%*%x)}else{anchors$anchor_x.feature}
+      }
+    }
+
+
+>>>>>>> main
     # Check convergence
     score.vec <- c(score.vec, total.mse)
     MSE <- mean(tail(score.vec,accept_score))
@@ -220,6 +264,7 @@ gcproc <- function(x,
   dimension_reduction$L.x_dim_red <- t(main.parameters$alpha.L%*%x)
   dimension_reduction$x.u_dim_red <- x%*%main.parameters$u.beta
 
+<<<<<<< HEAD
   code$Y_decoded <- t(main.parameters$alpha.K)%*%code$main_code%*%t(main.parameters$v.beta)
   code$X_decoded <- t(main.parameters$alpha.L)%*%code$main_code%*%t(main.parameters$u.beta)
   
@@ -228,6 +273,11 @@ gcproc <- function(x,
 
   runtime.end <- Sys.time()
   
+=======
+  recover$predict.x <- Matrix::Matrix(recover$predict.x*recover$x,sparse=T)
+  recover$predict.y <- Matrix::Matrix(recover$predict.y*recover$y,sparse=T)
+
+>>>>>>> main
   return(list(
 
     main.parameters = main.parameters,

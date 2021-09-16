@@ -6,7 +6,7 @@
 <meta http-equiv="X-UA-Compatible" content="IE=edge">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-<title>Extract configuration parameters of gcproc — extract_config • gcproc</title>
+<title>Extract recovery framework to put into gcproc — extract_recovery_framework • gcproc</title>
 
 
 <!-- jquery -->
@@ -39,8 +39,8 @@
 
 
 
-<meta property="og:title" content="Extract configuration parameters of gcproc — extract_config" />
-<meta property="og:description" content="Extract configuration parameters of gcproc" />
+<meta property="og:title" content="Extract recovery framework to put into gcproc — extract_recovery_framework" />
+<meta property="og:description" content="Can recover data points by imputing or predicting missing values" />
 
 
 
@@ -121,49 +121,41 @@
 <div class="row">
   <div class="col-md-9 contents">
     <div class="page-header">
-    <h1>Extract configuration parameters of gcproc</h1>
+    <h1>Extract recovery framework to put into gcproc</h1>
     
-    <div class="hidden name"><code>extract_config.Rd</code></div>
+    <div class="hidden name"><code>extract_recovery_framework.Rd</code></div>
     </div>
 
     <div class="ref-description">
-    <p>Extract configuration parameters of gcproc</p>
+    <p>Can recover data points by imputing or predicting missing values</p>
     </div>
 
-    <pre class="usage"><span class='fu'>extract_config</span><span class='op'>(</span>verbose <span class='op'>=</span> <span class='cn'>T</span><span class='op'>)</span></pre>
+    <pre class="usage"><span class='fu'>extract_recovery_framework</span><span class='op'>(</span>verbose <span class='op'>=</span> <span class='cn'>T</span><span class='op'>)</span></pre>
 
     <h2 class="hasAnchor" id="arguments"><a class="anchor" href="#arguments"></a>Arguments</h2>
     <table class="ref-arguments">
     <colgroup><col class="name" /><col class="desc" /></colgroup>
     <tr>
-      <th>verbose</th>
-      <td><p>Print statements?</p></td>
+      <th>x</th>
+      <td><p>Design matrix of x where 1 is to predict the test set, 0 is to be modelled as the train set</p></td>
     </tr>
     <tr>
-      <th>i_dim</th>
-      <td><p>Dimension reduction for samples (assumed to be along rows)</p></td>
+      <th>y</th>
+      <td><p>Design matrix of y where 1 is to predict the test set, 0 is to be modelled as the train set</p></td>
     </tr>
     <tr>
-      <th>j_dim</th>
-      <td><p>Dimension reduction for features (assumed to be along columns)</p></td>
+      <th>fn</th>
+      <td><p>Allows user to specify a prediction function</p></td>
     </tr>
     <tr>
-      <th>max_iter</th>
-      <td><p>Maximum iteration of gcproc</p></td>
-    </tr>
-    <tr>
-      <th>tol</th>
-      <td><p>Tolerance threshold for convergence (metric: Root Mean Squared Error)</p></td>
-    </tr>
-    <tr>
-      <th>init</th>
-      <td><p>Initialisation method for the model ("svd","eigen-quick","eigen-dense","svd-quick","svd-dense")</p></td>
+      <th>param</th>
+      <td><p>Parameters to be put into prediction function</p></td>
     </tr>
     </table>
 
     <h2 class="hasAnchor" id="value"><a class="anchor" href="#value"></a>Value</h2>
 
-    <p>Configuration parameters for gcproc</p>
+    <p>Prediction framework for gcproc</p>
 
   </div>
   <div class="col-md-3 hidden-xs hidden-sm" id="pkgdown-sidebar">
