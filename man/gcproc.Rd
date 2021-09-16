@@ -12,15 +12,14 @@ gcproc(
   config = gcproc::extract_config(verbose = F),
   anchors = gcproc::extract_anchors_framework(verbose = F),
   pivots = gcproc::extract_pivots_framework(verbose = F),
-  recover = gcproc::extract_recovery_framework(verbose = F)
+  recover = gcproc::extract_recovery_framework(verbose = F),
+  regularise = gcproc::extract_regularise_framework(verbose = F)
 )
 }
 \arguments{
 \item{x}{Reference dataset of sample by feature matrix (required)}
 
 \item{y}{Experimental dataset of sample by feature matrix (required)}
-
-\item{reference}{Choice of shared space representing x or y (required)}
 
 \item{fixed}{Enforcing feature (i_dim) and, or sample parameters (j_dim) to be identical for x and y (required)}
 
@@ -31,6 +30,8 @@ gcproc(
 \item{pivots}{Initialisation of model parameters (not required)}
 
 \item{recover}{Important information for prediction or imputation (not required)}
+
+\item{regularise}{Enables regularisation via elastic net, default is no regularisation - also see cv.gcproc (not required)}
 }
 \value{
 Main parameters contains the learned model parameters. The alpha and beta matrix multiply x and y by, (K)(Y)(v) and (L)(X)(u). By multiplying with the parameter, the dimension of the samples and features can be dimensionally reduced for further visualisation analysis such as embedding or projection.
