@@ -123,24 +123,21 @@ extract_recovery_framework <- function(verbose=T){
 #' @return  Regularisation framework for gcproc
 #' @export
 extract_regularise_framework <- function(verbose=T){
-  regularise <- list(lambda = 0, 
-                  alpha = 0, 
-                  i_dim =F, 
+  regularise <- list(lambda = 0,
+                  alpha = 0,
+                  i_dim =F,
                   j_dim =F)
-  
+
   if (verbose == T){
     print(regularise)
   }
-  
+
   return(regularise)
 }
 
-
-
-
-
-
-
-
-
-
+S.z.g <- function(S.z,S.g){
+  to_return <-
+    (S.z - S.g) * ((S.z > 0) * (S.g < abs(S.z))) +
+    (S.z + S.g) * ((S.z < 0) * (S.g < abs(S.z)))
+  return(to_return)
+}

@@ -26,7 +26,7 @@ cv.gcproc <- function(x,
 
   regularise.frame <- gcproc::extract_regularise_framework(F)
 
-  lambda_sequence <- c(0.05,0.1,0.2)
+  lambda_sequence <- c(0.001,0.01,0.1)
   alpha_sequence <- c(0.5)
 
   score.list <- Inf

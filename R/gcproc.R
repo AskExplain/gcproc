@@ -10,7 +10,7 @@
 #' @param pivots Initialisation of model parameters (not required)
 #' @param recover Important information for prediction or imputation (not required)
 #' @param regularise Enables regularisation via elastic net, default is no regularisation - also see cv.gcproc (not required)
-#' 
+#'
 #' @return Main parameters contains the learned model parameters. The alpha and beta matrix multiply x and y by, (K)(Y)(v) and (L)(X)(u). By multiplying with the parameter, the dimension of the samples and features can be dimensionally reduced for further visualisation analysis such as embedding or projection.
 #'
 #' @return Code contains the learned shared encoding space. The encoded space refers to the full dimension reduction of both samples and features after matrix multiplication by parameters K and v for y, as well as, L and u for x. The decode is an estimation of the full matrix dataset, where the code is used and matrix multiplied as t(K)(Y_code)t(v), and t(L)(X_code)t(u) to calculate the decoded estimation.
@@ -29,7 +29,7 @@ gcproc <- function(x,
                    regularise = gcproc::extract_regularise_framework(verbose = F)
 ){
   runtime.start <- Sys.time()
-  
+
   S.g <- regularise$lambda*regularise$alpha
   S.d <- 1+regularise$lambda*(1-regularise$alpha)
 
@@ -102,8 +102,8 @@ gcproc <- function(x,
   while (T){
 
     if (!is.null(recover$y) | !is.null(recover$x)){
-      
-      
+
+
       recover <- recover_points(
         x = x,
         y = y,
@@ -112,95 +112,80 @@ gcproc <- function(x,
         config = config,
         recover = recover
       )
-      
+
       if (!is.null(recover$x)){
         x <- recover$predict.x
       }
       if (!is.null(recover$y)){
         y <- recover$predict.y
       }
-      
-      
+
+
     }
-    
-  
-    
-    
-    main.parameters$alpha.L <- if(is.null(anchors$anchor_x.sample)){t(x%*%t((code$main_code)%*%t(main.parameters$u.beta))%*%MASS::ginv(((code$main_code)%*%t(main.parameters$u.beta))%*%t((code$main_code)%*%t(main.parameters$u.beta))))}else{anchors$anchor_x.sample}
-    main.parameters$u.beta <- if(is.null(anchors$anchor_x.feature)){t(MASS::ginv(t((t(main.parameters$alpha.L)%*%(code$main_code)))%*%((t(main.parameters$alpha.L)%*%(code$main_code))))%*%t(t(main.parameters$alpha.L)%*%(code$main_code))%*%x)}else{anchors$anchor_x.feature}
-    
+
+
+
+
+    main.parameters$alpha.L <- if(is.null(anchors$anchor_x.sample)){S.z.g(t(x%*%t((code$main_code)%*%t(main.parameters$u.beta))%*%MASS::ginv(((code$main_code)%*%t(main.parameters$u.beta))%*%t((code$main_code)%*%t(main.parameters$u.beta)))),S.g)/S.d}else{anchors$anchor_x.sample}
+    main.parameters$u.beta <- if(is.null(anchors$anchor_x.feature)){S.z.g(t(MASS::ginv(t((t(main.parameters$alpha.L)%*%(code$main_code)))%*%((t(main.parameters$alpha.L)%*%(code$main_code))))%*%t(t(main.parameters$alpha.L)%*%(code$main_code))%*%x),S.g)/S.d}else{anchors$anchor_x.feature}
+
     if (reference == "x"){
-      
+
       if (fixed$i_dim == T){
         main.parameters$alpha.K <- main.parameters$alpha.L
-      } 
-      
+      }
+
       if (fixed$j_dim == T){
         main.parameters$v.beta <- main.parameters$u.beta
-      } 
-      
+      }
+
     }
-    
-    
+
+
     code$X_encode <- (main.parameters$alpha.L%*%( x )%*%(main.parameters$u.beta))
     code$X_code <- code$main_code <- (MASS::ginv((main.parameters$alpha.L)%*%t(main.parameters$alpha.L))%*%(code$X_encode)%*%MASS::ginv(t(main.parameters$u.beta)%*%(main.parameters$u.beta)))
-    
-    main.parameters$alpha.K <- if(is.null(anchors$anchor_y.sample)){t(y%*%t((code$main_code)%*%t(main.parameters$v.beta))%*%MASS::ginv(((code$main_code)%*%t(main.parameters$v.beta))%*%t((code$main_code)%*%t(main.parameters$v.beta))))}else{anchors$anchor_y.sample}
-    main.parameters$v.beta <- if(is.null(anchors$anchor_y.feature)){t(MASS::ginv(t((t(main.parameters$alpha.K)%*%(code$main_code)))%*%((t(main.parameters$alpha.K)%*%(code$main_code))))%*%t(t(main.parameters$alpha.K)%*%(code$main_code))%*%y)}else{anchors$anchor_y.feature}
-    
-    
+
+    main.parameters$alpha.K <- if(is.null(anchors$anchor_y.sample)){S.z.g(t(y%*%t((code$main_code)%*%t(main.parameters$v.beta))%*%MASS::ginv(((code$main_code)%*%t(main.parameters$v.beta))%*%t((code$main_code)%*%t(main.parameters$v.beta)))),S.g)/S.d}else{anchors$anchor_y.sample}
+    main.parameters$v.beta <- if(is.null(anchors$anchor_y.feature)){S.z.g(t(MASS::ginv(t((t(main.parameters$alpha.K)%*%(code$main_code)))%*%((t(main.parameters$alpha.K)%*%(code$main_code))))%*%t(t(main.parameters$alpha.K)%*%(code$main_code))%*%y),S.g)/S.d}else{anchors$anchor_y.feature}
+
+
     if (reference == "y"){
-      
+
       if (fixed$i_dim == T){
         main.parameters$alpha.L <- main.parameters$alpha.K
-      } 
-      
+      }
+
       if (fixed$j_dim == T){
         main.parameters$u.beta <- main.parameters$v.beta
-      } 
-      
+      }
+
     }
-    
+
     code$Y_encode <- (main.parameters$alpha.K%*%( y )%*%(main.parameters$v.beta))
     code$Y_code <- code$main_code <- (MASS::ginv((main.parameters$alpha.K)%*%t(main.parameters$alpha.K))%*%(code$Y_encode)%*%MASS::ginv(t(main.parameters$v.beta)%*%(main.parameters$v.beta)))
-    
-    
-    
-    if (regularise$i_dim){
-      
-      main.parameters$alpha.K <- S.z.g(main.parameters$alpha.K,S.g)/S.d
-      main.parameters$alpha.L <- S.z.g(main.parameters$alpha.L,S.g)/S.d
-      
-    }
-    
-    if (regularise$j_dim){
-      
-      main.parameters$v.beta <- S.z.g(main.parameters$v.beta,S.g)/S.d
-      main.parameters$u.beta <- S.z.g(main.parameters$u.beta,S.g)/S.d
-      
-    }
-    
+
+
     matrix.residuals <- code$Y_code - code$X_code
-    
+
     total.mse <- mean(abs(matrix.residuals))
-      
+
     # Check convergence
     score.vec <- c(score.vec, total.mse)
     MSE <- mean(tail(score.vec,accept_score))
     prev.MSE <- mean(tail(score.vec,score_lag)[1:accept_score])
-    
+
     if ( count > ( score_lag ) ){
       if (config$verbose == T){
         print(paste("Iteration: ",count," with Tolerance of: ", abs(prev.MSE - MSE),sep=""))
       }
     }
-    
+
     if (count > config$min_iter){
       if ((count > config$max_iter ) | abs(prev.MSE - MSE) < config$tol){
         break
       }
     }
-    
+
 
     count = count + 1
 
@@ -209,9 +194,9 @@ gcproc <- function(x,
   if (Reduce('+',lapply(main.parameters,function(X){sum(X)})) == 0){
     regularisation.penalty <- Inf
   } else {
-    regularisation.penalty <-  regularise$lambda * ((0.5)*(1 - regularise$alpha)*Reduce('+',lapply(main.parameters,function(X){sum((X^2))}))  + 
+    regularisation.penalty <-  regularise$lambda * ((0.5)*(1 - regularise$alpha)*Reduce('+',lapply(main.parameters,function(X){sum((X^2))}))  +
                                                       regularise$alpha*Reduce('+',lapply(main.parameters,function(X){sum(abs(X))})))
-    
+
   }
 
   dimension_reduction <- list()
@@ -222,12 +207,12 @@ gcproc <- function(x,
 
   code$Y_decoded <- t(main.parameters$alpha.K)%*%code$main_code%*%t(main.parameters$v.beta)
   code$X_decoded <- t(main.parameters$alpha.L)%*%code$main_code%*%t(main.parameters$u.beta)
-  
+
   recover$predict.x <- Matrix::Matrix(x*recover$x,sparse=T)
   recover$predict.y <- Matrix::Matrix(y*recover$y,sparse=T)
 
   runtime.end <- Sys.time()
-  
+
   return(list(
 
     main.parameters = main.parameters,
@@ -248,7 +233,7 @@ gcproc <- function(x,
         runtime_total = runtime.end - runtime.start
       )
     ),
-    
+
     convergence.parameters = list(
       iterations = count,
       score.vec = score.vec,
