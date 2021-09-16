@@ -17,7 +17,7 @@ extract_config(verbose = T)
 
 \item{tol}{Tolerance threshold for convergence (metric: Root Mean Squared Error)}
 
-\item{init}{Initialisation method for the model ("svd","eigen-sparse","eigen-dense")}
+\item{init}{Initialisation method for the model ("random","eigen-sparse","eigen-dense","svd-quick","svd-dense)}
 }
 \value{
 Configuration parameters for gcproc

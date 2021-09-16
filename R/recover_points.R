@@ -4,84 +4,76 @@
 #'
 #' @param x Matrix of dataset x
 #' @param y Matrix of dataset y
+#' @param fixed Fixed parameters from gcproc
 #' @param main.parameters Main parameters from gcproc
 #' @param config Configuration parameters from gcproc
 #' @param recover Recover list from gcproc
-#' @param fixed Fixed parameters from gcproc
 #'
 #' @return  Recovered data from imputation or prediction, with the design matrices and any user input parameters and functions
 #' @export
 recover_points <- function(x,
                            y,
+                           fixed,
                            main.parameters,
+                           code,
                            config,
-                           recover,
-                           fixed){
+                           recover){
+  
 
   for (method in recover$method){
 
     if (!is.null(recover$y)){
-
-
-      Y.y <- scale(y)
+      
       X.x <- scale(x)
+      X.x.extract <- (t(main.parameters$alpha.L))
+      
+      Y.y <- scale(y)
+      Y.y.extract <- (t(main.parameters$alpha.K))
+      
+      y[,which((colSums(recover$y)>0)==T)]  <- do.call('cbind',lapply(c(which((colSums(recover$y)>0)==T)),function(id_col){
 
-      y[,which((colSums(recover$y)>0)==T)]  <- do.call('cbind',parallel::mclapply(c(which((colSums(recover$y)>0)==T)),function(id_col){
-
-        test_id <- as.logical(recover$y[,id_col])
-        train_id <- as.logical(1 - recover$y[,id_col])
+        test_id.y <- as.logical(recover$y[,id_col])
+        train_id.y <- as.logical(1 - recover$y[,id_col])
+        
         sparse.y <- c(y[,id_col])
 
-        if (any(test_id) & any(train_id)){
-
-          x.covariate_predictors <- y.covariate_predictors <- cbind(1,Y.y[train_id,-id_col]%*%main.parameters$v.beta[-id_col,])
-          x.test_predictors <- y.test_predictors <- cbind(1,Y.y[test_id,-id_col]%*%main.parameters$v.beta[-id_col,])
-
-          b.a <- 0
-          if (!identical(recover$x,recover$y) & fixed$i_dim == T) {
-            x.covariate_predictors <- cbind(1,X.x[train_id,]%*%main.parameters$u.beta)
-            x.test_predictors <- cbind(1,X.x[test_id,]%*%main.parameters$u.beta)
-            b.a <- 0.5
+        if (any(test_id.y) & any(train_id.y)){
+          
+          y.covariate_predictors <- Y.y.extract[train_id.y,]
+          y.test_predictors <- Y.y.extract[test_id.y,]
+          
+          if (fixed$i_dim){
+            x.covariate_predictors <- cbind(1,X.x.extract[train_id.y,],X.x[train_id.y,-id_col]%*%main.parameters$u.beta[-id_col,])
+            x.test_predictors <- cbind(1,X.x.extract[test_id.y,],X.x[test_id.y,-id_col]%*%main.parameters$u.beta[-id_col,])
+          } else {
+            x.covariate_predictors <- x.test_predictors <- c()
           }
-          a.b <- 1 - b.a
-
-
-
+          
+          covariate_predictors <- cbind(x.covariate_predictors,y.covariate_predictors)
+          test_predictors <- cbind(x.test_predictors,y.test_predictors)
+          
           if (method=="knn"){
 
-            sparse.y[test_id] <-
-              a.b * FNN::knn.reg(
-                train = y.covariate_predictors,
-                test = y.test_predictors,
-                y = sparse.y[train_id],
-                k = 5
-              )$pred +
-              b.a * FNN::knn.reg(
-                train = x.covariate_predictors,
-                test = x.test_predictors,
-                y = sparse.y[train_id],
+            sparse.y[test_id.y] <-
+              FNN::knn.reg(
+                train = covariate_predictors,
+                test = test_predictors,
+                y = sparse.y[train_id.y],
                 k = 5
               )$pred
 
           }
+          
           if (method=="glmnet"){
-
-            sparse.y[test_id] <- a.b * c(predict(glmnet::cv.glmnet(x=(y.covariate_predictors),y=sparse.y[train_id],type.measure = "mse"),(y.test_predictors), s = "lambda.min")) +
-              b.a * (predict(glmnet::cv.glmnet(x=(x.covariate_predictors),y=sparse.y[train_id],type.measure = "mse"),(x.test_predictors), s = "lambda.min"))
-
+            sparse.y[test_id.y] <-  c(predict(glmnet::cv.glmnet(x=(covariate_predictors),y=sparse.y[train_id.y],type.measure = "mse"),(test_predictors), s = "lambda.min")) 
           }
 
           if (method=="matrix.projection"){
-
-            sparse.y[test_id] <- a.b*((y.test_predictors)%*%(MASS::ginv(t(y.covariate_predictors)%*%(y.covariate_predictors))%*%t(y.covariate_predictors)%*%((as.matrix(y[train_id,id_col]))))) +
-              b.a*((x.test_predictors)%*%(MASS::ginv(t(x.covariate_predictors)%*%(x.covariate_predictors))%*%t(x.covariate_predictors)%*%((as.matrix(y[train_id,id_col])))))
-
+            sparse.y[test_id.y] <- ((test_predictors)%*%(MASS::ginv(t(covariate_predictors)%*%(covariate_predictors))%*%t(covariate_predictors)%*%((as.matrix(y[train_id.y,id_col]))))) 
           }
+          
           if (!is.null(recover$fn)){
-
-            sparse.y[test_id] <- a.b*recover$fn(train = y.covariate_predictors, test = y.test_predictors, y = sparse.y[train_id], parameters = recover$param) +
-              b.a*recover$fn(train = x.covariate_predictors, test = x.test_predictors, y = sparse.y[train_id], parameters = recover$param)
-
+            sparse.y[test_id.y] <- recover$fn(train = covariate_predictors, test = test_predictors, y = sparse.y[train_id.y], parameters = recover$param) 
           }
 
 
@@ -99,66 +91,58 @@ recover_points <- function(x,
     }
 
     if (!is.null(recover$x)){
-
-      Y.y <- scale(y)
+      
       X.x <- scale(x)
-
-
-      x[,which((colSums(recover$x)>0)==T)]  <- do.call('cbind',parallel::mclapply(c(which((colSums(recover$x)>0)==T)),function(id_col){
-
-        test_id <- as.logical(recover$x[,id_col])
-        train_id <- as.logical(1 - recover$x[,id_col])
+      X.x.extract <- (t(main.parameters$alpha.L))
+      
+      Y.y <- scale(y)
+      Y.y.extract <- (t(main.parameters$alpha.K))
+      
+      x[,which((colSums(recover$x)>0)==T)]  <- do.call('cbind',lapply(c(which((colSums(recover$x)>0)==T)),function(id_col){
+        
+        test_id.x <- as.logical(recover$x[,id_col])
+        train_id.x <- as.logical(1 - recover$x[,id_col])
+        
         sparse.x <- c(x[,id_col])
 
-        if (any(test_id) & any(train_id)){
-
-          y.covariate_predictors <- x.covariate_predictors <- cbind(1,X.x[train_id,-id_col]%*%main.parameters$u.beta[-id_col,])
-          y.test_predictors <- x.test_predictors <- cbind(1,X.x[test_id,-id_col]%*%main.parameters$u.beta[-id_col,])
-
-          b.a <- 0
-          if (!identical(recover$x,recover$y) & fixed$i_dim == T) {
-            y.covariate_predictors <- cbind(1,Y.y[train_id,]%*%main.parameters$v.beta)
-            y.test_predictors <- cbind(1,Y.y[test_id,]%*%main.parameters$v.beta)
+        if (any(test_id.x) & any(train_id.x)){
+          
+          x.covariate_predictors <- X.x.extract[train_id.x,]
+          x.test_predictors <- X.x.extract[test_id.x,]
+          
+          if (fixed$i_dim){
+            y.covariate_predictors <- cbind(1,Y.y.extract[train_id.x,],Y.y[train_id.x,-id_col]%*%main.parameters$v.beta[-id_col,])
+            y.test_predictors <- cbind(1,Y.y.extract[test_id.x,],Y.y[test_id.x,-id_col]%*%main.parameters$v.beta[-id_col,])
+          } else {
+            y.covariate_predictors <- y.test_predictors <- c()
           }
-          a.b <- 1 - b.a
-
-
+          
+          covariate_predictors <- cbind(x.covariate_predictors,y.covariate_predictors)
+          test_predictors <- cbind(x.test_predictors,y.test_predictors)
+          
           if (method=="knn"){
 
-            sparse.x[test_id] <-
-              a.b * FNN::knn.reg(
-                train = x.covariate_predictors,
-                test = x.test_predictors,
-                y = sparse.x[train_id],
+            sparse.x[test_id.x] <-
+              FNN::knn.reg(
+                train = covariate_predictors,
+                test = test_predictors,
+                y = sparse.x[train_id.x],
                 k = 5
-              )$pred +
-              b.a * FNN::knn.reg(
-                train = y.covariate_predictors,
-                test = y.test_predictors,
-                y = sparse.x[train_id],
-                k = 5
-              )$pred
-
+              )$pred 
           }
           if (method=="glmnet"){
 
-            sparse.x[test_id] <- a.b * c(predict(glmnet::cv.glmnet(x=(x.covariate_predictors),y=sparse.x[train_id],type.measure = "mse"),(x.test_predictors), s = "lambda.min")) +
-              b.a * (predict(glmnet::cv.glmnet(x=(y.covariate_predictors),y=sparse.x[train_id],type.measure = "mse"),(y.test_predictors), s = "lambda.min"))
-
+            sparse.x[test_id.x] <- c(predict(glmnet::cv.glmnet(x=(covariate_predictors),y=sparse.x[train_id.x],type.measure = "mse"),(test_predictors), s = "lambda.min")) 
           }
 
           if (method=="matrix.projection"){
 
-            sparse.x[test_id] <- a.b*((x.test_predictors)%*%(MASS::ginv(t(x.covariate_predictors)%*%(x.covariate_predictors))%*%t(x.covariate_predictors)%*%((as.matrix(x[train_id,id_col]))))) +
-              b.a*((y.test_predictors)%*%(MASS::ginv(t(y.covariate_predictors)%*%(y.covariate_predictors))%*%t(y.covariate_predictors)%*%((as.matrix(x[train_id,id_col])))))
-
+            sparse.x[test_id.x] <- ((test_predictors)%*%(MASS::ginv(t(covariate_predictors)%*%(covariate_predictors))%*%t(covariate_predictors)%*%((as.matrix(x[train_id.x,id_col]))))) 
           }
 
           if (!is.null(recover$fn)){
 
-            sparse.x[test_id] <- a.b*recover$fn(train = x.covariate_predictors, test = x.test_predictors, y = sparse.x[train_id], parameters = recover$param) +
-              b.a*recover$fn(train = y.covariate_predictors, test = y.test_predictors, y = sparse.x[train_id], parameters = recover$param)
-
+            sparse.x[test_id.x] <- recover$fn(train = covariate_predictors, test = test_predictors, y = sparse.x[train_id.x], parameters = recover$param)
           }
 
 
@@ -180,3 +164,11 @@ recover_points <- function(x,
 }
 
 
+
+
+S.z.g <- function(S.z,S.g){
+  to_return <-
+    (S.z - S.g) * ((S.z > 0) * (S.g < abs(S.z))) +
+    (S.z + S.g) * ((S.z < 0) * (S.g < abs(S.z)))
+  return(to_return)
+}

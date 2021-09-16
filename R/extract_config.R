@@ -5,18 +5,18 @@
 #' @param max_iter Maximum iteration of gcproc
 #' @param tol Tolerance threshold for convergence (metric: Root Mean Squared Error)
 #' @param verbose Print statements?
-#' @param init Initialisation method for the model ("random","eigen-sparse","eigen-dense","svd-quick","svd-dense)
+#' @param init Initialisation method for the model ("random","eigen-quick","eigen-dense","svd-quick","svd-dense")
 #' @return  Configuration parameters for gcproc
 #' @export
 extract_config <- function(verbose=T){
   config <- list(
-    all.i_dim = c(30,25),
-    all.j_dim = c(30,25),
-    layers = 2,
+    i_dim = NULL,
+    j_dim = NULL,
+    min_iter=2,
     max_iter=150,
     tol=1e-2,
     verbose=T,
-    init="random")
+    init="svd-quick")
 
   if (verbose == T){
     print(config)
@@ -91,7 +91,7 @@ extract_pivots_framework <- function(verbose=T){
 #' @export
 extract_recovery_framework <- function(verbose=T){
   recover <- list(
-    method = c("matrix.projection"),
+    method = c("matrix.projection","knn"),
     x = NULL,
     y = NULL,
     fn = NULL,
@@ -104,6 +104,39 @@ extract_recovery_framework <- function(verbose=T){
 
   return(recover)
 }
+
+
+
+
+
+
+
+#' Extract regularise framework to put into gcproc
+#'
+#' Regularise data to improve modelling interpretability
+#'
+#' @param lambda
+#' @param alpha
+#' @param code
+#' @param i_dim
+#' @param j_dim
+#' @return  Regularisation framework for gcproc
+#' @export
+extract_regularise_framework <- function(verbose=T){
+  regularise <- list(lambda = 0, 
+                  alpha = 0, 
+                  i_dim =F, 
+                  j_dim =F)
+  
+  if (verbose == T){
+    print(regularise)
+  }
+  
+  return(regularise)
+}
+
+
+
 
 
 
