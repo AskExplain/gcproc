@@ -30,9 +30,9 @@ recover_points <- function(x,
     if (!is.null(recover$y)){
 
       Y.y <- scale(y)
-      X.x <- scale(t(alpha.K)%*%MASS::ginv((alpha.K)%*%t(alpha.K))%*%(alpha.L)%*%(x)%*%u.beta%*%MASS::ginv(t(v.beta)%*%(v.beta))%*%t(v.beta))
+      X.x <- scale(t(alpha.K)%*%MASS::ginv((alpha.L)%*%t(alpha.L))%*%(alpha.L)%*%(x)%*%u.beta%*%MASS::ginv(t(u.beta)%*%(u.beta))%*%t(v.beta))
 
-      y[,which((colSums(recover$y)>0)==T)]  <- do.call('cbind',parallel::mclapply(mc.cores = 4, mc.silent = config$verbose, X = c(which((colSums(recover$y)>0)==T)), FUN = function(id_col){
+      y[,which((colSums(recover$y)>0)==T)]  <- do.call('cbind',lapply(X = c(which((colSums(recover$y)>0)==T)), FUN = function(id_col){
 
         test_id.y <- as.logical(recover$y[,id_col])
         train_id.y <- as.logical(1 - recover$y[,id_col])
@@ -91,9 +91,9 @@ recover_points <- function(x,
     if (!is.null(recover$x)){
 
       X.x <- scale(x)
-      Y.y <- scale(t(alpha.L)%*%MASS::ginv((alpha.L)%*%t(alpha.L))%*%(alpha.K)%*%(y)%*%v.beta%*%MASS::ginv(t(u.beta)%*%(u.beta))%*%t(u.beta))
+      Y.y <- scale(t(alpha.L)%*%MASS::ginv((alpha.K)%*%t(alpha.K))%*%(alpha.K)%*%(y)%*%v.beta%*%MASS::ginv(t(v.beta)%*%(v.beta))%*%t(u.beta))
 
-      x[,which((colSums(recover$x)>0)==T)]  <- do.call('cbind',parallel::mclapply(mc.cores = 4,mc.silent = config$verbose,X = c(which((colSums(recover$x)>0)==T)),FUN = function(id_col){
+      x[,which((colSums(recover$x)>0)==T)]  <- do.call('cbind',lapply(X = c(which((colSums(recover$x)>0)==T)),FUN = function(id_col){
 
         test_id.x <- as.logical(recover$x[,id_col])
         train_id.x <- as.logical(1 - recover$x[,id_col])
