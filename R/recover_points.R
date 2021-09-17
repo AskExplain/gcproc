@@ -20,15 +20,17 @@ recover_points <- function(x,
                            recover){
 
 
+  u.beta <- (main.parameters$u.beta)
+  v.beta <- (main.parameters$v.beta)
+  alpha.K <- (main.parameters$alpha.K)
+  alpha.L <- (main.parameters$alpha.L)
+
   for (method in recover$method){
 
     if (!is.null(recover$y)){
 
-      X.x <- (x)
-      X.x.extract <- (t(main.parameters$alpha.L))
-
       Y.y <- (y)
-      Y.y.extract <- (t(main.parameters$alpha.K))
+      X.x <- t(alpha.K)%*%MASS::ginv((alpha.L)%*%t(alpha.L))%*%(alpha.L)%*%(x)%*%u.beta%*%MASS::ginv(t(u.beta)%*%(u.beta))%*%t(v.beta)
 
       y[,which((colSums(recover$y)>0)==T)]  <- do.call('cbind',lapply(c(which((colSums(recover$y)>0)==T)),function(id_col){
 
@@ -39,15 +41,11 @@ recover_points <- function(x,
 
         if (any(test_id.y) & any(train_id.y)){
 
-          x.covariate_predictors <- cbind(1,X.x.extract[train_id.y,],X.x[train_id.y,-id_col]%*%main.parameters$u.beta[-id_col,])
-          x.test_predictors <- cbind(1,X.x.extract[test_id.y,],X.x[test_id.y,-id_col]%*%main.parameters$u.beta[-id_col,])
+          y.covariate_predictors <- cbind(1,Y.y[train_id.y,-id_col]%*%main.parameters$v.beta[-id_col,])
+          y.test_predictors <- cbind(1,Y.y[test_id.y,-id_col]%*%main.parameters$v.beta[-id_col,])
 
-          if (fixed$i_dim){
-            y.covariate_predictors <- y.test_predictors <- c()
-          } else {
-            y.covariate_predictors <- Y.y.extract[train_id.y,]
-            y.test_predictors <- Y.y.extract[test_id.y,]
-          }
+          x.covariate_predictors <- X.x[train_id.y,-id_col]%*%main.parameters$v.beta[-id_col,]
+          x.test_predictors <- X.x[test_id.y,-id_col]%*%main.parameters$v.beta[-id_col,]
 
           covariate_predictors <- cbind(x.covariate_predictors,y.covariate_predictors)
           test_predictors <- cbind(x.test_predictors,y.test_predictors)
@@ -59,7 +57,7 @@ recover_points <- function(x,
                 train = covariate_predictors,
                 test = test_predictors,
                 y = sparse.y[train_id.y],
-                k = 5
+                k = 2
               )$pred
 
           }
@@ -93,10 +91,7 @@ recover_points <- function(x,
     if (!is.null(recover$x)){
 
       X.x <- (x)
-      X.x.extract <- (t(main.parameters$alpha.L))
-
-      Y.y <- (y)
-      Y.y.extract <- (t(main.parameters$alpha.K))
+      Y.y <- t(alpha.L)%*%MASS::ginv((alpha.K)%*%t(alpha.K))%*%(alpha.K)%*%(y)%*%v.beta%*%MASS::ginv(t(v.beta)%*%(v.beta))%*%t(u.beta)
 
       x[,which((colSums(recover$x)>0)==T)]  <- do.call('cbind',lapply(c(which((colSums(recover$x)>0)==T)),function(id_col){
 
@@ -107,15 +102,11 @@ recover_points <- function(x,
 
         if (any(test_id.x) & any(train_id.x)){
 
-          y.covariate_predictors <- cbind(1,Y.y.extract[train_id.x,],Y.y[train_id.x,-id_col]%*%main.parameters$v.beta[-id_col,])
-          y.test_predictors <- cbind(1,Y.y.extract[test_id.x,],Y.y[test_id.x,-id_col]%*%main.parameters$v.beta[-id_col,])
+          y.covariate_predictors <- cbind(1,Y.y[train_id.x,-id_col]%*%main.parameters$u.beta[-id_col,])
+          y.test_predictors <- cbind(1,Y.y[test_id.x,-id_col]%*%main.parameters$u.beta[-id_col,])
 
-          if (fixed$i_dim){
-            x.covariate_predictors <- x.test_predictors <- c()
-          } else {
-            x.covariate_predictors <- X.x.extract[train_id.x,]
-            x.test_predictors <- X.x.extract[test_id.x,]
-          }
+          x.covariate_predictors <- X.x[train_id.x,-id_col]%*%main.parameters$u.beta[-id_col,]
+          x.test_predictors <- X.x[test_id.x,-id_col]%*%main.parameters$u.beta[-id_col,]
 
           covariate_predictors <- cbind(x.covariate_predictors,y.covariate_predictors)
           test_predictors <- cbind(x.test_predictors,y.test_predictors)
@@ -127,7 +118,7 @@ recover_points <- function(x,
                 train = covariate_predictors,
                 test = test_predictors,
                 y = sparse.x[train_id.x],
-                k = 5
+                k = 2
               )$pred
           }
           if (method=="glmnet"){

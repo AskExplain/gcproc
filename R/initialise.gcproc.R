@@ -40,7 +40,7 @@ initialise.gcproc <- function(x,
   X_code <- (MASS::ginv((alpha.L)%*%t(alpha.L))%*%(X_encode)%*%MASS::ginv(t(u.beta)%*%(u.beta)))
 
   main_code <- Y_code
-  
+
   main.parameters = list(
     alpha.L = alpha.L,
     alpha.K = alpha.K,
@@ -56,8 +56,8 @@ initialise.gcproc <- function(x,
     Y_encode = Y_encode
   )
 
-  
-  
+
+
   return(
     list(
       main.parameters = main.parameters,
@@ -83,13 +83,15 @@ initialise.parameters <- function(x,y,i_dim=70,j_dim=70,init="svd-quick",verbose
     alpha.L = matrix(rnorm(dim(x)[1]*i_dim),nrow=i_dim,ncol=dim(x)[1])
     alpha.K = matrix(rnorm(dim(y)[1]*i_dim),nrow=i_dim,ncol=dim(y)[1])
 
+  } else {
+
+    cov_x <- corpcor::cov.shrink(x,verbose = F)
+    cov_y <- corpcor::cov.shrink(y,verbose = F)
+    cov_tx <- corpcor::cov.shrink(Matrix::t(x),verbose = F)
+    cov_ty <- corpcor::cov.shrink(Matrix::t(y),verbose = F)
+
   }
-  
-  cov_x <- corpcor::cov.shrink(x,verbose = F)
-  cov_y <- corpcor::cov.shrink(y,verbose = F)
-  cov_tx <- corpcor::cov.shrink(Matrix::t(x),verbose = F)
-  cov_ty <- corpcor::cov.shrink(Matrix::t(y),verbose = F)
-  
+
   if (init=="svd-quick"){
     u.beta.svd <- irlba::irlba(
       cov_x,j_dim,maxit = 10000,verbose = F)
@@ -102,12 +104,12 @@ initialise.parameters <- function(x,y,i_dim=70,j_dim=70,init="svd-quick",verbose
     u.beta <- u.beta.svd$v
     v.beta <- v.beta.svd$v
 
-    
+
     alpha.L.J.svd <- irlba::irlba(
       cov_tx,i_dim,maxit = 10000,verbose = F)
     rm(cov_tx)
 
-    
+
     alpha.L.K.svd <- irlba::irlba(
       cov_ty,i_dim,maxit = 10000,verbose = F)
     rm(cov_ty)
@@ -128,12 +130,12 @@ initialise.parameters <- function(x,y,i_dim=70,j_dim=70,init="svd-quick",verbose
     u.beta <- u.beta.svd$v[,c(1:j_dim)]
     v.beta <- v.beta.svd$v[,c(1:j_dim)]
 
-    
+
     alpha.L.J.svd <- svd(
       cov_tx,i_dim)
     rm(cov_tx)
 
-    
+
     alpha.L.K.svd <- svd(
       cov_ty,i_dim)
     rm(cov_ty)
@@ -167,12 +169,12 @@ initialise.parameters <- function(x,y,i_dim=70,j_dim=70,init="svd-quick",verbose
 
   }
   if (init=="eigen-dense"){
-    
+
     u.beta.svd <- eigen(
       cov_x,j_dim)
     rm(cov_x)
 
-    
+
     v.beta.svd <- eigen(
       cov_y,j_dim)
     rm(cov_y)
@@ -180,12 +182,12 @@ initialise.parameters <- function(x,y,i_dim=70,j_dim=70,init="svd-quick",verbose
     u.beta <- u.beta.svd$vectors[,c(1:j_dim)]
     v.beta <- v.beta.svd$vectors[,c(1:j_dim)]
 
-    
+
     alpha.L.J.svd <- eigen(
       cov_tx)
     rm(cov_tx)
 
-    
+
     alpha.L.K.svd <- eigen(
       cov_ty)
     rm(cov_ty)
