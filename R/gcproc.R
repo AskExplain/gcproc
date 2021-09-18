@@ -166,7 +166,7 @@ gcproc <- function(x,
 
 
 
-    matrix.residuals <- code$Y_encode - code$X_encode
+    matrix.residuals <- code$Y_code - code$X_code
 
     total.mse <- mean(abs(matrix.residuals))
 

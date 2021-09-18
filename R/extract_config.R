@@ -141,3 +141,44 @@ S.z.g <- function(S.z,S.g){
     (S.z + S.g) * ((S.z < 0) * (S.g < abs(S.z)))
   return(to_return)
 }
+
+transform.data <- function(x,method="scale"){
+
+  if (method == "scale"){
+    center = T
+    scale = T
+
+    x <- as.matrix(x)
+    nc <- ncol(x)
+    if (is.logical(center)) {
+      if (center) {
+        center <- colMeans(x, na.rm=TRUE)
+        x <- sweep(x, 2L, center, check.margin=FALSE)
+      }
+    }
+    else if (is.numeric(center) && (length(center) == nc))
+      x <- sweep(x, 2L, center, check.margin=FALSE)
+    else
+      stop("length of 'center' must equal the number of columns of 'x'")
+    if (is.logical(scale)) {
+      if (scale) {
+        f <- function(v) {
+          v <- v[!is.na(v)]
+          sqrt(sum(v^2) / max(1, length(v) - 1L))
+        }
+        scale <- apply(x, 2L, f)
+        scale <- sapply(scale,function(scale){if(scale==0|is.na(scale)){1}else{scale}})
+        x <- sweep(x, 2L, scale, "/", check.margin=FALSE)
+      }
+    }
+    else if (is.numeric(scale) && length(scale) == nc)
+      x <- sweep(x, 2L, scale, "/", check.margin=FALSE)
+    else
+      stop("length of 'scale' must equal the number of columns of 'x'")
+    if(is.numeric(center)) attr(x, "scaled:center") <- center
+    if(is.numeric(scale)) attr(x, "scaled:scale") <- scale
+    x
+  }
+
+  return(x)
+}

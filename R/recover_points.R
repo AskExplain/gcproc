@@ -29,8 +29,8 @@ recover_points <- function(x,
 
     if (!is.null(recover$y)){
 
-      Y.y <- scale(y)%*%main.parameters$v.beta
-      X.x <- scale(x)%*%main.parameters$u.beta
+      Y.y <- transform.data(y)%*%main.parameters$v.beta
+      X.x <- transform.data(x)%*%main.parameters$u.beta
       Y.X <- Y.y + X.x
 
       y[,which((colSums(recover$y)>0)==T)]  <- do.call('cbind',lapply(X = c(which((colSums(recover$y)>0)==T)), FUN = function(id_col){
@@ -40,8 +40,10 @@ recover_points <- function(x,
 
         if (min(y)==0){
           sparse.y <- log(y[,id_col]+1)
+          to_exp <- T
         } else {
           sparse.y <- y[,id_col]
+          to_exp <- F
         }
 
         if (any(test_id.y) & any(train_id.y)){
@@ -76,10 +78,12 @@ recover_points <- function(x,
 
         }
 
-        return(if(min(y)==0){pmax(0,exp(sparse.y)-1)}else{sparse.y})
+        return(if(to_exp){exp(sparse.y)-1}else{sparse.y})
       }))
 
+      y[y<0] <- 0
       y <- as.matrix(y)
+
 
 
       recover$predict.y <- y
@@ -89,8 +93,8 @@ recover_points <- function(x,
 
     if (!is.null(recover$x)){
 
-      Y.y <- scale(y)%*%main.parameters$v.beta
-      X.x <- scale(x)%*%main.parameters$u.beta
+      Y.y <- transform.data(y)%*%main.parameters$v.beta
+      X.x <- transform.data(x)%*%main.parameters$u.beta
       Y.X <- Y.y + X.x
 
       x[,which((colSums(recover$x)>0)==T)]  <- do.call('cbind',lapply(X = c(which((colSums(recover$x)>0)==T)),FUN = function(id_col){
@@ -100,8 +104,10 @@ recover_points <- function(x,
 
         if (min(x)==0){
           sparse.x <- log(x[,id_col]+1)
+          to_exp <- T
         } else {
           sparse.x <- x[,id_col]
+          to_exp <- F
         }
 
         if (any(test_id.x) & any(train_id.x)){
@@ -136,9 +142,10 @@ recover_points <- function(x,
 
 
         }
-        return(if(min(x)==0){pmax(0,exp(sparse.x)-1)}else{sparse.x})
+        return(if(to_exp){exp(sparse.x)-1}else{sparse.x})
       }))
 
+      x[x<0] <- 0
       x <- as.matrix(x)
 
       recover$predict.x <- x
