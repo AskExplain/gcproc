@@ -29,8 +29,8 @@ recover_points <- function(x,
 
     if (!is.null(recover$y)){
 
-      Y.y <- ((y - colMeans(y))/apply(y,2,function(Y){Y+1e-3}))%*%main.parameters$v.beta
-      X.x <- ((x - colMeans(x))/apply(x,2,function(X){X+1e-3}))%*%main.parameters$u.beta
+      Y.y <- scale(y)%*%main.parameters$v.beta
+      X.x <- scale(x)%*%main.parameters$u.beta
       Y.X <- Y.y + X.x
 
       y[,which((colSums(recover$y)>0)==T)]  <- do.call('cbind',lapply(X = c(which((colSums(recover$y)>0)==T)), FUN = function(id_col){
@@ -76,7 +76,7 @@ recover_points <- function(x,
 
         }
 
-        return(if(min(y)==0){exp(sparse.y)-1}else{sparse.y})
+        return(if(min(y)==0){pmax(0,exp(sparse.y)-1)}else{sparse.y})
       }))
 
       y <- as.matrix(y)
@@ -89,8 +89,8 @@ recover_points <- function(x,
 
     if (!is.null(recover$x)){
 
-      Y.y <- ((y - colMeans(y))/apply(y,2,function(Y){Y+1e-3}))%*%main.parameters$v.beta
-      X.x <- ((x - colMeans(x))/apply(x,2,function(X){X+1e-3}))%*%main.parameters$u.beta
+      Y.y <- scale(y)%*%main.parameters$v.beta
+      X.x <- scale(x)%*%main.parameters$u.beta
       Y.X <- Y.y + X.x
 
       x[,which((colSums(recover$x)>0)==T)]  <- do.call('cbind',lapply(X = c(which((colSums(recover$x)>0)==T)),FUN = function(id_col){
@@ -136,7 +136,7 @@ recover_points <- function(x,
 
 
         }
-        return(if(min(x)==0){exp(sparse.x)-1}else{sparse.x})
+        return(if(min(x)==0){pmax(0,exp(sparse.x)-1)}else{sparse.x})
       }))
 
       x <- as.matrix(x)
