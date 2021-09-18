@@ -129,17 +129,16 @@ gcproc <- function(x,
     main.parameters$alpha.L <- if(is.null(anchors$anchor_x.sample)){t(x%*%t((code$main_code)%*%t(main.parameters$u.beta))%*%MASS::ginv(((code$main_code)%*%t(main.parameters$u.beta))%*%t((code$main_code)%*%t(main.parameters$u.beta))))}else{anchors$anchor_x.sample}
     main.parameters$u.beta <- if(is.null(anchors$anchor_x.feature)){t(MASS::ginv(t((t(main.parameters$alpha.L)%*%(code$main_code)))%*%((t(main.parameters$alpha.L)%*%(code$main_code))))%*%t(t(main.parameters$alpha.L)%*%(code$main_code))%*%x)}else{anchors$anchor_x.feature}
 
-    if (reference == "x"){
 
-      if (fixed$i_dim == T){
-        main.parameters$alpha.K <- main.parameters$alpha.L
-      }
 
-      if (fixed$j_dim == T){
-        main.parameters$v.beta <- main.parameters$u.beta
-      }
-
+    if (fixed$i_dim == T){
+      main.parameters$alpha.K <-  main.parameters$alpha.L
     }
+
+    if (fixed$j_dim == T){
+      main.parameters$v.beta <- main.parameters$u.beta
+    }
+
 
 
     code$X_encode <- (main.parameters$alpha.L%*%( x )%*%(main.parameters$u.beta))
@@ -149,20 +148,22 @@ gcproc <- function(x,
     main.parameters$v.beta <- if(is.null(anchors$anchor_y.feature)){t(MASS::ginv(t((t(main.parameters$alpha.K)%*%(code$main_code)))%*%((t(main.parameters$alpha.K)%*%(code$main_code))))%*%t(t(main.parameters$alpha.K)%*%(code$main_code))%*%y)}else{anchors$anchor_y.feature}
 
 
-    if (reference == "y"){
-
-      if (fixed$i_dim == T){
-        main.parameters$alpha.L <- main.parameters$alpha.K
-      }
-
-      if (fixed$j_dim == T){
-        main.parameters$u.beta <- main.parameters$v.beta
-      }
-
+    if (fixed$i_dim == T){
+      main.parameters$alpha.L <- main.parameters$alpha.K
     }
+
+    if (fixed$j_dim == T){
+      main.parameters$v.beta <- main.parameters$u.beta
+    }
+
 
     code$Y_encode <- (main.parameters$alpha.K%*%( y )%*%(main.parameters$v.beta))
     code$Y_code <- code$main_code <- (MASS::ginv((main.parameters$alpha.K)%*%t(main.parameters$alpha.K))%*%(code$Y_encode)%*%MASS::ginv(t(main.parameters$v.beta)%*%(main.parameters$v.beta)))
+
+
+
+
+
 
 
     matrix.residuals <- code$Y_encode - code$X_encode

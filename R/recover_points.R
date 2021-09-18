@@ -29,26 +29,25 @@ recover_points <- function(x,
 
     if (!is.null(recover$y)){
 
-      Y.y <- scale(y)
-      X.x <- scale(t(alpha.K)%*%MASS::ginv((alpha.L)%*%t(alpha.L))%*%(alpha.L)%*%(x)%*%u.beta%*%MASS::ginv(t(u.beta)%*%(u.beta))%*%t(v.beta))
+      Y.y <- scale(y)%*%main.parameters$v.beta
+      X.x <- scale(x)%*%main.parameters$u.beta
+      Y.X <- Y.y + X.x
 
       y[,which((colSums(recover$y)>0)==T)]  <- do.call('cbind',lapply(X = c(which((colSums(recover$y)>0)==T)), FUN = function(id_col){
 
         test_id.y <- as.logical(recover$y[,id_col])
         train_id.y <- as.logical(1 - recover$y[,id_col])
 
-        sparse.y <- c(y[,id_col])
+        if (min(y)==0){
+          sparse.y <- log(y[,id_col]+1)
+        } else {
+          sparse.y <- y[,id_col]
+        }
 
         if (any(test_id.y) & any(train_id.y)){
 
-          y.covariate_predictors <- cbind(1,Y.y[train_id.y,-id_col]%*%main.parameters$v.beta[-id_col,])
-          y.test_predictors <- cbind(1,Y.y[test_id.y,-id_col]%*%main.parameters$v.beta[-id_col,])
-
-          x.covariate_predictors <- X.x[train_id.y,-id_col]%*%main.parameters$v.beta[-id_col,]
-          x.test_predictors <- X.x[test_id.y,-id_col]%*%main.parameters$v.beta[-id_col,]
-
-          covariate_predictors <- cbind(x.covariate_predictors,y.covariate_predictors)
-          test_predictors <- cbind(x.test_predictors,y.test_predictors)
+          covariate_predictors <- cbind(1,Y.X[train_id.y,])
+          test_predictors <- cbind(1,Y.X[test_id.y,])
 
           if (method=="knn"){
 
@@ -57,7 +56,7 @@ recover_points <- function(x,
                 train = covariate_predictors,
                 test = test_predictors,
                 y = sparse.y[train_id.y],
-                k = 2
+                k = 5
               )$pred
 
           }
@@ -77,7 +76,7 @@ recover_points <- function(x,
 
         }
 
-        return(sparse.y)
+        return(if(min(y)==0){exp(sparse.y)-1}else{sparse.y})
       }))
 
       y <- as.matrix(y)
@@ -90,26 +89,25 @@ recover_points <- function(x,
 
     if (!is.null(recover$x)){
 
-      X.x <- scale(x)
-      Y.y <- scale(t(alpha.L)%*%MASS::ginv((alpha.K)%*%t(alpha.K))%*%(alpha.K)%*%(y)%*%v.beta%*%MASS::ginv(t(v.beta)%*%(v.beta))%*%t(u.beta))
+      Y.y <- scale(y)%*%main.parameters$v.beta
+      X.x <- scale(x)%*%main.parameters$u.beta
+      Y.X <- Y.y + X.x
 
       x[,which((colSums(recover$x)>0)==T)]  <- do.call('cbind',lapply(X = c(which((colSums(recover$x)>0)==T)),FUN = function(id_col){
 
         test_id.x <- as.logical(recover$x[,id_col])
         train_id.x <- as.logical(1 - recover$x[,id_col])
 
-        sparse.x <- c(x[,id_col])
+        if (min(x)==0){
+          sparse.x <- log(x[,id_col]+1)
+        } else {
+          sparse.x <- x[,id_col]
+        }
 
         if (any(test_id.x) & any(train_id.x)){
 
-          y.covariate_predictors <- cbind(1,Y.y[train_id.x,-id_col]%*%main.parameters$u.beta[-id_col,])
-          y.test_predictors <- cbind(1,Y.y[test_id.x,-id_col]%*%main.parameters$u.beta[-id_col,])
-
-          x.covariate_predictors <- X.x[train_id.x,-id_col]%*%main.parameters$u.beta[-id_col,]
-          x.test_predictors <- X.x[test_id.x,-id_col]%*%main.parameters$u.beta[-id_col,]
-
-          covariate_predictors <- cbind(x.covariate_predictors,y.covariate_predictors)
-          test_predictors <- cbind(x.test_predictors,y.test_predictors)
+          covariate_predictors <- cbind(1,Y.X[train_id.x,])
+          test_predictors <- cbind(1,Y.X[test_id.x,])
 
           if (method=="knn"){
 
@@ -118,7 +116,7 @@ recover_points <- function(x,
                 train = covariate_predictors,
                 test = test_predictors,
                 y = sparse.x[train_id.x],
-                k = 2
+                k = 5
               )$pred
           }
           if (method=="glmnet"){
@@ -138,7 +136,7 @@ recover_points <- function(x,
 
 
         }
-        return(sparse.x)
+        return(if(min(x)==0){exp(sparse.x)-1}else{sparse.x})
       }))
 
       x <- as.matrix(x)
