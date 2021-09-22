@@ -5,6 +5,7 @@
 #' @param x Matrix of dataset x
 #' @param y Matrix of dataset y
 #' @param fixed Fixed parameters from gcproc
+#' @param code Code parameters from gcproc
 #' @param main.parameters Main parameters from gcproc
 #' @param config Configuration parameters from gcproc
 #' @param recover Recover list from gcproc
@@ -14,24 +15,23 @@
 recover_points <- function(x,
                            y,
                            fixed,
-                           main.parameters,
                            code,
+                           main.parameters,
                            config,
                            recover){
 
-
-  u.beta <- (main.parameters$u.beta)
-  v.beta <- (main.parameters$v.beta)
-  alpha.K <- (main.parameters$alpha.K)
-  alpha.L <- (main.parameters$alpha.L)
 
   for (method in recover$method){
 
     if (!is.null(recover$y)){
 
-      Y.y <- transform.data(y)%*%main.parameters$v.beta
-      X.x <- transform.data(x)%*%main.parameters$u.beta
-      Y.X <- Y.y + X.x
+      X.x <- transform.data(x)%*%(main.parameters$u.beta)
+      if (fixed$i_dim == T){
+        Y.y <- transform.data(y)%*%(main.parameters$v.beta)
+        Y.X <- Y.y + X.x
+      } else {
+        Y.X <- X.x
+      }
 
       y[,which((colSums(recover$y)>0)==T)]  <- do.call('cbind',lapply(X = c(which((colSums(recover$y)>0)==T)), FUN = function(id_col){
 
@@ -93,9 +93,13 @@ recover_points <- function(x,
 
     if (!is.null(recover$x)){
 
-      Y.y <- transform.data(y)%*%main.parameters$v.beta
-      X.x <- transform.data(x)%*%main.parameters$u.beta
-      Y.X <- Y.y + X.x
+      Y.y <- transform.data(y)%*%(main.parameters$v.beta)
+      if (fixed$i_dim == T){
+        X.x <- transform.data(x)%*%(main.parameters$u.beta)
+        Y.X <- Y.y + X.x
+      } else {
+        Y.X <- Y.y
+      }
 
       x[,which((colSums(recover$x)>0)==T)]  <- do.call('cbind',lapply(X = c(which((colSums(recover$x)>0)==T)),FUN = function(id_col){
 

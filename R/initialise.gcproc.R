@@ -13,7 +13,7 @@ initialise.gcproc <- function(x,
   initial.param <- list()
   # Initialise parameters
   if (any(do.call('c',lapply(pivots,function(piv){is.null(piv)})))){
-    initial.param <-initialise.parameters(x=x,y=y,i_dim=config$i_dim,j_dim=config$j_dim,init=config$init,verbose=config$verbose)
+    initial.param <-initialise.parameters(x=x,y=y,i_dim=config$i_dim,j_dim=config$i_dim,init=config$init,verbose=config$verbose)
   }
 
   # Check pivoting parameters
@@ -40,6 +40,7 @@ initialise.gcproc <- function(x,
   X_code <- (MASS::ginv((alpha.L)%*%t(alpha.L))%*%(X_encode)%*%MASS::ginv(t(u.beta)%*%(u.beta)))
 
   main_code <- Y_code
+  s_code <- matrix(rnorm(config$i_dim*config$j_dim),nrow=config$j_dim,ncol=config$i_dim)
 
   main.parameters = list(
     alpha.L = alpha.L,
@@ -49,6 +50,7 @@ initialise.gcproc <- function(x,
   )
 
   code = list(
+    s_code = s_code,
     main_code = main_code,
     X_code = X_code,
     Y_code = Y_code,

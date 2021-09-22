@@ -7,13 +7,11 @@
 gcproc(
   x,
   y,
-  reference = "y",
   fixed = list(i_dim = F, j_dim = F),
   config = gcproc::extract_config(verbose = F),
   anchors = gcproc::extract_anchors_framework(verbose = F),
   pivots = gcproc::extract_pivots_framework(verbose = F),
-  recover = gcproc::extract_recovery_framework(verbose = F),
-  regularise = gcproc::extract_regularise_framework(verbose = F)
+  recover = gcproc::extract_recovery_framework(verbose = F)
 )
 }
 \arguments{
@@ -30,8 +28,6 @@ gcproc(
 \item{pivots}{Initialisation of model parameters (not required)}
 
 \item{recover}{Important information for prediction or imputation (not required)}
-
-\item{regularise}{Enables regularisation via elastic net, default is no regularisation - also see cv.gcproc (not required)}
 }
 \value{
 Main parameters contains the learned model parameters. The alpha and beta matrix multiply x and y by, (K)(Y)(v) and (L)(X)(u). By multiplying with the parameter, the dimension of the samples and features can be dimensionally reduced for further visualisation analysis such as embedding or projection.

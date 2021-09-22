@@ -9,7 +9,6 @@
 #' @param anchors Transferring pre-trained model parameters (not required)
 #' @param pivots Initialisation of model parameters (not required)
 #' @param recover Important information for prediction or imputation (not required)
-#' @param regularise Enables regularisation via elastic net, default is no regularisation - also see cv.gcproc (not required)
 #'
 #' @return Main parameters contains the learned model parameters. The alpha and beta matrix multiply x and y by, (K)(Y)(v) and (L)(X)(u). By multiplying with the parameter, the dimension of the samples and features can be dimensionally reduced for further visualisation analysis such as embedding or projection.
 #'
@@ -20,36 +19,40 @@
 #' @export
 gcproc <- function(x,
                    y,
-                   reference = "y",
                    fixed = list(i_dim = F, j_dim =F),
                    config = gcproc::extract_config(verbose = F),
                    anchors = gcproc::extract_anchors_framework(verbose = F),
                    pivots = gcproc::extract_pivots_framework(verbose = F),
-                   recover = gcproc::extract_recovery_framework(verbose = F),
-                   regularise = gcproc::extract_regularise_framework(verbose = F)
-){
+                   recover = gcproc::extract_recovery_framework(verbose = F)
+                   ){
   runtime.start <- Sys.time()
 
-  S.g <- regularise$lambda*regularise$alpha
-  S.d <- 1+regularise$lambda*(1-regularise$alpha)
-
   if (is.null(config$i_dim)){
-    eig.val_x <- RSpectra::eigs(crossprod(t(x),t(x)),k = min(nrow(x)-2,30))$values
-    eig.val_y <- RSpectra::eigs(crossprod(t(y),t(y)),k = min(nrow(y)-2,30))$values
+    eig.val_t.x <- RSpectra::eigs(crossprod(t(x),t(x)),k = min(nrow(x)-2,30))$values
+    eig.val_t.y <- RSpectra::eigs(crossprod(t(y),t(y)),k = min(nrow(y)-2,30))$values
 
-    main_dim <- sum(cumsum(((eig.val_x)/sum((eig.val_x))+(eig.val_y)/sum((eig.val_y)))/2)<(1-1e-2))
-
-    config$i_dim <- max(5,main_dim)
-  }
-
-
-  if (is.null(config$j_dim)){
     eig.val_x <- RSpectra::eigs(crossprod((x),(x)),k = min(ncol(x)-2,30))$values
     eig.val_y <- RSpectra::eigs(crossprod((y),(y)),k = min(ncol(y)-2,30))$values
 
-    main_dim <- sum(cumsum(((eig.val_x)/sum((eig.val_x))+(eig.val_y)/sum((eig.val_y)))/2)<(1-1e-2))
 
-    config$j_dim <- max(5,main_dim)
+    main_dim <- sum(cumsum(((eig.val_t.x)/sum((eig.val_t.x))+(eig.val_t.y)/sum((eig.val_t.y))+
+                              (eig.val_x)/sum((eig.val_x))+(eig.val_y)/sum((eig.val_y)))/4)<(1-1e-2))
+
+    config$i_dim <- max(2,main_dim)
+  }
+
+  if (is.null(config$j_dim)){
+    eig.val_t.x <- RSpectra::eigs(crossprod(t(x),t(x)),k = min(nrow(x)-2,30))$values
+    eig.val_t.y <- RSpectra::eigs(crossprod(t(y),t(y)),k = min(nrow(y)-2,30))$values
+
+    eig.val_x <- RSpectra::eigs(crossprod((x),(x)),k = min(ncol(x)-2,30))$values
+    eig.val_y <- RSpectra::eigs(crossprod((y),(y)),k = min(ncol(y)-2,30))$values
+
+
+    main_dim <- sum(cumsum(((eig.val_t.x)/sum((eig.val_t.x))+(eig.val_t.y)/sum((eig.val_t.y))+
+                              (eig.val_x)/sum((eig.val_x))+(eig.val_y)/sum((eig.val_y)))/4)<(1-1e-5))
+
+    config$j_dim <- max(2,main_dim)
   }
 
 
@@ -98,28 +101,41 @@ gcproc <- function(x,
     print(paste("Beginning gcproc learning with:    Sample dimension reduction (config$i_dim): ",config$i_dim, "    Feature dimension reduction (config$j_dim): ", config$j_dim,"    Tolerance Threshold: ", config$tol, "   Maximum number of iterations: ", config$max_iter, "   Verbose: ", config$verbose,sep=""))
   }
 
-
   while (T){
 
     if (!is.null(recover$y) | !is.null(recover$x)){
 
+      if (recover$type %in% "regression"){
+        recover <- recover_points(
+          x = x,
+          y = y,
+          fixed = fixed,
+          code = code,
+          main.parameters = main.parameters,
+          config = config,
+          recover = recover
+        )
 
-      recover <- recover_points(
-        x = x,
-        y = y,
-        fixed = fixed,
-        main.parameters = main.parameters,
-        config = config,
-        recover = recover
-      )
-
-      if (!is.null(recover$x)){
-        x <- recover$predict.x
+        if (!is.null(recover$x)){
+          x <- recover$predict.x
+        }
+        if (!is.null(recover$y)){
+          y <- recover$predict.y
+        }
       }
-      if (!is.null(recover$y)){
-        y <- recover$predict.y
-      }
+      if (recover$type %in% "decode"){
 
+        code$Y_decoded <- t(main.parameters$alpha.K)%*%(code$main_code)%*%t(main.parameters$v.beta)
+        code$X_decoded <- t(main.parameters$alpha.L)%*%(code$main_code)%*%t(main.parameters$u.beta)
+
+        if (!is.null(recover$x)){
+          x <- code$X_decoded
+        }
+        if (!is.null(recover$y)){
+          y <- code$Y_decoded
+        }
+
+      }
 
     }
 
@@ -142,7 +158,9 @@ gcproc <- function(x,
 
 
     code$X_encode <- (main.parameters$alpha.L%*%( x )%*%(main.parameters$u.beta))
-    code$X_code <- code$main_code <- (MASS::ginv((main.parameters$alpha.L)%*%t(main.parameters$alpha.L))%*%(code$X_encode)%*%MASS::ginv(t(main.parameters$u.beta)%*%(main.parameters$u.beta)))
+    code$s_code <- MASS::ginv(code$s_code%*%t(code$s_code))%*%code$s_code%*%(MASS::ginv((main.parameters$alpha.L)%*%t(main.parameters$alpha.L))%*%(code$X_encode)%*%MASS::ginv(t(main.parameters$u.beta)%*%(main.parameters$u.beta)))
+    code$X_code <- code$main_code <- t(code$s_code)%*%(code$s_code)
+
 
     main.parameters$alpha.K <- if(is.null(anchors$anchor_y.sample)){t(y%*%t((code$main_code)%*%t(main.parameters$v.beta))%*%MASS::ginv(((code$main_code)%*%t(main.parameters$v.beta))%*%t((code$main_code)%*%t(main.parameters$v.beta))))}else{anchors$anchor_y.sample}
     main.parameters$v.beta <- if(is.null(anchors$anchor_y.feature)){t(MASS::ginv(t((t(main.parameters$alpha.K)%*%(code$main_code)))%*%((t(main.parameters$alpha.K)%*%(code$main_code))))%*%t(t(main.parameters$alpha.K)%*%(code$main_code))%*%y)}else{anchors$anchor_y.feature}
@@ -158,15 +176,11 @@ gcproc <- function(x,
 
 
     code$Y_encode <- (main.parameters$alpha.K%*%( y )%*%(main.parameters$v.beta))
-    code$Y_code <- code$main_code <- (MASS::ginv((main.parameters$alpha.K)%*%t(main.parameters$alpha.K))%*%(code$Y_encode)%*%MASS::ginv(t(main.parameters$v.beta)%*%(main.parameters$v.beta)))
+    code$s_code <- MASS::ginv(code$s_code%*%t(code$s_code))%*%code$s_code%*%(MASS::ginv((main.parameters$alpha.K)%*%t(main.parameters$alpha.K))%*%(code$Y_encode)%*%MASS::ginv(t(main.parameters$v.beta)%*%(main.parameters$v.beta)))
+    code$Y_code <- code$main_code <- t(code$s_code)%*%(code$s_code)
 
 
-
-
-
-
-
-    matrix.residuals <- code$Y_code - code$X_code
+    matrix.residuals <- code$Y_encode - code$X_encode
 
     total.mse <- mean(abs(matrix.residuals))
 
@@ -192,25 +206,19 @@ gcproc <- function(x,
 
   }
 
-  if (Reduce('+',lapply(main.parameters,function(X){sum(X)})) == 0){
-    regularisation.penalty <- Inf
-  } else {
-    regularisation.penalty <-  regularise$lambda * ((0.5)*(1 - regularise$alpha)*Reduce('+',lapply(main.parameters,function(X){sum((X^2))}))  +
-                                                      regularise$alpha*Reduce('+',lapply(main.parameters,function(X){sum(abs(X))})))
-
-  }
-
   dimension_reduction <- list()
   dimension_reduction$K.y_dim_red <- t(main.parameters$alpha.K%*%y)
   dimension_reduction$y.v_dim_red <- y%*%main.parameters$v.beta
   dimension_reduction$L.x_dim_red <- t(main.parameters$alpha.L%*%x)
   dimension_reduction$x.u_dim_red <- x%*%main.parameters$u.beta
 
-  code$Y_decoded <- t(main.parameters$alpha.K)%*%code$main_code%*%t(main.parameters$v.beta)
-  code$X_decoded <- t(main.parameters$alpha.L)%*%code$main_code%*%t(main.parameters$u.beta)
+  code$Y_decoded <- t(main.parameters$alpha.K)%*%(code$main_code)%*%t(main.parameters$v.beta)
+  code$X_decoded <- t(main.parameters$alpha.L)%*%(code$main_code)%*%t(main.parameters$u.beta)
 
   recover$predict.x <- Matrix::Matrix(x*recover$x,sparse=T)
   recover$predict.y <- Matrix::Matrix(y*recover$y,sparse=T)
+
+  code$main_code <- t(code$s_code)%*%code$s_code
 
   runtime.end <- Sys.time()
 
@@ -225,7 +233,6 @@ gcproc <- function(x,
     code = code,
 
     meta.parameters = list(
-      regularise = regularise,
       config = config,
       fixed = fixed,
       runtime = list(
@@ -237,8 +244,7 @@ gcproc <- function(x,
 
     convergence.parameters = list(
       iterations = count,
-      score.vec = score.vec,
-      regularisation.penalty = regularisation.penalty
+      score.vec = score.vec
     )
 
 
