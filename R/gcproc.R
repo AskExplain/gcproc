@@ -4,7 +4,6 @@
 #'
 #' @param x Reference dataset of sample by feature matrix (required)
 #' @param y Experimental dataset of sample by feature matrix (required)
-#' @param fixed Enforcing feature (i_dim) and, or sample parameters (j_dim) to be identical for x and y (required)
 #' @param config Configuration parameters (required, default provided)
 #' @param anchors Transferring pre-trained model parameters (not required)
 #' @param pivots Initialisation of model parameters (not required)
@@ -17,44 +16,14 @@
 #' @return Recover contains the predictions for the test dataset as indicated by a 1 in the binary prediction matrices. In addition to the x and y variables within this list that correspond to the input binary design matrix, the predict.y and predict.x datasets represent the decoded estimation, and predicts any missing test data.
 #'
 #' @export
-gcproc <- function(x,
-                   y,
-                   fixed = list(i_dim = F, j_dim =F),
+gcproc <- function(data_list,
                    config = gcproc::extract_config(verbose = F),
                    anchors = gcproc::extract_anchors_framework(verbose = F),
                    pivots = gcproc::extract_pivots_framework(verbose = F),
-                   recover = gcproc::extract_recovery_framework(verbose = F)
+                   recover = gcproc::extract_recovery_framework(verbose = F),
+                   fixed = gcproc::extract_fixed_framework(verbose=F)
                    ){
   runtime.start <- Sys.time()
-
-  if (is.null(config$i_dim)){
-    eig.val_t.x <- RSpectra::eigs(crossprod(t(x),t(x)),k = min(nrow(x)-2,30))$values
-    eig.val_t.y <- RSpectra::eigs(crossprod(t(y),t(y)),k = min(nrow(y)-2,30))$values
-
-    eig.val_x <- RSpectra::eigs(crossprod((x),(x)),k = min(ncol(x)-2,30))$values
-    eig.val_y <- RSpectra::eigs(crossprod((y),(y)),k = min(ncol(y)-2,30))$values
-
-
-    main_dim <- sum(cumsum(((eig.val_t.x)/sum((eig.val_t.x))+(eig.val_t.y)/sum((eig.val_t.y))+
-                              (eig.val_x)/sum((eig.val_x))+(eig.val_y)/sum((eig.val_y)))/4)<(1-1e-2))
-
-    config$i_dim <- max(2,main_dim)
-  }
-
-  if (is.null(config$j_dim)){
-    eig.val_t.x <- RSpectra::eigs(crossprod(t(x),t(x)),k = min(nrow(x)-2,30))$values
-    eig.val_t.y <- RSpectra::eigs(crossprod(t(y),t(y)),k = min(nrow(y)-2,30))$values
-
-    eig.val_x <- RSpectra::eigs(crossprod((x),(x)),k = min(ncol(x)-2,30))$values
-    eig.val_y <- RSpectra::eigs(crossprod((y),(y)),k = min(ncol(y)-2,30))$values
-
-
-    main_dim <- sum(cumsum(((eig.val_t.x)/sum((eig.val_t.x))+(eig.val_t.y)/sum((eig.val_t.y))+
-                              (eig.val_x)/sum((eig.val_x))+(eig.val_y)/sum((eig.val_y)))/4)<(1-1e-5))
-
-    config$j_dim <- max(2,main_dim)
-  }
-
 
 
   prepare_data = TRUE
@@ -84,11 +53,9 @@ gcproc <- function(x,
     score_lag <- 2 # How many previous scores kept track of
     accept_score <- 1 # How many scores used to calculate previous and current "mean score"
 
-    recover$predict.y <- recover$y
-    recover$predict.x <- recover$x
+    recover$predict.list <- recover$design.list
 
-    initialise.model <- initialise.gcproc(x = x,
-                                          y = y,
+    initialise.model <- initialise.gcproc(data_list = data_list,
                                           config = config,
                                           anchors = anchors,
                                           pivots = pivots)
@@ -103,84 +70,68 @@ gcproc <- function(x,
 
   while (T){
 
-    if (!is.null(recover$y) | !is.null(recover$x)){
+    prev_code <- code
+    for (i in 1:length(data_list)){
+      return_update <- update_set(x = data_list[[i]],
+                                  main.parameters = main.parameters[[i]],
+                                  code = code,
+                                  anchors = anchors
+                                )
 
-      if (recover$type %in% "regression"){
+      main.parameters[[i]] <- return_update$main.parameters
+      code <- return_update$code
+
+      if (i %in% fixed$alpha | i %in% fixed$beta){
+
+        if (!is.null(fixed$alpha)){
+          main.alpha <- main.parameters[[fixed$alpha[i]]]$alpha
+          # main.l.s_code <- main.parameters[[fixed$alpha[i]]]$l.s_code
+
+          for (a in fixed$alpha){
+            main.parameters[[a]]$alpha <- main.alpha
+            # main.parameters[[a]]$l.s_code <- main.l.s_code
+          }
+        }
+
+        if (!is.null(fixed$beta)){
+          main.beta <- main.parameters[[fixed$beta[i]]]$beta
+          # main.r.s_code <- main.parameters[[fixed$beta[i]]]$r.s_code
+
+          for (b in fixed$beta){
+            main.parameters[[b]]$beta <- main.beta
+            # main.parameters[[b]]$r.s_code <- main.r.s_code
+
+          }
+        }
+
+      }
+
+
+      if (any(do.call('c',lapply(recover$design.list,function(X){!is.null(X)})))){
+
         recover <- recover_points(
-          x = x,
-          y = y,
-          fixed = fixed,
+          data_list,
           code = code,
           main.parameters = main.parameters,
           config = config,
           recover = recover
         )
 
-        if (!is.null(recover$x)){
-          x <- recover$predict.x
-        }
-        if (!is.null(recover$y)){
-          y <- recover$predict.y
-        }
-      }
-      if (recover$type %in% "decode"){
-
-        code$Y_decoded <- t(main.parameters$alpha.K)%*%(code$main_code)%*%t(main.parameters$v.beta)
-        code$X_decoded <- t(main.parameters$alpha.L)%*%(code$main_code)%*%t(main.parameters$u.beta)
-
-        if (!is.null(recover$x)){
-          x <- code$X_decoded
-        }
-        if (!is.null(recover$y)){
-          y <- code$Y_decoded
+        for (i in 1:length(data_list)){
+          if (!is.null(recover$predict.list[[i]])){
+            data_list[[i]] <- recover$predict.list[[i]]
+          }
         }
 
       }
 
+
     }
 
 
 
 
-    main.parameters$alpha.L <- if(is.null(anchors$anchor_x.sample)){t(x%*%t((code$main_code)%*%t(main.parameters$u.beta))%*%MASS::ginv(((code$main_code)%*%t(main.parameters$u.beta))%*%t((code$main_code)%*%t(main.parameters$u.beta))))}else{anchors$anchor_x.sample}
-    main.parameters$u.beta <- if(is.null(anchors$anchor_x.feature)){t(MASS::ginv(t((t(main.parameters$alpha.L)%*%(code$main_code)))%*%((t(main.parameters$alpha.L)%*%(code$main_code))))%*%t(t(main.parameters$alpha.L)%*%(code$main_code))%*%x)}else{anchors$anchor_x.feature}
-
-
-
-    if (fixed$i_dim == T){
-      main.parameters$alpha.K <-  main.parameters$alpha.L
-    }
-
-    if (fixed$j_dim == T){
-      main.parameters$v.beta <- main.parameters$u.beta
-    }
-
-
-
-    code$X_encode <- (main.parameters$alpha.L%*%( x )%*%(main.parameters$u.beta))
-    code$s_code <- MASS::ginv(code$s_code%*%t(code$s_code))%*%code$s_code%*%(MASS::ginv((main.parameters$alpha.L)%*%t(main.parameters$alpha.L))%*%(code$X_encode)%*%MASS::ginv(t(main.parameters$u.beta)%*%(main.parameters$u.beta)))
-    code$X_code <- code$main_code <- t(code$s_code)%*%(code$s_code)
-
-
-    main.parameters$alpha.K <- if(is.null(anchors$anchor_y.sample)){t(y%*%t((code$main_code)%*%t(main.parameters$v.beta))%*%MASS::ginv(((code$main_code)%*%t(main.parameters$v.beta))%*%t((code$main_code)%*%t(main.parameters$v.beta))))}else{anchors$anchor_y.sample}
-    main.parameters$v.beta <- if(is.null(anchors$anchor_y.feature)){t(MASS::ginv(t((t(main.parameters$alpha.K)%*%(code$main_code)))%*%((t(main.parameters$alpha.K)%*%(code$main_code))))%*%t(t(main.parameters$alpha.K)%*%(code$main_code))%*%y)}else{anchors$anchor_y.feature}
-
-
-    if (fixed$i_dim == T){
-      main.parameters$alpha.L <- main.parameters$alpha.K
-    }
-
-    if (fixed$j_dim == T){
-      main.parameters$v.beta <- main.parameters$u.beta
-    }
-
-
-    code$Y_encode <- (main.parameters$alpha.K%*%( y )%*%(main.parameters$v.beta))
-    code$s_code <- MASS::ginv(code$s_code%*%t(code$s_code))%*%code$s_code%*%(MASS::ginv((main.parameters$alpha.K)%*%t(main.parameters$alpha.K))%*%(code$Y_encode)%*%MASS::ginv(t(main.parameters$v.beta)%*%(main.parameters$v.beta)))
-    code$Y_code <- code$main_code <- t(code$s_code)%*%(code$s_code)
-
-
-    matrix.residuals <- code$Y_encode - code$X_encode
+    matrix.residuals <- code$encode - prev_code$encode
 
     total.mse <- mean(abs(matrix.residuals))
 
@@ -204,21 +155,23 @@ gcproc <- function(x,
 
     count = count + 1
 
+
+
   }
 
-  dimension_reduction <- list()
-  dimension_reduction$K.y_dim_red <- t(main.parameters$alpha.K%*%y)
-  dimension_reduction$y.v_dim_red <- y%*%main.parameters$v.beta
-  dimension_reduction$L.x_dim_red <- t(main.parameters$alpha.L%*%x)
-  dimension_reduction$x.u_dim_red <- x%*%main.parameters$u.beta
 
-  code$Y_decoded <- t(main.parameters$alpha.K)%*%(code$main_code)%*%t(main.parameters$v.beta)
-  code$X_decoded <- t(main.parameters$alpha.L)%*%(code$main_code)%*%t(main.parameters$u.beta)
 
-  recover$predict.x <- Matrix::Matrix(x*recover$x,sparse=T)
-  recover$predict.y <- Matrix::Matrix(y*recover$y,sparse=T)
 
-  code$main_code <- t(code$s_code)%*%code$s_code
+#   dimension_reduction <- list()
+#   dimension_reduction$K.y_dim_red <- t(main.parameters$alpha.K%*%y)
+#   dimension_reduction$y.v_dim_red <- y%*%main.parameters$v.beta
+#   dimension_reduction$L.x_dim_red <- t(main.parameters$alpha.L%*%x)
+#   dimension_reduction$x.u_dim_red <- x%*%main.parameters$u.beta
+
+  # code$Y_decoded <- t(main.parameters$alpha.K)%*%(code$main_code)%*%t(main.parameters$v.beta)
+  # code$X_decoded <- t(main.parameters$alpha.L)%*%(code$main_code)%*%t(main.parameters$u.beta)
+
+  # code$main_code <- t(main.parameters$s_code)%*%main.parameters$s_code
 
   runtime.end <- Sys.time()
 
@@ -228,7 +181,7 @@ gcproc <- function(x,
 
     recover =  recover,
 
-    dimension_reduction = dimension_reduction,
+    # dimension_reduction = dimension_reduction,
 
     code = code,
 
@@ -253,5 +206,31 @@ gcproc <- function(x,
 
 }
 
+
+
+
+
+update_set <- function(x,
+                       main.parameters,
+                       code,
+                       anchors
+                       ){
+
+  main.parameters$alpha <- if(is.null(anchors$anchor_x.sample)){t(x%*%t((code$main_code)%*%t(main.parameters$beta))%*%MASS::ginv(((code$main_code)%*%t(main.parameters$beta))%*%t((code$main_code)%*%t(main.parameters$beta))))}else{anchors$anchor_x.sample}
+  main.parameters$beta <- if(is.null(anchors$anchor_x.feature)){t(MASS::ginv(t((t(main.parameters$alpha)%*%(code$main_code)))%*%((t(main.parameters$alpha)%*%(code$main_code))))%*%t(t(main.parameters$alpha)%*%(code$main_code))%*%x)}else{anchors$anchor_x.feature}
+
+  code$encode <- (main.parameters$alpha%*%( x )%*%(main.parameters$beta))
+  main.parameters$r.s_code <- t(MASS::ginv(t(code$code)%*%(code$code))%*%t(code$code)%*%MASS::ginv(main.parameters$l.s_code%*%t(main.parameters$l.s_code))%*%main.parameters$l.s_code%*%(MASS::ginv((main.parameters$alpha)%*%t(main.parameters$alpha))%*%(code$encode)%*%MASS::ginv(t(main.parameters$beta)%*%(main.parameters$beta))))
+  main.parameters$l.s_code <- t((MASS::ginv((main.parameters$alpha)%*%t(main.parameters$alpha))%*%(code$encode)%*%MASS::ginv(t(main.parameters$beta)%*%(main.parameters$beta)))%*%main.parameters$r.s_code%*%MASS::ginv(t(main.parameters$r.s_code)%*%(main.parameters$r.s_code))%*%t(code$code)%*%MASS::ginv((code$code)%*%t(code$code)))
+
+  code$main_code <- MASS::ginv((main.parameters$alpha)%*%t(main.parameters$alpha))%*%(code$encode)%*%MASS::ginv(t(main.parameters$beta)%*%(main.parameters$beta))
+  code$code <- MASS::ginv((main.parameters$l.s_code)%*%t(main.parameters$l.s_code))%*%(main.parameters$l.s_code)%*%code$main_code%*%(main.parameters$r.s_code)%*%MASS::ginv(t(main.parameters$r.s_code)%*%(main.parameters$r.s_code))
+
+
+  return(list(main.parameters = main.parameters,
+              code = code
+              ))
+
+}
 
 

@@ -10,13 +10,14 @@
 #' @export
 extract_config <- function(verbose=T){
   config <- list(
-    i_dim = NULL,
-    j_dim = NULL,
-    min_iter=2,
-    max_iter=150,
-    tol=1e-2,
+    i_dim = 200,
+    j_dim = 200,
+    k_dim = 200,
+    min_iter=3,
+    max_iter=350,
+    tol=1,
     verbose=T,
-    init="svd-quick")
+    init="random")
 
   if (verbose == T){
     print(config)
@@ -95,7 +96,9 @@ extract_recovery_framework <- function(verbose=T){
     x = NULL,
     y = NULL,
     fn = NULL,
-    param = NULL
+    param = NULL,
+    design.list = NULL,
+    predict.list = NULL
   )
 
   if (verbose == T){
@@ -110,36 +113,19 @@ extract_recovery_framework <- function(verbose=T){
 
 
 
-
-#' Extract regularise framework to put into gcproc
+#' Extract fixed framework to put into gcproc
 #'
-#' Regularise data to improve modelling interpretability
-#'
-#' @param lambda
-#' @param alpha
-#' @param code
-#' @param i_dim
-#' @param j_dim
-#' @return  Regularisation framework for gcproc
+#' Fix data to improve modelling capacity for similar axes
 #' @export
-extract_regularise_framework <- function(verbose=T){
-  regularise <- list(lambda = 0,
-                  alpha = 0,
-                  i_dim =F,
-                  j_dim =F)
+extract_fixed_framework <- function(verbose=T){
+  fixed <- list(alpha=NULL,
+                beta=NULL)
 
   if (verbose == T){
-    print(regularise)
+    print(fixed)
   }
 
-  return(regularise)
-}
-
-S.z.g <- function(S.z,S.g){
-  to_return <-
-    (S.z - S.g) * ((S.z > 0) * (S.g < abs(S.z))) +
-    (S.z + S.g) * ((S.z < 0) * (S.g < abs(S.z)))
-  return(to_return)
+  return(fixed)
 }
 
 transform.data <- function(x,method="scale"){
