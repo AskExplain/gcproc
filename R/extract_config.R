@@ -10,10 +10,10 @@
 #' @export
 extract_config <- function(verbose=T){
   config <- list(
-    i_dim = 200,
-    j_dim = 200,
-    k_dim = 200,
-    min_iter=3,
+    i_dim = 100,
+    j_dim = 100,
+    k_dim = 100,
+    min_iter=2,
     max_iter=350,
     tol=1,
     verbose=T,

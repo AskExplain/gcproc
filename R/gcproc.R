@@ -84,23 +84,25 @@ gcproc <- function(data_list,
       if (i %in% fixed$alpha | i %in% fixed$beta){
 
         if (!is.null(fixed$alpha)){
-          main.alpha <- main.parameters[[fixed$alpha[i]]]$alpha
-          # main.l.s_code <- main.parameters[[fixed$alpha[i]]]$l.s_code
 
-          for (a in fixed$alpha){
-            main.parameters[[a]]$alpha <- main.alpha
-            # main.parameters[[a]]$l.s_code <- main.l.s_code
+          for (unq_a in unique(fixed$alpha)){
+            a_id <- which(fixed$alpha == unq_a)
+            main.alpha <- main.parameters[[a_id[1]]]$alpha
+
+            for (a in a_id[-1]){
+              main.parameters[[a]]$alpha <- main.alpha
+            }
           }
         }
 
         if (!is.null(fixed$beta)){
-          main.beta <- main.parameters[[fixed$beta[i]]]$beta
-          # main.r.s_code <- main.parameters[[fixed$beta[i]]]$r.s_code
+          for (unq_b in unique(fixed$beta)){
+            b_id <- which(fixed$beta == unq_b)
+            main.beta <- main.parameters[[b_id[1]]]$beta
 
-          for (b in fixed$beta){
-            main.parameters[[b]]$beta <- main.beta
-            # main.parameters[[b]]$r.s_code <- main.r.s_code
-
+            for (b in b_id[-1]){
+              main.parameters[[b]]$beta <- main.beta
+            }
           }
         }
 
