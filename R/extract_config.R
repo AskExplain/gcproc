@@ -12,7 +12,6 @@ extract_config <- function(verbose=T){
   config <- list(
     i_dim = 100,
     j_dim = 100,
-    k_dim = 100,
     min_iter=2,
     max_iter=350,
     tol=1,

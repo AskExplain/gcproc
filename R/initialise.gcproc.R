@@ -8,9 +8,6 @@ initialise.gcproc <- function(data_list,
     print("Initialising data")
   }
 
-  left_decode <- matrix(rnorm(config$i_dim*config$k_dim),nrow=config$k_dim,ncol=config$i_dim)
-  right_decode <- matrix(rnorm(config$k_dim*config$j_dim),nrow=config$j_dim,ncol=config$k_dim)
-
   main.parameters <- list()
   for (i in 1:length(data_list)){
 
@@ -33,22 +30,14 @@ initialise.gcproc <- function(data_list,
 
     decode <- X_code
 
-    right_decode <- t(MASS::ginv(left_decode%*%t(left_decode))%*%left_decode%*%(MASS::ginv((alpha)%*%t(alpha))%*%(X_encode)%*%MASS::ginv(t(beta)%*%(beta))))
-    left_decode <- t((MASS::ginv((alpha)%*%t(alpha))%*%(X_encode)%*%MASS::ginv(t(beta)%*%(beta)))%*%right_decode%*%MASS::ginv(t(right_decode)%*%right_decode))
-
-    code <- MASS::ginv((left_decode)%*%t(left_decode))%*%(left_decode)%*%MASS::ginv((alpha)%*%t(alpha))%*%X_encode%*%MASS::ginv(t(beta)%*%(beta))%*%(right_decode)%*%MASS::ginv(t(right_decode)%*%(right_decode))
-
     main.parameters[[i]] = list(
-      right_decode = right_decode,
-      left_decode = left_decode,
       alpha = alpha,
       beta = beta
     )
 
     code = list(
       encode = X_encode,
-      decode = decode,
-      code = code
+      decode = decode
     )
 
 

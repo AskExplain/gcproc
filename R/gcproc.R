@@ -55,6 +55,7 @@ gcproc <- function(data_list,
 
     prev_code <- code
     for (i in 1:length(data_list)){
+
       return_update <- update_set(x = data_list[[i]],
                                   main.parameters = main.parameters[[i]],
                                   code = code,
@@ -89,28 +90,28 @@ gcproc <- function(data_list,
       }
 
 
-      if (any(do.call('c',lapply(recover$design.list,function(X){!is.null(X)})))){
-
-        recover <- recover_points(
-          data_list,
-          code = code,
-          main.parameters = main.parameters,
-          config = config,
-          recover = recover
-        )
-
-        for (i in 1:length(data_list)){
-          if (!is.null(recover$predict.list[[i]])){
-            data_list[[i]] <- recover$predict.list[[i]]
-          }
-        }
-
-      }
 
 
     }
 
 
+    if (any(do.call('c',lapply(recover$design.list,function(X){!is.null(X)})))){
+
+      recover <- recover_points(
+        data_list,
+        code = code,
+        main.parameters = main.parameters,
+        config = config,
+        recover = recover
+      )
+
+      for (i in 1:length(data_list)){
+        if (!is.null(recover$predict.list[[i]])){
+          data_list[[i]] <- recover$predict.list[[i]]
+        }
+      }
+
+    }
 
 
     matrix.residuals <- code$encode - prev_code$encode
@@ -200,10 +201,6 @@ update_set <- function(x,
 
   main.parameters$alpha <- if(is.null(anchors$anchor_x.sample)){t(x%*%t((code$decode)%*%t(main.parameters$beta))%*%MASS::ginv(((code$decode)%*%t(main.parameters$beta))%*%t((code$decode)%*%t(main.parameters$beta))))}else{anchors$anchor_x.sample}
   main.parameters$beta <- if(is.null(anchors$anchor_x.feature)){t(MASS::ginv(t((t(main.parameters$alpha)%*%(code$decode)))%*%((t(main.parameters$alpha)%*%(code$decode))))%*%t(t(main.parameters$alpha)%*%(code$decode))%*%x)}else{anchors$anchor_x.feature}
-
-  main.parameters$right_decode <- t(MASS::ginv(t(code$code)%*%(code$code))%*%t(code$code)%*%MASS::ginv(main.parameters$left_decode%*%t(main.parameters$left_decode))%*%main.parameters$left_decode%*%(code$decode))
-  main.parameters$left_decode <- t((code$decode)%*%main.parameters$right_decode%*%MASS::ginv(t(main.parameters$right_decode)%*%(main.parameters$right_decode))%*%t(code$code)%*%MASS::ginv((code$code)%*%t(code$code)))
-  code$code <- MASS::ginv((main.parameters$left_decode)%*%t(main.parameters$left_decode))%*%(main.parameters$left_decode)%*%code$decode%*%(main.parameters$right_decode)%*%MASS::ginv(t(main.parameters$right_decode)%*%(main.parameters$right_decode))
 
   code$encode <- (main.parameters$alpha%*%( x )%*%(main.parameters$beta))
   code$decode <- MASS::ginv((main.parameters$alpha)%*%t(main.parameters$alpha))%*%code$encode%*%MASS::ginv(t(main.parameters$beta)%*%(main.parameters$beta))
