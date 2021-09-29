@@ -9,8 +9,8 @@ initialise.gcproc <- function(data_list,
     print("Initialising data")
   }
 
-  l.s_code <- matrix(rnorm(config$i_dim*config$k_dim),nrow=config$k_dim,ncol=config$i_dim)
-  r.s_code <- matrix(rnorm(config$k_dim*config$j_dim),nrow=config$j_dim,ncol=config$k_dim)
+  left_decode <- matrix(rnorm(config$i_dim*config$k_dim),nrow=config$k_dim,ncol=config$i_dim)
+  right_decode <- matrix(rnorm(config$k_dim*config$j_dim),nrow=config$j_dim,ncol=config$k_dim)
 
   main.parameters <- list()
   for (i in 1:length(data_list)){
@@ -33,25 +33,24 @@ initialise.gcproc <- function(data_list,
     X_encode <- (alpha%*%(data_list[[i]])%*%(beta))
     X_code <- (MASS::ginv((alpha)%*%t(alpha))%*%(X_encode)%*%MASS::ginv(t(beta)%*%(beta)))
 
-    main_code <- X_code
+    decode <- X_code
 
-    r.s_code <- t(MASS::ginv(l.s_code%*%t(l.s_code))%*%l.s_code%*%(MASS::ginv((alpha)%*%t(alpha))%*%(X_encode)%*%MASS::ginv(t(beta)%*%(beta))))
-    l.s_code <- t((MASS::ginv((alpha)%*%t(alpha))%*%(X_encode)%*%MASS::ginv(t(beta)%*%(beta)))%*%r.s_code%*%MASS::ginv(t(r.s_code)%*%r.s_code))
+    right_decode <- t(MASS::ginv(left_decode%*%t(left_decode))%*%left_decode%*%(MASS::ginv((alpha)%*%t(alpha))%*%(X_encode)%*%MASS::ginv(t(beta)%*%(beta))))
+    left_decode <- t((MASS::ginv((alpha)%*%t(alpha))%*%(X_encode)%*%MASS::ginv(t(beta)%*%(beta)))%*%right_decode%*%MASS::ginv(t(right_decode)%*%right_decode))
 
-    code <- MASS::ginv((l.s_code)%*%t(l.s_code))%*%(l.s_code)%*%MASS::ginv((alpha)%*%t(alpha))%*%X_encode%*%MASS::ginv(t(beta)%*%(beta))%*%(r.s_code)%*%MASS::ginv(t(r.s_code)%*%(r.s_code))
+    code <- MASS::ginv((left_decode)%*%t(left_decode))%*%(left_decode)%*%MASS::ginv((alpha)%*%t(alpha))%*%X_encode%*%MASS::ginv(t(beta)%*%(beta))%*%(right_decode)%*%MASS::ginv(t(right_decode)%*%(right_decode))
 
     main.parameters[[i]] = list(
-      r.s_code = r.s_code,
-      l.s_code = l.s_code,
+      right_decode = right_decode,
+      left_decode = left_decode,
       alpha = alpha,
       beta = beta
     )
 
-
     code = list(
       encode = X_encode,
-      code = code,
-      main_code = main_code
+      decode = decode,
+      code = code
     )
 
 

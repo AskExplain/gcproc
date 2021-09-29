@@ -85,24 +85,21 @@ gcproc <- function(data_list,
 
         if (!is.null(fixed$alpha)){
 
-          for (unq_a in unique(fixed$alpha)){
-            a_id <- which(fixed$alpha == unq_a)
-            main.alpha <- main.parameters[[a_id[1]]]$alpha
+          a_id <- which(fixed$alpha == fixed$alpha[i])
+          main.alpha <- main.parameters[[i]]$alpha
 
-            for (a in a_id[-1]){
-              main.parameters[[a]]$alpha <- main.alpha
-            }
+          for (a in a_id){
+            main.parameters[[a]]$alpha <- main.alpha
           }
         }
 
         if (!is.null(fixed$beta)){
-          for (unq_b in unique(fixed$beta)){
-            b_id <- which(fixed$beta == unq_b)
-            main.beta <- main.parameters[[b_id[1]]]$beta
 
-            for (b in b_id[-1]){
-              main.parameters[[b]]$beta <- main.beta
-            }
+          b_id <- which(fixed$beta == unique(fixed$beta)[i])
+          main.beta <- main.parameters[[b_id[1]]]$beta
+
+          for (b in b_id){
+            main.parameters[[b]]$beta <- main.beta
           }
         }
 
@@ -170,10 +167,10 @@ gcproc <- function(data_list,
 #   dimension_reduction$L.x_dim_red <- t(main.parameters$alpha.L%*%x)
 #   dimension_reduction$x.u_dim_red <- x%*%main.parameters$u.beta
 
-  # code$Y_decoded <- t(main.parameters$alpha.K)%*%(code$main_code)%*%t(main.parameters$v.beta)
-  # code$X_decoded <- t(main.parameters$alpha.L)%*%(code$main_code)%*%t(main.parameters$u.beta)
+  # code$Y_decoded <- t(main.parameters$alpha.K)%*%(code$decode)%*%t(main.parameters$v.beta)
+  # code$X_decoded <- t(main.parameters$alpha.L)%*%(code$decode)%*%t(main.parameters$u.beta)
 
-  # code$main_code <- t(main.parameters$s_code)%*%main.parameters$s_code
+  # code$decode <- t(main.parameters$s_code)%*%main.parameters$s_code
 
   runtime.end <- Sys.time()
 
@@ -218,16 +215,15 @@ update_set <- function(x,
                        anchors
                        ){
 
-  main.parameters$alpha <- if(is.null(anchors$anchor_x.sample)){t(x%*%t((code$main_code)%*%t(main.parameters$beta))%*%MASS::ginv(((code$main_code)%*%t(main.parameters$beta))%*%t((code$main_code)%*%t(main.parameters$beta))))}else{anchors$anchor_x.sample}
-  main.parameters$beta <- if(is.null(anchors$anchor_x.feature)){t(MASS::ginv(t((t(main.parameters$alpha)%*%(code$main_code)))%*%((t(main.parameters$alpha)%*%(code$main_code))))%*%t(t(main.parameters$alpha)%*%(code$main_code))%*%x)}else{anchors$anchor_x.feature}
+  main.parameters$alpha <- if(is.null(anchors$anchor_x.sample)){t(x%*%t((code$decode)%*%t(main.parameters$beta))%*%MASS::ginv(((code$decode)%*%t(main.parameters$beta))%*%t((code$decode)%*%t(main.parameters$beta))))}else{anchors$anchor_x.sample}
+  main.parameters$beta <- if(is.null(anchors$anchor_x.feature)){t(MASS::ginv(t((t(main.parameters$alpha)%*%(code$decode)))%*%((t(main.parameters$alpha)%*%(code$decode))))%*%t(t(main.parameters$alpha)%*%(code$decode))%*%x)}else{anchors$anchor_x.feature}
+
+  main.parameters$right_decode <- t(MASS::ginv(t(code$code)%*%(code$code))%*%t(code$code)%*%MASS::ginv(main.parameters$left_decode%*%t(main.parameters$left_decode))%*%main.parameters$left_decode%*%(code$decode))
+  main.parameters$left_decode <- t((code$decode)%*%main.parameters$right_decode%*%MASS::ginv(t(main.parameters$right_decode)%*%(main.parameters$right_decode))%*%t(code$code)%*%MASS::ginv((code$code)%*%t(code$code)))
+  code$code <- MASS::ginv((main.parameters$left_decode)%*%t(main.parameters$left_decode))%*%(main.parameters$left_decode)%*%code$decode%*%(main.parameters$right_decode)%*%MASS::ginv(t(main.parameters$right_decode)%*%(main.parameters$right_decode))
 
   code$encode <- (main.parameters$alpha%*%( x )%*%(main.parameters$beta))
-  main.parameters$r.s_code <- t(MASS::ginv(t(code$code)%*%(code$code))%*%t(code$code)%*%MASS::ginv(main.parameters$l.s_code%*%t(main.parameters$l.s_code))%*%main.parameters$l.s_code%*%(MASS::ginv((main.parameters$alpha)%*%t(main.parameters$alpha))%*%(code$encode)%*%MASS::ginv(t(main.parameters$beta)%*%(main.parameters$beta))))
-  main.parameters$l.s_code <- t((MASS::ginv((main.parameters$alpha)%*%t(main.parameters$alpha))%*%(code$encode)%*%MASS::ginv(t(main.parameters$beta)%*%(main.parameters$beta)))%*%main.parameters$r.s_code%*%MASS::ginv(t(main.parameters$r.s_code)%*%(main.parameters$r.s_code))%*%t(code$code)%*%MASS::ginv((code$code)%*%t(code$code)))
-
-  code$main_code <- MASS::ginv((main.parameters$alpha)%*%t(main.parameters$alpha))%*%(code$encode)%*%MASS::ginv(t(main.parameters$beta)%*%(main.parameters$beta))
-  code$code <- MASS::ginv((main.parameters$l.s_code)%*%t(main.parameters$l.s_code))%*%(main.parameters$l.s_code)%*%code$main_code%*%(main.parameters$r.s_code)%*%MASS::ginv(t(main.parameters$r.s_code)%*%(main.parameters$r.s_code))
-
+  code$decode <- MASS::ginv((main.parameters$alpha)%*%t(main.parameters$alpha))%*%code$encode%*%MASS::ginv(t(main.parameters$beta)%*%(main.parameters$beta))
 
   return(list(main.parameters = main.parameters,
               code = code
