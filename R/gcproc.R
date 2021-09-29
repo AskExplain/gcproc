@@ -29,22 +29,6 @@ gcproc <- function(data_list,
   prepare_data = TRUE
   initialise = TRUE
 
-
-  anchor_y.sample = NULL
-  anchor_y.feature = NULL
-  anchor_x.sample = NULL
-  anchor_x.feature = NULL
-
-  if (!is.null(anchors)){
-    check_anchors = TRUE
-
-    anchors$anchor_y.sample = anchors$anchor_y.sample
-    anchors$anchor_y.feature = anchors$anchor_y.feature
-    anchors$anchor_x.sample = anchors$anchor_x.sample
-    anchors$anchor_x.feature = anchors$anchor_x.feature
-
-  }
-
   if (initialise==T){
 
     # Prepare convergence checking parameters
@@ -57,11 +41,10 @@ gcproc <- function(data_list,
 
     initialise.model <- initialise.gcproc(data_list = data_list,
                                           config = config,
-                                          anchors = anchors,
-                                          pivots = pivots)
+                                          anchors = anchors)
 
     main.parameters <- initialise.model$main.parameters
-    code <- initialise.model$code
+    code <- if(is.null(pivots$code)){initialise.model$code}else{pivots$code}
   }
 
   if (config$verbose){
@@ -79,7 +62,7 @@ gcproc <- function(data_list,
                                 )
 
       main.parameters[[i]] <- return_update$main.parameters
-      code <- return_update$code
+      code <- if(is.null(anchors$code)){return_update$code}else{anchors$code}
 
       if (i %in% fixed$alpha | i %in% fixed$beta){
 

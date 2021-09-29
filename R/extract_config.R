@@ -31,18 +31,12 @@ extract_config <- function(verbose=T){
 #' Anchors allow the transfer of learned parameters from a pre-trained model.
 #' NOTE: This is an empty framework that the user must fill in.
 #'
-#' @param anchor_y.sample Equivalent to alpha.K
-#' @param anchor_y.feature Equivalent to v.beta
-#' @param anchor_x.sample Equivalent to alpha.L
-#' @param anchor_x.feature Equivalent to u.beta
+#' @param code Anchor the code
 #' @return  Anchor framework for gcproc
 #' @export
 extract_anchors_framework <- function(verbose=T){
   anchors <- list(
-    anchor_y.sample = NULL,
-    anchor_y.feature = NULL,
-    anchor_x.sample = NULL,
-    anchor_x.feature = NULL
+    code = NULL
   )
 
   if (verbose == T){
@@ -57,18 +51,12 @@ extract_anchors_framework <- function(verbose=T){
 #' Pivots allow initialisation of parameters as input.
 #' NOTE: This is an empty framework that the user must fill in.
 #'
-#' @param pivot_y.sample Equivalent to alpha.K
-#' @param pivot_y.feature Equivalent to v.beta
-#' @param pivot_x.sample Equivalent to alpha.L
-#' @param pivot_x.feature Equivalent to u.beta
+#' @param code code
 #' @return  Pivot framework for gcproc
 #' @export
 extract_pivots_framework <- function(verbose=T){
   pivots <- list(
-    pivot_y.sample = NULL,
-    pivot_y.feature = NULL,
-    pivot_x.sample = NULL,
-    pivot_x.feature = NULL
+    code = NULL
   )
 
   if (verbose == T){

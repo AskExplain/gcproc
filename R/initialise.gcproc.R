@@ -1,8 +1,7 @@
 #' @export
 initialise.gcproc <- function(data_list,
                               config,
-                              anchors=NULL,
-                              pivots=NULL){
+                              anchors=NULL){
 
 
   if (config$verbose){
@@ -17,17 +16,16 @@ initialise.gcproc <- function(data_list,
 
     initial.param <- list()
     # Initialise parameters
-    if (any(do.call('c',lapply(pivots,function(piv){is.null(piv)})))){
-      initial.param <-initialise.parameters(x = data_list[[i]], i_dim=config$i_dim,j_dim=config$j_dim,init=config$init,verbose=config$verbose)
-    }
+    initial.param <-initialise.parameters(x = data_list[[i]], i_dim=config$i_dim,j_dim=config$j_dim,init=config$init,verbose=config$verbose)
+
 
     # Check pivoting parameters
-    initial.param$pivot_x.sample <- if (is.null(pivots$alpha)){initial.param$pivot_x.sample}else{pivots$alpha}
-    initial.param$pivot_x.feature <- if (is.null(pivots$beta)){initial.param$pivot_x.feature}else{pivots$beta}
+    initial.param$pivot_x.sample <- initial.param$pivot_x.sample
+    initial.param$pivot_x.feature <- initial.param$pivot_x.feature
 
     # Check anchoring parameters
-    alpha <- if (is.null( anchors$alpha)){initial.param$pivot_x.sample}else{ anchors$alpha}
-    beta <- if (is.null( anchors$beta)){initial.param$pivot_x.feature}else{ anchors$beta}
+    alpha <- initial.param$pivot_x.sample
+    beta <- initial.param$pivot_x.feature
 
     # Find intercept in endecoded space
     X_encode <- (alpha%*%(data_list[[i]])%*%(beta))

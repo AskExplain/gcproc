@@ -7,13 +7,7 @@
 extract_pivots_framework(verbose = T)
 }
 \arguments{
-\item{pivot_y.sample}{Equivalent to alpha.K}
-
-\item{pivot_y.feature}{Equivalent to v.beta}
-
-\item{pivot_x.sample}{Equivalent to alpha.L}
-
-\item{pivot_x.feature}{Equivalent to u.beta}
+\item{code}{code}
 }
 \value{
 Pivot framework for gcproc

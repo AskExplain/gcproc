@@ -7,13 +7,7 @@
 extract_anchors_framework(verbose = T)
 }
 \arguments{
-\item{anchor_y.sample}{Equivalent to alpha.K}
-
-\item{anchor_y.feature}{Equivalent to v.beta}
-
-\item{anchor_x.sample}{Equivalent to alpha.L}
-
-\item{anchor_x.feature}{Equivalent to u.beta}
+\item{code}{Anchor the code}
 }
 \value{
 Anchor framework for gcproc
