@@ -133,8 +133,8 @@ initialise.parameters <- function(x,i_dim=70,j_dim=70,init="svd-quick",verbose=F
 
 
   pivots <- list(
-                   pivot_x.sample = param.alpha,
-                   pivot_x.feature = param.beta  )
+                   pivot_x.sample = as.matrix(param.alpha),
+                   pivot_x.feature = as.matrix(param.beta)  )
   return(pivots)
 
 }
