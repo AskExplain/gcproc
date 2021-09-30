@@ -65,7 +65,7 @@ recover_points <- function(data_list,
                   train = covariate_predictors,
                   test = test_predictors,
                   y = sparse.x[train_id.x],
-                  k = 5
+                  k = 20
                 )$pred
             }
             if (method=="glmnet"){
