@@ -13,7 +13,7 @@ initialise.gcproc <- function(data_list,
 
     initial.param <- list()
     # Initialise parameters
-    initial.param <-initialise.parameters(x = data_list[[i]], i_dim=config$i_dim,j_dim=config$j_dim,init=config$init,verbose=config$verbose)
+    initial.param <-initialise.parameters(x = as.matrix(data_list[[i]]), i_dim=config$i_dim,j_dim=config$j_dim,init=config$init,verbose=config$verbose)
 
 
     # Check pivoting parameters
