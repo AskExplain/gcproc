@@ -56,7 +56,7 @@ gcproc <- function(data_list,
     prev_code <- code
     for (i in 1:length(data_list)){
 
-      return_update <- update_set(x = data_list[[i]],
+      return_update <- update_set(x = as.matrix(data_list[[i]]),
                                   main.parameters = main.parameters[[i]],
                                   code = code
                                   )
