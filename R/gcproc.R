@@ -126,6 +126,8 @@ gcproc <- function(data_list,
       if (config$verbose == T){
         print(paste("Iteration: ",count," with Tolerance of: ", abs(prev.MSE - MSE),sep=""))
       }
+    } else {
+      print(paste("Iteration: ",count," ... initialising ... ",sep=""))
     }
 
     if (count > config$min_iter){
