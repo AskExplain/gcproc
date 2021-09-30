@@ -25,7 +25,7 @@ initialise.gcproc <- function(data_list,
     beta <- initial.param$pivot_x.feature
 
     # Find intercept in endecoded space
-    X_encode <- (alpha%*%(data_list[[i]])%*%(beta))
+    X_encode <- (alpha%*%as.matrix(data_list[[i]])%*%(beta))
     X_code <- (MASS::ginv((alpha)%*%t(alpha))%*%(X_encode)%*%MASS::ginv(t(beta)%*%(beta)))
 
     decode <- X_code
