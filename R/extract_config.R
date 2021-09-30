@@ -15,6 +15,7 @@ extract_config <- function(verbose=T){
     min_iter=2,
     max_iter=350,
     tol=1,
+    n_cores = 2,
     verbose=T,
     init="random")
 

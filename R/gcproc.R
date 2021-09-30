@@ -55,17 +55,15 @@ gcproc <- function(data_list,
 
     prev_code <- code
     for (i in 1:length(data_list)){
-      print(c("check pre update",i))
+
       return_update <- update_set(x = as.matrix(data_list[[i]]),
                                   main.parameters = main.parameters[[i]],
                                   code = code
                                   )
-      print(c("check post update",i))
 
       main.parameters[[i]] <- return_update$main.parameters
       code <- if(is.null(anchors$code)){return_update$code}else{anchors$code}
 
-      print(c("check pre fix",i))
 
       if (i %in% fixed$alpha | i %in% fixed$beta){
 
@@ -91,33 +89,10 @@ gcproc <- function(data_list,
 
       }
 
-      print(c("check post fix",i))
-
 
 
     }
 
-    print(c("check pre predict",i))
-
-    if (any(do.call('c',lapply(recover$design.list,function(X){!is.null(X)})))){
-
-      recover <- recover_points(
-        data_list,
-        code = code,
-        main.parameters = main.parameters,
-        config = config,
-        recover = recover
-      )
-
-      for (i in 1:length(data_list)){
-        if (!is.null(recover$predict.list[[i]])){
-          data_list[[i]] <- recover$predict.list[[i]]
-        }
-      }
-
-    }
-
-    print(c("check post predict",i))
 
 
     matrix.residuals <- code$encode - prev_code$encode
@@ -149,6 +124,26 @@ gcproc <- function(data_list,
 
 
   }
+
+
+  if (any(do.call('c',lapply(recover$design.list,function(X){!is.null(X)})))){
+
+    recover <- recover_points(
+      data_list,
+      code = code,
+      main.parameters = main.parameters,
+      config = config,
+      recover = recover
+    )
+
+    for (i in 1:length(data_list)){
+      if (!is.null(recover$predict.list[[i]])){
+        data_list[[i]] <- recover$predict.list[[i]]
+      }
+    }
+
+  }
+
 
 
 
