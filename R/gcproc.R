@@ -58,9 +58,8 @@ gcproc <- function(data_list,
 
       return_update <- update_set(x = data_list[[i]],
                                   main.parameters = main.parameters[[i]],
-                                  code = code,
-                                  anchors = anchors
-                                )
+                                  code = code
+                                  )
 
       main.parameters[[i]] <- return_update$main.parameters
       code <- if(is.null(anchors$code)){return_update$code}else{anchors$code}
@@ -199,8 +198,8 @@ update_set <- function(x,
                        anchors
                        ){
 
-  main.parameters$alpha <- if(is.null(anchors$anchor_x.sample)){t(x%*%t((code$decode)%*%t(main.parameters$beta))%*%MASS::ginv(((code$decode)%*%t(main.parameters$beta))%*%t((code$decode)%*%t(main.parameters$beta))))}else{anchors$anchor_x.sample}
-  main.parameters$beta <- if(is.null(anchors$anchor_x.feature)){t(MASS::ginv(t((t(main.parameters$alpha)%*%(code$decode)))%*%((t(main.parameters$alpha)%*%(code$decode))))%*%t(t(main.parameters$alpha)%*%(code$decode))%*%x)}else{anchors$anchor_x.feature}
+  main.parameters$alpha <- t(x%*%t((code$decode)%*%t(main.parameters$beta))%*%MASS::ginv(((code$decode)%*%t(main.parameters$beta))%*%t((code$decode)%*%t(main.parameters$beta))))
+  main.parameters$beta <- t(MASS::ginv(t((t(main.parameters$alpha)%*%(code$decode)))%*%((t(main.parameters$alpha)%*%(code$decode))))%*%t(t(main.parameters$alpha)%*%(code$decode))%*%x)
 
   code$encode <- (main.parameters$alpha%*%( x )%*%(main.parameters$beta))
   code$decode <- MASS::ginv((main.parameters$alpha)%*%t(main.parameters$alpha))%*%code$encode%*%MASS::ginv(t(main.parameters$beta)%*%(main.parameters$beta))
