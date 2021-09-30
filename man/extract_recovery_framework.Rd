@@ -7,13 +7,13 @@
 extract_recovery_framework(verbose = T)
 }
 \arguments{
-\item{x}{Design matrix of x where 1 is to predict the test set, 0 is to be modelled as the train set}
-
-\item{y}{Design matrix of y where 1 is to predict the test set, 0 is to be modelled as the train set}
-
 \item{fn}{Allows user to specify a prediction function}
 
 \item{param}{Parameters to be put into prediction function}
+
+\item{design.list}{A list of design structures where each matrix is given a 1 to indicate the test set, 0 indicates the train set.}
+
+\item{predict.list}{This will be filled in by gpcroc with the predictions and return a prediction for indicated design matrices only. Leave as NULL to begin.}
 }
 \value{
 Prediction framework for gcproc

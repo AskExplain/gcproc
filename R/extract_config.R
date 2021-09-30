@@ -2,8 +2,10 @@
 #'
 #' @param i_dim Dimension reduction for samples (assumed to be along rows)
 #' @param j_dim Dimension reduction for features (assumed to be along columns)
+#' @param min_iter Minimum iteration of gcproc
 #' @param max_iter Maximum iteration of gcproc
 #' @param tol Tolerance threshold for convergence (metric: Root Mean Squared Error)
+#' @param n_cores Number of CPU cores to use for prediction part only
 #' @param verbose Print statements?
 #' @param init Initialisation method for the model ("random","eigen-quick","eigen-dense","svd-quick","svd-dense")
 #' @return  Configuration parameters for gcproc
@@ -72,17 +74,15 @@ extract_pivots_framework <- function(verbose=T){
 #'
 #' Can recover data points by imputing or predicting missing values
 #'
-#' @param x Design matrix of x where 1 is to predict the test set, 0 is to be modelled as the train set
-#' @param y Design matrix of y where 1 is to predict the test set, 0 is to be modelled as the train set
 #' @param fn Allows user to specify a prediction function
 #' @param param Parameters to be put into prediction function
+#' @param design.list A list of design structures where each matrix is given a 1 to indicate the test set, 0 indicates the train set.
+#' @param predict.list This will be filled in by gpcroc with the predictions and return a prediction for indicated design matrices only. Leave as NULL to begin.
 #' @return  Prediction framework for gcproc
 #' @export
 extract_recovery_framework <- function(verbose=T){
   recover <- list(
     method = c("matrix.projection","knn"),
-    x = NULL,
-    y = NULL,
     fn = NULL,
     param = NULL,
     design.list = NULL,
@@ -104,6 +104,8 @@ extract_recovery_framework <- function(verbose=T){
 #' Extract fixed framework to put into gcproc
 #'
 #' Fix data to improve modelling capacity for similar axes
+#' @param alpha Fixing the alpha parameters. A vector of integers, where identical integers indicate same the data axis. Axes that are not shared are given NA.
+#' @param beta Fixing the beta parameters. A vector of integers, where identical integers indicate same the data axis. Axes that are not shared are given NA.
 #' @export
 extract_fixed_framework <- function(verbose=T){
   fixed <- list(alpha=NULL,
@@ -116,43 +118,3 @@ extract_fixed_framework <- function(verbose=T){
   return(fixed)
 }
 
-transform.data <- function(x,method="scale"){
-
-  if (method == "scale"){
-    center = T
-    scale = T
-
-    x <- as.matrix(x)
-    nc <- ncol(x)
-    if (is.logical(center)) {
-      if (center) {
-        center <- colMeans(x, na.rm=TRUE)
-        x <- sweep(x, 2L, center, check.margin=FALSE)
-      }
-    }
-    else if (is.numeric(center) && (length(center) == nc))
-      x <- sweep(x, 2L, center, check.margin=FALSE)
-    else
-      stop("length of 'center' must equal the number of columns of 'x'")
-    if (is.logical(scale)) {
-      if (scale) {
-        f <- function(v) {
-          v <- v[!is.na(v)]
-          sqrt(sum(v^2) / max(1, length(v) - 1L))
-        }
-        scale <- apply(x, 2L, f)
-        scale <- sapply(scale,function(scale){if(scale==0|is.na(scale)){1}else{scale}})
-        x <- sweep(x, 2L, scale, "/", check.margin=FALSE)
-      }
-    }
-    else if (is.numeric(scale) && length(scale) == nc)
-      x <- sweep(x, 2L, scale, "/", check.margin=FALSE)
-    else
-      stop("length of 'scale' must equal the number of columns of 'x'")
-    if(is.numeric(center)) attr(x, "scaled:center") <- center
-    if(is.numeric(scale)) attr(x, "scaled:scale") <- scale
-    x
-  }
-
-  return(x)
-}
