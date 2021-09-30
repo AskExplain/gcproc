@@ -31,7 +31,7 @@ recover_points <- function(data_list,
           transformed.data <- (t(main.parameters[[i]]$alpha)%*%MASS::ginv((main.parameters[[X]]$alpha)%*%t(main.parameters[[X]]$alpha))%*%(main.parameters[[X]]$alpha)%*%as.matrix(data_list[[X]])%*%(main.parameters[[X]]$beta)%*%MASS::ginv(t(main.parameters[[X]]$beta)%*%(main.parameters[[X]]$beta)))
         })))
 
-        x[,which((colSums(recover$design.list[[i]])>0)==T)]  <- do.call('cbind',parallel::mclapply(mc.silent = config$verbose, X = c(which((colSums(recover$design.list[[i]])>0)==T)),FUN = function(id_col){
+        x[,which((colSums(recover$design.list[[i]])>0)==T)]  <- do.call('cbind',lapply(X = c(which((colSums(recover$design.list[[i]])>0)==T)),FUN = function(id_col){
 
           test_id.x <- as.logical(recover$design.list[[i]][,id_col])
           train_id.x <- as.logical(1 - recover$design.list[[i]][,id_col])
@@ -82,6 +82,8 @@ recover_points <- function(data_list,
         x <- as.matrix(x)
 
         recover$predict.list[[i]] <- x
+
+        data_list[[i]] <- x
 
       }
 
