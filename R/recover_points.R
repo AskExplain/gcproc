@@ -23,12 +23,12 @@ recover_points <- function(data_list,
 
     for (i in 1:length(data_list)){
 
-      x <- data_list[[i]]
+      x <- as.matrix(data_list[[i]])
 
       if (!is.null(recover$design.list[[i]])){
 
         recover$covariate <- transform.data(Reduce("+",lapply(c(1:length(data_list)),function(X){
-          transformed.data <- (t(main.parameters[[i]]$alpha)%*%MASS::ginv((main.parameters[[X]]$alpha)%*%t(main.parameters[[X]]$alpha))%*%(main.parameters[[X]]$alpha)%*%data_list[[X]]%*%(main.parameters[[X]]$beta)%*%MASS::ginv(t(main.parameters[[X]]$beta)%*%(main.parameters[[X]]$beta)))
+          transformed.data <- (t(main.parameters[[i]]$alpha)%*%MASS::ginv((main.parameters[[X]]$alpha)%*%t(main.parameters[[X]]$alpha))%*%(main.parameters[[X]]$alpha)%*%as.matrix(data_list[[X]])%*%(main.parameters[[X]]$beta)%*%MASS::ginv(t(main.parameters[[X]]$beta)%*%(main.parameters[[X]]$beta)))
         })))
 
         x[,which((colSums(recover$design.list[[i]])>0)==T)]  <- do.call('cbind',parallel::mclapply(mc.silent = config$verbose, X = c(which((colSums(recover$design.list[[i]])>0)==T)),FUN = function(id_col){
