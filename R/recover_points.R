@@ -28,7 +28,7 @@ recover_points <- function(data_list,
       if (!is.null(recover$design.list[[i]])){
         print(c("check pre covariate",i))
 
-        recover$covariate <- transform.data(Reduce("+",lapply(c(1:length(data_list)),function(X){
+        recover$covariate <- scale(Reduce("+",lapply(c(1:length(data_list)),function(X){
           transformed.data <- (t(main.parameters[[i]]$alpha)%*%MASS::ginv((main.parameters[[X]]$alpha)%*%t(main.parameters[[X]]$alpha))%*%(main.parameters[[X]]$alpha)%*%as.matrix(data_list[[X]])%*%(main.parameters[[X]]$beta)%*%MASS::ginv(t(main.parameters[[X]]$beta)%*%(main.parameters[[X]]$beta)))
         })))
 
