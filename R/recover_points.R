@@ -22,8 +22,8 @@ recover_points <- function(data_list,
   if (recover$task == "regression"){
 
 
-    matrix.projection <- T
-    knn.reg <- T
+    matrix.projection <- c(recover$method=="matrix.projection")
+    knn.reg <- c(recover$method=="knn.reg")
 
     for (i in 1:length(data_list)){
 
@@ -152,31 +152,34 @@ recover_points <- function(data_list,
   if (recover$task == "classification"){
 
 
+    label.projection <- c(recover$method=="label.projection")
 
-    for (j in which(recover$design.list==0)){
+    if (label.projection){
 
-      recover$encoded_covariate <- lapply(c(1:length(data_list)),function(X){
-        transformed.data <- as.matrix(MASS::ginv((main.parameters[[X]]$alpha)%*%t(main.parameters[[X]]$alpha))%*%(main.parameters[[X]]$alpha)%*%as.matrix(data_list[[X]])%*%(main.parameters[[X]]$beta)%*%MASS::ginv(t((main.parameters[[X]]$beta))%*%(main.parameters[[X]]$beta)))
-      })
+      for (j in which(recover$design.list==0)){
 
-      label.decoded_covariate <- scale(Reduce('+',lapply(c(1:length(recover$encoded_covariate)),function(X){
-        t(main.parameters[[j]]$alpha)%*%recover$encoded_covariate[[X]]
-      })))
+        recover$encoded_covariate <- lapply(c(1:length(data_list)),function(X){
+          transformed.data <- as.matrix(MASS::ginv((main.parameters[[X]]$alpha)%*%t(main.parameters[[X]]$alpha))%*%(main.parameters[[X]]$alpha)%*%as.matrix(data_list[[X]])%*%(main.parameters[[X]]$beta)%*%MASS::ginv(t((main.parameters[[X]]$beta))%*%(main.parameters[[X]]$beta)))
+        })
 
-      for (i in which(recover$design.list==1)){
-
-        unlabel.decoded_covariate <- scale(Reduce('+',lapply(c(1:length(recover$encoded_covariate)),function(X){
-          t(main.parameters[[i]]$alpha)%*%recover$encoded_covariate[[X]]
+        label.decoded_covariate <- scale(Reduce('+',lapply(c(1:length(recover$encoded_covariate)),function(X){
+          t(main.parameters[[j]]$alpha)%*%recover$encoded_covariate[[X]]
         })))
 
-        labels <- recover$labels
+        for (i in which(recover$design.list==1)){
 
-        recover$predict.list[[j]][[i]] <- apply((unlabel.decoded_covariate)%*%t(label.decoded_covariate),1,function(X){names(sort(table(labels[order(X,decreasing = T)[1]]))[1])})
+          unlabel.decoded_covariate <- scale(Reduce('+',lapply(c(1:length(recover$encoded_covariate)),function(X){
+            t(main.parameters[[i]]$alpha)%*%recover$encoded_covariate[[X]]
+          })))
+
+          labels <- recover$labels
+
+          recover$predict.list[[j]][[i]] <- apply((unlabel.decoded_covariate)%*%t(label.decoded_covariate),1,function(X){names(sort(table(labels[order(X,decreasing = T)[1]]))[1])})
+
+        }
 
       }
-
     }
-
 
 
 

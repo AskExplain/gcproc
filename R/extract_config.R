@@ -83,6 +83,7 @@ extract_pivots_framework <- function(verbose=T){
 extract_recovery_framework <- function(verbose=T){
   recover <- list(
     task = c("regression"),    # c("classification")
+    method = c("knn.reg"),     # c("label.projection)
     design.list = NULL,
     labels = NULL,
     predict.list = NULL
