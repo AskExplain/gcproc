@@ -192,11 +192,33 @@ update_set <- function(x,
                        anchors
                        ){
 
-  main.parameters$alpha <- t(x%*%t((code$decode)%*%t(main.parameters$beta))%*%MASS::ginv(((code$decode)%*%t(main.parameters$beta))%*%t((code$decode)%*%t(main.parameters$beta))))
-  main.parameters$beta <- t(MASS::ginv(t((t(main.parameters$alpha)%*%(code$decode)))%*%((t(main.parameters$alpha)%*%(code$decode))))%*%t(t(main.parameters$alpha)%*%(code$decode))%*%x)
+  alpha.batch <- chunk(c(1:config$i_dim),config$batch)
+  beta.batch <- chunk(c(1:config$j_dim),config$batch)
 
-  code$encode <- (main.parameters$alpha%*%( x )%*%(main.parameters$beta))
-  code$decode <- MASS::ginv((main.parameters$alpha)%*%t(main.parameters$alpha))%*%code$encode%*%MASS::ginv(t(main.parameters$beta)%*%(main.parameters$beta))
+  for (a in alpha.batch){
+
+    main_decode_beta <- ((code$decode)%*%t(main.parameters$beta))[a,]
+    main.parameters$alpha[a,] <- t(x%*%t(main_decode_beta)%*%MASS::ginv((main_decode_beta)%*%t(main_decode_beta)))
+
+  }
+
+
+  for (b in beta.batch){
+
+    main_decode_alpha <- (t(main.parameters$alpha)%*%(code$decode))[,b]
+    main.parameters$beta[,b] <- t(MASS::ginv(t((main_decode_alpha))%*%((main_decode_alpha)))%*%t(main_decode_alpha)%*%x)
+
+  }
+
+
+  for (a in alpha.batch){
+    for (b in beta.batch){
+
+      code$encode[a,b] <- (main.parameters$alpha[a,]%*%( x )%*%(main.parameters$beta[,b]))
+      code$decode[a,b] <- MASS::ginv((main.parameters$alpha[a,])%*%t(main.parameters$alpha[a,]))%*%code$encode[a,b]%*%MASS::ginv(t(main.parameters$beta[,b])%*%(main.parameters$beta[,b]))
+
+    }
+  }
 
   return(list(main.parameters = main.parameters,
               code = code

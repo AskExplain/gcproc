@@ -17,6 +17,7 @@ extract_config <- function(verbose=T){
     min_iter=2,
     max_iter=350,
     tol=1,
+    batch = 3,
     n_cores = 2,
     verbose=T,
     init="random")
@@ -118,3 +119,14 @@ extract_fixed_framework <- function(verbose=T){
   return(fixed)
 }
 
+
+
+#' @export
+chunk <- function(x,n){
+  if (n==1){
+    list(x)
+  }
+  else{
+    split(x, cut(seq_along(x), n, labels = FALSE))
+  }
+}
