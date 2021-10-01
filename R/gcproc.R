@@ -192,33 +192,67 @@ update_set <- function(x,
                        anchors
                        ){
 
+
   alpha.batch <- chunk(c(1:config$i_dim),config$batch)
   beta.batch <- chunk(c(1:config$j_dim),config$batch)
 
-  for (a in alpha.batch){
+
+
+  main.parameters$alpha <- as.matrix(Reduce('+',parallel::mclapply(mc.cores = config$n_cores, alpha.batch,function(a){
+
+    internal_alpha <- main.parameters$alpha
+    internal_alpha[-a,] <- 0
+    internal_alpha <- Matrix::Matrix(internal_alpha,sparse=T)
 
     main_decode_beta <- ((code$decode)%*%t(main.parameters$beta))[a,]
-    main.parameters$alpha[a,] <- t(x%*%t(main_decode_beta)%*%MASS::ginv((main_decode_beta)%*%t(main_decode_beta)))
+    internal_alpha[a,] <- t(x%*%t(main_decode_beta)%*%MASS::ginv((main_decode_beta)%*%t(main_decode_beta)))
 
-  }
-
-
-  for (b in beta.batch){
-
-    main_decode_alpha <- (t(main.parameters$alpha)%*%(code$decode))[,b]
-    main.parameters$beta[,b] <- t(MASS::ginv(t((main_decode_alpha))%*%((main_decode_alpha)))%*%t(main_decode_alpha)%*%x)
-
-  }
+    return(internal_alpha)
+  })))
 
 
-  for (a in alpha.batch){
-    for (b in beta.batch){
 
-      code$encode[a,b] <- (main.parameters$alpha[a,]%*%( x )%*%(main.parameters$beta[,b]))
-      code$decode[a,b] <- MASS::ginv((main.parameters$alpha[a,])%*%t(main.parameters$alpha[a,]))%*%code$encode[a,b]%*%MASS::ginv(t(main.parameters$beta[,b])%*%(main.parameters$beta[,b]))
 
-    }
-  }
+  main.parameters$beta <- as.matrix(Reduce('+',parallel::mclapply(mc.cores = config$n_cores, beta.batch,function(b){
+
+    internal_beta <- main.parameters$beta
+    internal_beta[,-b] <- 0
+    internal_beta <- Matrix::Matrix(internal_beta,sparse=T)
+
+
+    main_decode_beta <- (t(main.parameters$alpha)%*%(code$decode))[,b]
+    internal_beta[,b] <- t(MASS::ginv(t((main_decode_beta))%*%((main_decode_beta)))%*%t(main_decode_beta)%*%x)
+
+    return(internal_beta)
+  })))
+
+
+
+
+
+  all_batch.id <- cbind(rep(c(1:length(alpha.batch)),length(beta.batch)),
+                        rep(c(1:length(beta.batch)),length(alpha.batch)))
+
+  internal.code <- parallel::mclapply(mc.cores = config$n_cores, c(1:dim(all_batch.id)[1]),function(c){
+
+    a <- alpha.batch[[all_batch.id[c,1]]]
+    b <- beta.batch[[all_batch.id[c,2]]]
+
+    internal_encode <- code$encode
+    internal_encode <- Matrix::Matrix(0,nrow = config$i_dim, ncol = config$j_dim, sparse=T)
+
+    internal_decode <- code$decode
+    internal_decode <- Matrix::Matrix(0,nrow = config$i_dim, ncol = config$j_dim, sparse=T)
+
+    internal_encode[a,b] <- (main.parameters$alpha[a,]%*%( x )%*%(main.parameters$beta[,b]))
+    internal_decode[a,b] <- MASS::ginv((main.parameters$alpha[a,])%*%t(main.parameters$alpha[a,]))%*%internal_encode[a,b]%*%MASS::ginv(t(main.parameters$beta[,b])%*%(main.parameters$beta[,b]))
+
+    return(list(encode=internal_encode,
+                decode=internal_decode))
+  })
+
+  code$encode <- as.matrix(Reduce('+',lapply(internal.code,function(X){X$encode})))
+  code$decode <- as.matrix(Reduce('+',lapply(internal.code,function(X){X$decode})))
 
   return(list(main.parameters = main.parameters,
               code = code
