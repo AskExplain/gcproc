@@ -7,11 +7,11 @@
 extract_recovery_framework(verbose = T)
 }
 \arguments{
-\item{fn}{Allows user to specify a prediction function}
+\item{task}{Allows user to specify either a regression or classification task}
 
-\item{param}{Parameters to be put into prediction function}
+\item{design.list}{A list of design structures where each element is given a 1 to indicate the test set, 0 indicates the train set.}
 
-\item{design.list}{A list of design structures where each matrix is given a 1 to indicate the test set, 0 indicates the train set.}
+\item{labels}{For classification, these are the pre-defined labels}
 
 \item{predict.list}{This will be filled in by gpcroc with the predictions and return a prediction for indicated design matrices only. Leave as NULL to begin.}
 }

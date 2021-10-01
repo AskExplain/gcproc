@@ -23,10 +23,10 @@ gcproc <- function(data_list,
                    recover = gcproc::extract_recovery_framework(verbose = F),
                    fixed = gcproc::extract_fixed_framework(verbose=F)
                    ){
+
   runtime.start <- Sys.time()
 
 
-  prepare_data = TRUE
   initialise = TRUE
 
   if (initialise==T){
@@ -37,7 +37,7 @@ gcproc <- function(data_list,
     score_lag <- 2 # How many previous scores kept track of
     accept_score <- 1 # How many scores used to calculate previous and current "mean score"
 
-    recover$predict.list <- recover$design.list
+    recover$predict.list <- lapply(c(1:length(data_list)),function(X){NULL})
 
     initialise.model <- initialise.gcproc(data_list = data_list,
                                           config = config,
@@ -89,10 +89,7 @@ gcproc <- function(data_list,
 
       }
 
-
-
     }
-
 
 
     matrix.residuals <- code$encode - prev_code$encode
@@ -118,12 +115,10 @@ gcproc <- function(data_list,
       }
     }
 
-
     count = count + 1
 
-
-
   }
+
 
 
   if (any(do.call('c',lapply(recover$design.list,function(X){!is.null(X)})))){
@@ -136,28 +131,24 @@ gcproc <- function(data_list,
       recover = recover
     )
 
-    for (i in 1:length(data_list)){
-      if (!is.null(recover$predict.list[[i]])){
-        data_list[[i]] <- recover$predict.list[[i]]
-      }
-    }
-
   }
 
 
 
+  dimension_reduction <- lapply(c(1:length(data_list)),function(X){
+    feature_x.dim_reduce.encode <- t(main.parameters[[X]]$alpha%*%data_list[[X]])
+    sample_x.dim_reduce.encode <- data_list[[X]]%*%main.parameters[[X]]$beta
 
+    feature_x.dim_reduce.code <- t(MASS::ginv((main.parameters[[X]]$alpha)%*%t(main.parameters[[X]]$alpha))%*%main.parameters[[X]]$alpha%*%data_list[[X]])
+    sample_x.dim_reduce.code <- data_list[[X]]%*%main.parameters[[X]]$beta%*%MASS::ginv(t(main.parameters[[X]]$beta)%*%(main.parameters[[X]]$beta))
 
-#   dimension_reduction <- list()
-#   dimension_reduction$K.y_dim_red <- t(main.parameters$alpha.K%*%y)
-#   dimension_reduction$y.v_dim_red <- y%*%main.parameters$v.beta
-#   dimension_reduction$L.x_dim_red <- t(main.parameters$alpha.L%*%x)
-#   dimension_reduction$x.u_dim_red <- x%*%main.parameters$u.beta
-
-  # code$Y_decoded <- t(main.parameters$alpha.K)%*%(code$decode)%*%t(main.parameters$v.beta)
-  # code$X_decoded <- t(main.parameters$alpha.L)%*%(code$decode)%*%t(main.parameters$u.beta)
-
-  # code$decode <- t(main.parameters$s_code)%*%main.parameters$s_code
+    return(list(
+      feature_x.dim_reduce.encode = feature_x.dim_reduce.encode,
+      sample_x.dim_reduce.encode = sample_x.dim_reduce.encode,
+      feature_x.dim_reduce.code = feature_x.dim_reduce.code,
+      sample_x.dim_reduce.code = sample_x.dim_reduce.code
+    ))
+  })
 
   runtime.end <- Sys.time()
 
@@ -165,11 +156,11 @@ gcproc <- function(data_list,
 
     main.parameters = main.parameters,
 
+    code = code,
+
     recover =  recover,
 
-    # dimension_reduction = dimension_reduction,
-
-    code = code,
+    dimension_reduction = dimension_reduction,
 
     meta.parameters = list(
       config = config,
@@ -185,7 +176,6 @@ gcproc <- function(data_list,
       iterations = count,
       score.vec = score.vec
     )
-
 
   ))
 

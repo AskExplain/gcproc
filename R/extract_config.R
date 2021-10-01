@@ -12,8 +12,8 @@
 #' @export
 extract_config <- function(verbose=T){
   config <- list(
-    i_dim = 100,
-    j_dim = 100,
+    i_dim = 30,
+    j_dim = 30,
     min_iter=2,
     max_iter=350,
     tol=1,
@@ -74,18 +74,17 @@ extract_pivots_framework <- function(verbose=T){
 #'
 #' Can recover data points by imputing or predicting missing values
 #'
-#' @param fn Allows user to specify a prediction function
-#' @param param Parameters to be put into prediction function
-#' @param design.list A list of design structures where each matrix is given a 1 to indicate the test set, 0 indicates the train set.
+#' @param task Allows user to specify either a regression or classification task
+#' @param design.list A list of design structures where each element is given a 1 to indicate the test set, 0 indicates the train set.
+#' @param labels For classification, these are the pre-defined labels
 #' @param predict.list This will be filled in by gpcroc with the predictions and return a prediction for indicated design matrices only. Leave as NULL to begin.
 #' @return  Prediction framework for gcproc
 #' @export
 extract_recovery_framework <- function(verbose=T){
   recover <- list(
-    method = c("matrix.projection","knn"),
-    fn = NULL,
-    param = NULL,
+    task = c("regression"),    # c("classification")
     design.list = NULL,
+    labels = NULL,
     predict.list = NULL
   )
 
