@@ -32,13 +32,9 @@ recover_points <- function(data_list,
         if (matrix.projection){
 
 
-          if (min(data_list[[i]])==0){
-            x <- log(as.matrix(data_list[[i]])+1)
-            to_exp <- T
-          } else {
-            x <- as.matrix(data_list[[i]])
-            to_exp <- F
-          }
+
+          x <- as.matrix(data_list[[i]])
+
 
           if (is.null(recover$encoded_covariate)){
             recover$encoded_covariate <- lapply(c(1:length(data_list))[-i],function(X){
@@ -58,20 +54,15 @@ recover_points <- function(data_list,
           elements_with_missing_points <- which((recover$design.list[[i]]>0)==T,arr.ind = T)
           x[elements_with_missing_points]  <- (((test_predictors)%*%(MASS::ginv(t(covariate_predictors)%*%(covariate_predictors))%*%t(covariate_predictors)%*%(x[-samples_with_missing_points,]))))[elements_with_missing_points]
 
-          data_list[[i]] <- recover$predict.list[[i]] <- x <- if(to_exp){exp(as.matrix(x))-1}else{as.matrix(x)}
-
+          data_list[[i]] <- recover$predict.list[[i]] <- x
         }
 
 
         if (knn.reg){
 
-          if (min(data_list[[i]])==0){
-            x <- log(as.matrix(data_list[[i]])+1)
-            to_exp <- T
-          } else {
-            x <- as.matrix(data_list[[i]])
-            to_exp <- F
-          }
+
+          x <- as.matrix(data_list[[i]])
+
 
           if (is.null(recover$encoded_covariate)){
             recover$encoded_covariate <- lapply(c(1:length(data_list))[-i],function(X){
@@ -106,20 +97,16 @@ recover_points <- function(data_list,
           pred.x[samples_with_missing_points,] <- pred
           x[elements_with_missing_points] <- pred.x[elements_with_missing_points]
 
-          data_list[[i]] <- recover$predict.list[[i]] <- x <- if(to_exp){exp(as.matrix(x))-1}else{as.matrix(x)}
+          data_list[[i]] <- recover$predict.list[[i]] <- x
 
         }
 
 
         if (!is.null(recover$fn)){
 
-          if (min(x)==0){
-            x <- log(as.matrix(data_list[[i]])+1)
-            to_exp <- T
-          } else {
-            x <- as.matrix(data_list[[i]])
-            to_exp <- F
-          }
+          x <- as.matrix(data_list[[i]])
+
+
 
           if (is.null(recover$encoded_covariate)){
             recover$encoded_covariate <- lapply(c(1:length(data_list))[-i],function(X){
@@ -143,8 +130,7 @@ recover_points <- function(data_list,
           pred.x[samples_with_missing_points,] <- pred
           x[elements_with_missing_points] <- pred.x[elements_with_missing_points]
 
-          data_list[[i]] <- recover$predict.list[[i]] <- x <- if(to_exp){exp(as.matrix(x))-1}else{as.matrix(x)}
-
+          data_list[[i]] <- recover$predict.list[[i]] <- x
         }
 
 
