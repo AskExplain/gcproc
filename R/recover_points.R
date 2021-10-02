@@ -22,8 +22,8 @@ recover_points <- function(data_list,
   if (recover$task == "regression"){
 
 
-    matrix.projection <- c(recover$method=="matrix.projection")
-    knn.reg <- c(recover$method=="knn.reg")
+    matrix.projection <- c("matrix.projection"%in%recover$method)
+    knn.reg <- c("knn.reg"%in%recover$method)
 
     for (i in 1:length(data_list)){
 
