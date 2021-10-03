@@ -87,7 +87,7 @@ for (list_id in c(1:length(predict.list))){
   
   main_scores.1 <- c()
   
-  for (seed in c(1:100)){
+  for (seed in c(1:30)){
     
     # Set up training ids
     set.seed(seed)
@@ -181,7 +181,7 @@ for (list_id in c(1:length(predict.list))){
 
   main_scores.2<-c()
   
-  for (seed in 1:100){
+  for (seed in 1:30){
     
     set.seed(seed)
     

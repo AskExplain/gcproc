@@ -48,7 +48,7 @@ gcproc <- function(data_list,
   }
 
   if (config$verbose){
-    print(paste("Beginning gcproc learning with:    Sample dimension reduction (config$i_dim): ",config$i_dim, "    Feature dimension reduction (config$j_dim): ", config$j_dim,"    Tolerance Threshold: ", config$tol, "   Maximum number of iterations: ", config$max_iter, "   Verbose: ", config$verbose, sep=""))
+    print(paste("Beginning gcproc learning with:    Sample dimension reduction (config$i_dim): ",config$i_dim, "    Feature dimension reduction (config$j_dim): ", config$j_dim,"    Tolerance Threshold: ", config$tol, "   Maximum number of iterations: ", config$max_iter, "   Verbose: ", config$verbose, "   CPU cores: ", config$n_cores, sep=""))
   }
 
   while (T){
@@ -106,7 +106,9 @@ gcproc <- function(data_list,
         print(paste("Iteration: ",count," with Tolerance of: ", abs(prev.MSE - MSE),sep=""))
       }
     } else {
-      print(paste("Iteration: ",count," ... initialising ... ",sep=""))
+      if (config$verbose){
+        print(paste("Iteration: ",count," ... initialising ... ",sep=""))
+      }
     }
 
     if (count > config$min_iter){
@@ -119,7 +121,9 @@ gcproc <- function(data_list,
 
   }
 
-
+  if (config$verbose){
+    print("Learning has converged for gcproc, beginning prediction (if requested) and dimension reduction")
+  }
 
   if (any(do.call('c',lapply(recover$design.list,function(X){!is.null(X)})))){
 
@@ -132,8 +136,6 @@ gcproc <- function(data_list,
     )
 
   }
-
-
 
   dimension_reduction <- lapply(c(1:length(data_list)),function(X){
     feature_x.dim_reduce.encode <- t(main.parameters[[X]]$alpha%*%data_list[[X]])
@@ -151,6 +153,11 @@ gcproc <- function(data_list,
   })
 
   runtime.end <- Sys.time()
+
+
+  if (config$verbose){
+    print(paste("Done! Total runtime of   ", runtime.end - runtime.start ,sep=""))
+  }
 
   return(list(
 
