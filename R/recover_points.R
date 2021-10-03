@@ -22,115 +22,72 @@ recover_points <- function(data_list,
   if (recover$task == "regression"){
 
 
-    matrix.projection <- c("matrix.projection"%in%recover$method)
-    knn.reg <- c("knn.reg"%in%recover$method)
+    for (method in recover$method){
 
-    for (i in 1:length(data_list)){
+      for (i in 1:length(data_list)){
 
-      if (!is.null(recover$design.list[[i]])){
+        x <- as.matrix(data_list[[i]])
 
-        if (matrix.projection){
+        if (!is.null(recover$design.list[[i]])){
 
-
-
-          x <- as.matrix(data_list[[i]])
-
-
-          if (is.null(recover$encoded_covariate)){
-            recover$encoded_covariate <- lapply(c(1:length(data_list))[-i],function(X){
-              transformed.data <- as.matrix(MASS::ginv((main.parameters[[X]]$alpha)%*%t(main.parameters[[X]]$alpha))%*%(main.parameters[[X]]$alpha)%*%as.matrix(data_list[[X]])%*%(main.parameters[[X]]$beta)%*%MASS::ginv(t((main.parameters[[X]]$beta))%*%(main.parameters[[X]]$beta)))
-            })
-          }
-
-          decoded_covariate <- cbind(1,scale(Reduce('+',lapply(c(1:length(recover$encoded_covariate)),function(X){
-            t(main.parameters[[i]]$alpha)%*%recover$encoded_covariate[[X]]
-          }))))
-
-          samples_with_missing_points <- which((rowSums(recover$design.list[[i]])>0)==T)
-          covariate_predictors <-  decoded_covariate[-samples_with_missing_points,]
-          test_predictors <- decoded_covariate[samples_with_missing_points,]
+          recover$covariate <- scale(Reduce("+",lapply(c(1:length(data_list))[-i],function(X){
+            transformed.data <- as.matrix(t(main.parameters[[i]]$alpha)%*%MASS::ginv((main.parameters[[X]]$alpha)%*%t(main.parameters[[X]]$alpha))%*%(main.parameters[[X]]$alpha)%*%as.matrix(data_list[[X]])%*%(main.parameters[[X]]$beta)%*%MASS::ginv(t((main.parameters[[X]]$beta))%*%(main.parameters[[X]]$beta)))
+          })))
 
 
-          elements_with_missing_points <- which((recover$design.list[[i]]>0)==T,arr.ind = T)
-          x[elements_with_missing_points]  <- (((test_predictors)%*%(MASS::ginv(t(covariate_predictors)%*%(covariate_predictors))%*%t(covariate_predictors)%*%(x[-samples_with_missing_points,]))))[elements_with_missing_points]
+          x[,which((colSums(recover$design.list[[i]])>0)==T)]  <- do.call('cbind',parallel::mclapply(mc.cores = config$n_cores, X = c(which((colSums(recover$design.list[[i]])>0)==T)),FUN = function(id_col){
 
-          data_list[[i]] <- recover$predict.list[[i]] <- x
-        }
+            test_id.x <- as.logical(recover$design.list[[i]][,id_col])
+            train_id.x <- as.logical(1 - recover$design.list[[i]][,id_col])
 
-
-        if (knn.reg){
-
-
-          x <- as.matrix(data_list[[i]])
-
-
-          if (is.null(recover$encoded_covariate)){
-            recover$encoded_covariate <- lapply(c(1:length(data_list))[-i],function(X){
-              transformed.data <- as.matrix(MASS::ginv((main.parameters[[X]]$alpha)%*%t(main.parameters[[X]]$alpha))%*%(main.parameters[[X]]$alpha)%*%as.matrix(data_list[[X]])%*%(main.parameters[[X]]$beta)%*%MASS::ginv(t((main.parameters[[X]]$beta))%*%(main.parameters[[X]]$beta)))
-            })
-          }
-
-          decoded_covariate <- cbind(1,scale(Reduce('+',lapply(c(1:length(recover$encoded_covariate)),function(X){
-            t(main.parameters[[i]]$alpha)%*%recover$encoded_covariate[[X]]
-          }))))
-
-          samples_with_missing_points <- which((rowSums(recover$design.list[[i]])>0)==T)
-          covariate_predictors <-  decoded_covariate[-samples_with_missing_points,]
-          test_predictors <- decoded_covariate[samples_with_missing_points,]
-
-          knn_ix <- FNN::get.knnx(
-            covariate_predictors,
-            test_predictors,
-            k = 20
-          )$nn.index
-
-          pred <- (x[-samples_with_missing_points,])[knn_ix[, 1], , drop = FALSE]
-          if (20 > 1) {
-            for (k in seq(2, 20)) {
-              pred <- pred + (x[-samples_with_missing_points,])[knn_ix[, k], , drop = FALSE]
+            if (min(x)==0){
+              sparse.x <- log(x[,id_col]+1)
+              to_exp <- T
+            } else {
+              sparse.x <- x[,id_col]
+              to_exp <- F
             }
-          }
-          pred <- pred / 20
 
-          elements_with_missing_points <- which((recover$design.list[[i]]>0)==T,arr.ind = T)
-          pred.x <- x
-          pred.x[samples_with_missing_points,] <- pred
-          x[elements_with_missing_points] <- pred.x[elements_with_missing_points]
+            if (any(test_id.x) & any(train_id.x)){
 
-          data_list[[i]] <- recover$predict.list[[i]] <- x
+              covariate_predictors <- cbind(1,recover$covariate[train_id.x,])
+              test_predictors <- cbind(1,recover$covariate[test_id.x,])
 
-        }
+              if (method=="knn"){
 
+                sparse.x[test_id.x] <-
+                  FNN::knn.reg(
+                    train = covariate_predictors,
+                    test = test_predictors,
+                    y = sparse.x[train_id.x],
+                    k = 20
+                  )$pred
+              }
+              if (method=="glmnet"){
 
-        if (!is.null(recover$fn)){
+                sparse.x[test_id.x] <- c(predict(glmnet::cv.glmnet(x=(covariate_predictors),y=sparse.x[train_id.x],type.measure = "mse"),(test_predictors), s = "lambda.min"))
+              }
 
-          x <- as.matrix(data_list[[i]])
+              if (method=="matrix.projection"){
 
+                sparse.x[test_id.x] <- ((test_predictors)%*%(MASS::ginv(t(covariate_predictors)%*%(covariate_predictors))%*%t(covariate_predictors)%*%(sparse.x[train_id.x])))
+              }
 
+              if (!is.null(recover$fn)){
 
-          if (is.null(recover$encoded_covariate)){
-            recover$encoded_covariate <- lapply(c(1:length(data_list))[-i],function(X){
-              transformed.data <- as.matrix(MASS::ginv((main.parameters[[X]]$alpha)%*%t(main.parameters[[X]]$alpha))%*%(main.parameters[[X]]$alpha)%*%as.matrix(data_list[[X]])%*%(main.parameters[[X]]$beta)%*%MASS::ginv(t((main.parameters[[X]]$beta))%*%(main.parameters[[X]]$beta)))
-            })
-          }
+                sparse.x[test_id.x] <- recover$fn(train = covariate_predictors, test = test_predictors, y = sparse.x[train_id.x], parameters = recover$param)
+              }
 
-          decoded_covariate <- cbind(1,scale(Reduce('+',lapply(c(1:length(recover$encoded_covariate)),function(X){
-            t(main.parameters[[i]]$alpha)%*%recover$encoded_covariate[[X]]
-          }))))
+            }
+            return(if(to_exp){exp(sparse.x)-1}else{sparse.x})
+          }))
 
+          x <- as.matrix(x)
 
-          samples_with_missing_points <- which((rowSums(recover$design.list[[i]])>0)==T)
-          covariate_predictors <-  decoded_covariate[-samples_with_missing_points,]
-          test_predictors <- decoded_covariate[samples_with_missing_points,]
+          recover$predict.list[[i]] <- x
 
-          pred <- recover$fn(train = covariate_predictors, test = test_predictors, y = x[-samples_with_missing_points,], parameters = recover$param)
+          data_list[[i]] <- x
 
-          elements_with_missing_points <- which((recover$design.list[[i]]>0)==T,arr.ind = T)
-          pred.x <- x
-          pred.x[samples_with_missing_points,] <- pred
-          x[elements_with_missing_points] <- pred.x[elements_with_missing_points]
-
-          data_list[[i]] <- recover$predict.list[[i]] <- x
         }
 
 
@@ -139,6 +96,124 @@ recover_points <- function(data_list,
 
     }
 
+
+
+
+  #
+  #
+  #   matrix.projection <- c("matrix.projection"%in%recover$method)
+  #   knn.reg <- c("knn.reg"%in%recover$method)
+  #
+  #   for (i in 1:length(data_list)){
+  #
+  #     if (!is.null(recover$design.list[[i]])){
+  #
+  #       if (matrix.projection){
+  #
+  #
+  #
+  #         x <- as.matrix(data_list[[i]])
+  #
+  #
+  #         if (is.null(recover$encoded_covariate)){
+  #           recover$encoded_covariate <- lapply(c(1:length(data_list))[-i],function(X){
+  #             transformed.data <- as.matrix(MASS::ginv((main.parameters[[X]]$alpha)%*%t(main.parameters[[X]]$alpha))%*%(main.parameters[[X]]$alpha)%*%as.matrix(data_list[[X]])%*%(main.parameters[[X]]$beta)%*%MASS::ginv(t((main.parameters[[X]]$beta))%*%(main.parameters[[X]]$beta)))
+  #           })
+  #         }
+  #
+  #         decoded_covariate <- cbind(1,scale(Reduce('+',lapply(c(1:length(recover$encoded_covariate)),function(X){
+  #           t(main.parameters[[i]]$alpha)%*%recover$encoded_covariate[[X]]
+  #         }))))
+  #
+  #         samples_with_missing_points <- which((rowSums(recover$design.list[[i]])>0)==T)
+  #         covariate_predictors <-  decoded_covariate[-samples_with_missing_points,]
+  #         test_predictors <- decoded_covariate[samples_with_missing_points,]
+  #
+  #         elements_with_missing_points <- which((recover$design.list[[i]]>0)[samples_with_missing_points,]==T,arr.ind = T)
+  #         x[samples_with_missing_points,][elements_with_missing_points]  <- (((test_predictors)%*%(MASS::ginv(t(covariate_predictors)%*%(covariate_predictors))%*%t(covariate_predictors)%*%(x[-samples_with_missing_points,]))))[elements_with_missing_points]
+  #
+  #         data_list[[i]] <- recover$predict.list[[i]] <- x
+  #       }
+  #
+  #
+  #       if (knn.reg){
+  #
+  #
+  #         x <- as.matrix(data_list[[i]])
+  #
+  #
+  #         if (is.null(recover$encoded_covariate)){
+  #           recover$encoded_covariate <- lapply(c(1:length(data_list))[-i],function(X){
+  #             transformed.data <- as.matrix(MASS::ginv((main.parameters[[X]]$alpha)%*%t(main.parameters[[X]]$alpha))%*%(main.parameters[[X]]$alpha)%*%as.matrix(data_list[[X]])%*%(main.parameters[[X]]$beta)%*%MASS::ginv(t((main.parameters[[X]]$beta))%*%(main.parameters[[X]]$beta)))
+  #           })
+  #         }
+  #
+  #         decoded_covariate <- cbind(1,scale(Reduce('+',lapply(c(1:length(recover$encoded_covariate)),function(X){
+  #           t(main.parameters[[i]]$alpha)%*%recover$encoded_covariate[[X]]
+  #         }))))
+  #
+  #         samples_with_missing_points <- which((rowSums(recover$design.list[[i]])>0)==T)
+  #         covariate_predictors <-  decoded_covariate[-samples_with_missing_points,]
+  #         test_predictors <- decoded_covariate[samples_with_missing_points,]
+  #
+  #         knn_ix <- FNN::get.knnx(
+  #           covariate_predictors,
+  #           test_predictors,
+  #           k = 20
+  #         )$nn.index
+  #
+  #         pred <- (x[-samples_with_missing_points,])[knn_ix[, 1], , drop = FALSE]
+  #         if (20 > 1) {
+  #           for (k in seq(2, 20)) {
+  #             pred <- pred + (x[-samples_with_missing_points,])[knn_ix[, k], , drop = FALSE]
+  #           }
+  #         }
+  #         pred <- pred / 20
+  #
+  #         elements_with_missing_points <- which((recover$design.list[[i]]>0)[samples_with_missing_points,]==T,arr.ind = T)
+  #         x[samples_with_missing_points,][elements_with_missing_points]  <- (pred)[elements_with_missing_points]
+  #
+  #         data_list[[i]] <- recover$predict.list[[i]] <- x
+  #
+  #       }
+  #
+  #
+  #       if (!is.null(recover$fn)){
+  #
+  #         x <- as.matrix(data_list[[i]])
+  #
+  #
+  #
+  #         if (is.null(recover$encoded_covariate)){
+  #           recover$encoded_covariate <- lapply(c(1:length(data_list))[-i],function(X){
+  #             transformed.data <- as.matrix(MASS::ginv((main.parameters[[X]]$alpha)%*%t(main.parameters[[X]]$alpha))%*%(main.parameters[[X]]$alpha)%*%as.matrix(data_list[[X]])%*%(main.parameters[[X]]$beta)%*%MASS::ginv(t((main.parameters[[X]]$beta))%*%(main.parameters[[X]]$beta)))
+  #           })
+  #         }
+  #
+  #         decoded_covariate <- cbind(1,scale(Reduce('+',lapply(c(1:length(recover$encoded_covariate)),function(X){
+  #           t(main.parameters[[i]]$alpha)%*%recover$encoded_covariate[[X]]
+  #         }))))
+  #
+  #
+  #         samples_with_missing_points <- which((rowSums(recover$design.list[[i]])>0)==T)
+  #         covariate_predictors <-  decoded_covariate[-samples_with_missing_points,]
+  #         test_predictors <- decoded_covariate[samples_with_missing_points,]
+  #
+  #         pred <- recover$fn(train = covariate_predictors, test = test_predictors, y = x[-samples_with_missing_points,], parameters = recover$param)
+  #
+  #         elements_with_missing_points <- which((recover$design.list[[i]]>0)[samples_with_missing_points,]==T,arr.ind = T)
+  #         x[samples_with_missing_points,][elements_with_missing_points]  <- (pred)[elements_with_missing_points]
+  #
+  #         data_list[[i]] <- recover$predict.list[[i]] <- x
+  #       }
+  #
+  #
+  #     }
+  #
+  #
+  #   }
+  #
+  #
 
   }
   if (recover$task == "classification"){

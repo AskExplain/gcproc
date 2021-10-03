@@ -30,7 +30,10 @@ library(irlba,quietly = T)
 ```{r step_1}
 
 config.recover <- gcproc::extract_config(T)
+config.recover$i_dim <- 10
+config.recover$j_dim <- 10
 config.recover$verbose <- F
+config.recover$n_cores <- 4
 
 ```
 
@@ -103,27 +106,30 @@ for (list_id in c(1:length(predict.list))){
     
     # Set up recovery for gcproc
     recover <- gcproc::extract_recovery_framework(F)
-    recover$x <- recover$y <- array(0,dim=dim(data___x))
-    recover$x[-train_id,y_predict.id_col] <- recover$y[-train_id,y_predict.id_col] <- 1
+    recover$method <- "matrix.projection"
+    recover.x <- array(0,dim=dim(data___x))
+    recover.x[-train_id,y_predict.id_col] <- 1
     
     # Initialise missing values given by recovery design matrix with median feature value
     x.x.check <- as.matrix(data___x)
-    x.x.check <- x.x.check*(1-recover$y) + do.call('cbind',lapply(c(1:dim(x.x.check*(1-recover$y))[2]),function(X){(recover$y[,X])*median(x.x.check[which((1-recover$y)[,X]==1),X])}))
+    x.x.check[-train_id,y_predict.id_col] <- lm_predict
     
+    main_data <- list(x.x.check,x.x.check)
+    
+    recover$design.list <- list(recover.x,NULL)
+    
+
     # Run gcproc
-    gcproc.model <- gcproc::gcproc(x=x.x.check,
-                                   y=x.x.check,
+    gcproc.model <- gcproc::gcproc(main_data,
                                    config = config.recover,
-                                   recover = recover,
-                                   fixed = list(i_dim = T, j_dim = T),
-                                   reference = "x"
-    )
+                                   recover = recover
+                                   )
     
     # Extract predicted values
-    gcproc.recover <- gcproc.model$recover$predict.y
+    gcproc.recover <- gcproc.model$recover$predict.list[[1]]
     
-    y_hat.plot <- gcproc.recover[which(recover$y==1,arr.ind = T)]
-    data___x.plot <- data___x[which((recover$y)==1,arr.ind = T)]
+    y_hat.plot <- gcproc.recover[-train_id,y_predict.id_col]
+    data___x.plot <- data___x[-train_id,y_predict.id_col]
     
     # Set up table for plotting
     vals <- data.frame(rbind(data.frame(seed,"Feature Column"=colnames(data___x)[y_predict.id_col],Metric="Loss: Root Mean Squared Error",
@@ -187,26 +193,29 @@ for (list_id in c(1:length(predict.list))){
     
     # Set up recovery design matrix
     recover <- gcproc::extract_recovery_framework(F)
-    recover$y <- recover$x <- (data___x.check$where)
+    recover.x <- (data___x.check$where)
 
     # Initialise missing values given by recovery design matrix with median feature value
     x.x.check <- as.matrix(data___x)
-    x.x.check <- x.x.check*(1-recover$y) + do.call('cbind',lapply(c(1:dim(x.x.check*(1-recover$y))[2]),function(X){(recover$y[,X])*median(x.x.check[which((1-recover$y)[,X]==1),X])}))
+    x.x.check <- x.x.check*(1-recover.x) + do.call('cbind',lapply(c(1:dim(x.x.check*(1-recover.x))[2]),function(X){(recover.x[,X])*median(x.x.check[which((1-recover.x)[,X]==1),X])}))
+    
+    
+    main_data <- list(x.x.check,x.x.check)
+    
+    recover$design.list <- list(recover.x,NULL)
     
     # Run gcproc
-    gcproc.model <- gcproc::gcproc(x=x.x.check,
-                                   y=x.x.check,
+    gcproc.model <- gcproc::gcproc(main_data,
                                    config = config.recover,
-                                   recover = recover,
-                                   fixed = list(i_dim = T, j_dim = T),
-                                   reference = "y")
+                                   recover = recover
+    )
     
-    gcproc.recover <- gcproc.model$recover$predict.x
+    gcproc.recover <- gcproc.model$recover$predict.list[[1]]
     
     # Extract imputed values
-    y_hat.plot <- gcproc.recover[which(recover$x==1,arr.ind = T)]
-    data___x.plot <- data___x[which((recover$x)==1,arr.ind = T)]
-    mice.pred.plot <- mice.pred[which((recover$x)==1,arr.ind = T)]
+    y_hat.plot <- gcproc.recover[which(recover.x==1,arr.ind = T)]
+    data___x.plot <- data___x[which((recover.x)==1,arr.ind = T)]
+    mice.pred.plot <- mice.pred[which((recover.x)==1,arr.ind = T)]
     
     # Set up table for plotting
     vals <- data.frame(rbind(data.frame(seed,Metric="Loss: Root Mean Squared Error",
