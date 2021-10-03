@@ -19,8 +19,6 @@ extract_config(verbose = T)
 
 \item{tol}{Tolerance threshold for convergence (metric: Root Mean Squared Error)}
 
-\item{n_cores}{Number of CPU cores to use for prediction part only}
-
 \item{init}{Initialisation method for the model ("random","eigen-quick","eigen-dense","svd-quick","svd-dense")}
 }
 \value{

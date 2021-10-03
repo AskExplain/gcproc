@@ -1,6 +1,6 @@
 #' Generalised Canonical Procrustes
 #'
-#' A method that uses a likelihood model to align two datasets via an encoding in a lower dimensional space. The coding of the datasets simultaneously can be used to reconstruct the data to predict missing test points. The parameters can be used to reduce either the feature or the sample dimensions into a smaller subspace for further embedding or projection. To run as default, only data list is required.
+#' A method that uses a likelihood model to align multiple datasets via an encoding in a lower dimensional space. The parameters can be used to reduce either the feature or the sample dimensions into a smaller subspace for further embedding or prediction. To run as default, only a data list is required - please review the config parameters at gcproc::extract_config(T)  .
 #'
 #' @param data_list List of data matrices of varying dimensionality. Attempts to find similarities among all datasets with a core structure.
 #' @param config Configuration parameters (required, default provided)
@@ -13,7 +13,7 @@
 #'
 #' @return Code contains the learned shared encoding space. The encoded space refers to the full dimension reduction of both samples and features after matrix multiplication by parameters K and v for y, as well as, L and u for x. The decode is an estimation of the full matrix dataset, where the code is used and matrix multiplied as t(K)(Y_code)t(v), and t(L)(X_code)t(u) to calculate the decoded estimation.
 #'
-#' @return Recover contains the list of predictions for the test dataset as indicated by a 1 in the binary prediction matrices.
+#' @return Recover contains the list of predictions for the test dataset as indicated by a 1 in the binary prediction matrices. The prediction occurs in the shared lower dimensional space where all data sets in the list are projected to using a common latent code.
 #'
 #' @export
 gcproc <- function(data_list,

@@ -5,7 +5,6 @@
 #' @param min_iter Minimum iteration of gcproc
 #' @param max_iter Maximum iteration of gcproc
 #' @param tol Tolerance threshold for convergence (metric: Root Mean Squared Error)
-#' @param n_cores Number of CPU cores to use for prediction part only
 #' @param verbose Print statements?
 #' @param init Initialisation method for the model ("random","eigen-quick","eigen-dense","svd-quick","svd-dense")
 #' @return  Configuration parameters for gcproc
@@ -18,7 +17,6 @@ extract_config <- function(verbose=T){
     max_iter=350,
     tol=1,
     verbose=T,
-    n_cores=2,
     init="random")
 
   if (verbose == T){
@@ -75,6 +73,7 @@ extract_pivots_framework <- function(verbose=T){
 #' Can recover data points by imputing or predicting missing values
 #'
 #' @param task Allows user to specify either a regression or classification task
+#' @param method The algorithm for the task (Options are regression: "knn.reg","matrix.projection", -- provide your own --   ;   classification: "label.projection")
 #' @param design.list A list of design structures where each element is given a 1 to indicate the test set, 0 indicates the train set.
 #' @param labels For classification, these are the pre-defined labels
 #' @param predict.list This will be filled in by gpcroc with the predictions and return a prediction for indicated design matrices only. Leave as NULL to begin.
@@ -116,16 +115,4 @@ extract_fixed_framework <- function(verbose=T){
   }
 
   return(fixed)
-}
-
-
-
-#' @export
-chunk <- function(x,n){
-  if (n==1){
-    list(x)
-  }
-  else{
-    split(x, cut(seq_along(x), n, labels = FALSE))
-  }
 }

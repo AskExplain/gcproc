@@ -2,9 +2,7 @@
 #'
 #' Main function to recover missing points. Used internally, but can be re-purposed by the user.
 #'
-#' @param x Matrix of dataset x
-#' @param y Matrix of dataset y
-#' @param fixed Fixed parameters from gcproc
+#' @param data_list A list of datasets (matrix or tensor etc.)
 #' @param code Code parameters from gcproc
 #' @param main.parameters Main parameters from gcproc
 #' @param config Configuration parameters from gcproc

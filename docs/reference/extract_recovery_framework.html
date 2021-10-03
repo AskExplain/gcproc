@@ -136,20 +136,20 @@
     <table class="ref-arguments">
     <colgroup><col class="name" /><col class="desc" /></colgroup>
     <tr>
-      <th>x</th>
-      <td><p>Design matrix of x where 1 is to predict the test set, 0 is to be modelled as the train set</p></td>
+      <th>task</th>
+      <td><p>Allows user to specify either a regression or classification task</p></td>
     </tr>
     <tr>
-      <th>y</th>
-      <td><p>Design matrix of y where 1 is to predict the test set, 0 is to be modelled as the train set</p></td>
+      <th>design.list</th>
+      <td><p>A list of design structures where each element is given a 1 to indicate the test set, 0 indicates the train set.</p></td>
     </tr>
     <tr>
-      <th>fn</th>
-      <td><p>Allows user to specify a prediction function</p></td>
+      <th>labels</th>
+      <td><p>For classification, these are the pre-defined labels</p></td>
     </tr>
     <tr>
-      <th>param</th>
-      <td><p>Parameters to be put into prediction function</p></td>
+      <th>predict.list</th>
+      <td><p>This will be filled in by gpcroc with the predictions and return a prediction for indicated design matrices only. Leave as NULL to begin.</p></td>
     </tr>
     </table>
 
