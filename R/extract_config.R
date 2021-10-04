@@ -15,6 +15,7 @@ extract_config <- function(verbose=T){
     j_dim = 30,
     min_iter=2,
     max_iter=350,
+    n_cores=2,
     tol=1,
     verbose=T,
     init="random")
@@ -60,8 +61,8 @@ extract_transfer_framework <- function(verbose=T){
 #' @export
 extract_recovery_framework <- function(verbose=T){
   recover <- list(
-    task = c("regression-detail"),    # c("classification","regression-quick")
-    method = c("knn"),     # c("label.projection)
+    task = c("regression"),    # c("classification","regression-quick")
+    method = c("matrix.projection","knn"),     # c("label.projection)
     design.list = NULL,
     labels = NULL
   )

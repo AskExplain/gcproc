@@ -17,7 +17,7 @@ recover_points <- function(data_list,
                            recover){
 
 
-  if (recover$task == "regression-detail"){
+  if (recover$task == "regression"){
 
     for (method in recover$method){
 
@@ -41,44 +41,34 @@ recover_points <- function(data_list,
             to_exp <- F
           }
 
+          samples_with_missing_points <- which((rowSums(recover$design.list[[i]])>0)==T)
+
+          covariate_predictors <- recover$covariate[-samples_with_missing_points,]
+          test_predictors <- recover$covariate[samples_with_missing_points,]
+
           x[,which((colSums(recover$design.list[[i]])>0)==T)]  <- do.call('cbind',parallel::mclapply(mc.cores = config$n_cores, X = c(which((colSums(recover$design.list[[i]])>0)==T)),FUN = function(id_col){
 
-            test_id.x <- as.logical(recover$design.list[[i]][,id_col])
-            train_id.x <- as.logical(1 - recover$design.list[[i]][,id_col])
+            sparse.x <- transform.x[,id_col]
 
-
-            if (any(test_id.x) & any(train_id.x)){
-              sparse.x <- transform.x[,id_col]
-
-              covariate_predictors <- recover$covariate[train_id.x,]
-              test_predictors <- recover$covariate[test_id.x,]
-
-              if (method=="knn"){
-
-                sparse.x[test_id.x] <-
-                  FNN::knn.reg(
-                    train = covariate_predictors,
-                    test = test_predictors,
-                    y = sparse.x[train_id.x],
-                    k =
-                  )$pred
-              }
-              if (method=="glmnet"){
-
-                sparse.x[test_id.x] <- c(predict(glmnet::cv.glmnet(x=(covariate_predictors),y=sparse.x[train_id.x],type.measure = "mse"),(test_predictors), s = "lambda.min"))
-              }
-
-              if (method=="matrix.projection"){
-
-                sparse.x[test_id.x] <- ((test_predictors)%*%(MASS::ginv(t(covariate_predictors)%*%(covariate_predictors))%*%t(covariate_predictors)%*%(sparse.x[train_id.x])))
-              }
-
-              if (!is.null(recover$fn)){
-
-                sparse.x[test_id.x] <- recover$fn(train = covariate_predictors, test = test_predictors, y = sparse.x[train_id.x], parameters = recover$param)
-              }
-
+            if (method=="knn"){
+              sparse.x[samples_with_missing_points] <-
+                FNN::knn.reg(
+                  train = covariate_predictors,
+                  test = test_predictors,
+                  y = sparse.x[-samples_with_missing_points],
+                  k =
+                )$pred
             }
+            if (method=="glmnet"){
+              sparse.x[samples_with_missing_points] <- c(predict(glmnet::cv.glmnet(x=(covariate_predictors),y=sparse.x[-samples_with_missing_points],type.measure = "mse"),(test_predictors), s = "lambda.min"))
+            }
+            if (method=="matrix.projection"){
+              sparse.x[samples_with_missing_points] <- ((test_predictors)%*%(MASS::ginv(t(covariate_predictors)%*%(covariate_predictors))%*%t(covariate_predictors)%*%(sparse.x[-samples_with_missing_points])))
+            }
+            if (!is.null(recover$fn)){
+              sparse.x[samples_with_missing_points] <- recover$fn(train = covariate_predictors, test = test_predictors, y = sparse.x[-samples_with_missing_points], parameters = recover$param)
+            }
+
             return(if(to_exp){exp(sparse.x)-1}else{sparse.x})
           }))
 
@@ -99,7 +89,7 @@ recover_points <- function(data_list,
 
   }
 
-  if (recover$task == "regression-quick"){
+  if (recover$task == "imputation"){
 
     matrix.projection <- c("matrix.projection"%in%recover$method)
     knn.reg <- c("knn.reg"%in%recover$method)
