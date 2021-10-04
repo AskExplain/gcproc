@@ -88,7 +88,9 @@ gcproc <- function(data_list,
 
       }
 
+
     }
+
 
 
     matrix.residuals <- code$encode - prev_code$encode
@@ -135,6 +137,7 @@ gcproc <- function(data_list,
     )
 
   }
+
 
   dimension_reduction <- lapply(c(1:length(data_list)),function(X){
     feature_x.dim_reduce.encode <- t(main.parameters[[X]]$alpha%*%data_list[[X]])
