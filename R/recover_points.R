@@ -17,7 +17,89 @@ recover_points <- function(data_list,
                            recover){
 
 
-  if (recover$task == "regression"){
+  if (recover$task == "regression-detail"){
+
+    for (method in recover$method){
+
+      for (i in 1:length(data_list)){
+        print("runs")
+
+        x <- as.matrix(data_list[[i]])
+
+        if (!is.null(recover$design.list[[i]])){
+
+          recover$covariate <- cbind(1,scale(Reduce("+",lapply(c(1:length(data_list))[-i],function(X){
+            transformed.data <- as.matrix(t(main.parameters[[i]]$alpha)%*%MASS::ginv((main.parameters[[X]]$alpha)%*%t(main.parameters[[X]]$alpha))%*%(main.parameters[[X]]$alpha)%*%as.matrix(data_list[[X]])%*%(main.parameters[[X]]$beta)%*%MASS::ginv(t((main.parameters[[X]]$beta))%*%(main.parameters[[X]]$beta)))
+          }))))
+
+
+          if (min(x)==0){
+            transform.x <- log(x+1)
+            to_exp <- T
+          } else {
+            transform.x <- x
+            to_exp <- F
+          }
+
+          x[,which((colSums(recover$design.list[[i]])>0)==T)]  <- do.call('cbind',parallel::mclapply(mc.cores = config$n_cores, X = c(which((colSums(recover$design.list[[i]])>0)==T)),FUN = function(id_col){
+
+            test_id.x <- as.logical(recover$design.list[[i]][,id_col])
+            train_id.x <- as.logical(1 - recover$design.list[[i]][,id_col])
+
+
+            if (any(test_id.x) & any(train_id.x)){
+              sparse.x <- transform.x[,id_col]
+
+              covariate_predictors <- recover$covariate[train_id.x,]
+              test_predictors <- recover$covariate[test_id.x,]
+
+              if (method=="knn"){
+
+                sparse.x[test_id.x] <-
+                  FNN::knn.reg(
+                    train = covariate_predictors,
+                    test = test_predictors,
+                    y = sparse.x[train_id.x],
+                    k =
+                  )$pred
+              }
+              if (method=="glmnet"){
+
+                sparse.x[test_id.x] <- c(predict(glmnet::cv.glmnet(x=(covariate_predictors),y=sparse.x[train_id.x],type.measure = "mse"),(test_predictors), s = "lambda.min"))
+              }
+
+              if (method=="matrix.projection"){
+
+                sparse.x[test_id.x] <- ((test_predictors)%*%(MASS::ginv(t(covariate_predictors)%*%(covariate_predictors))%*%t(covariate_predictors)%*%(sparse.x[train_id.x])))
+              }
+
+              if (!is.null(recover$fn)){
+
+                sparse.x[test_id.x] <- recover$fn(train = covariate_predictors, test = test_predictors, y = sparse.x[train_id.x], parameters = recover$param)
+              }
+
+            }
+            return(if(to_exp){exp(sparse.x)-1}else{sparse.x})
+          }))
+
+          x <- as.matrix(x)
+
+          recover$predict.list[[i]] <- x
+
+          data_list[[i]] <- x
+
+        }
+
+
+      }
+
+
+    }
+
+
+  }
+
+  if (recover$task == "regression-quick"){
 
     matrix.projection <- c("matrix.projection"%in%recover$method)
     knn.reg <- c("knn.reg"%in%recover$method)

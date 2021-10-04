@@ -37,7 +37,7 @@ extract_config <- function(verbose=T){
 extract_transfer_framework <- function(verbose=T){
   transfer <- list(
     code = NULL,
-    pivot = NULL
+    pivot = T
   )
 
   if (verbose == T){
@@ -60,8 +60,8 @@ extract_transfer_framework <- function(verbose=T){
 #' @export
 extract_recovery_framework <- function(verbose=T){
   recover <- list(
-    task = c("regression"),    # c("classification")
-    method = c("knn.reg"),     # c("label.projection)
+    task = c("regression-detail"),    # c("classification","regression-quick")
+    method = c("knn"),     # c("label.projection)
     design.list = NULL,
     labels = NULL
   )
