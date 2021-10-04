@@ -22,7 +22,6 @@ recover_points <- function(data_list,
     for (method in recover$method){
 
       for (i in 1:length(data_list)){
-        print("runs")
 
         x <- as.matrix(data_list[[i]])
 
@@ -92,7 +91,7 @@ recover_points <- function(data_list,
   if (recover$task == "imputation"){
 
     matrix.projection <- c("matrix.projection"%in%recover$method)
-    knn.reg <- c("knn.reg"%in%recover$method)
+    knn.reg <- c("knn"%in%recover$method)
 
     for (i in 1:length(data_list)){
 

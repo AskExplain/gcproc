@@ -4,6 +4,7 @@
 #' @param j_dim Dimension reduction for features (assumed to be along columns)
 #' @param min_iter Minimum iteration of gcproc
 #' @param max_iter Maximum iteration of gcproc
+#' @param n_cores Number of CPU cores, used for prediction only
 #' @param tol Tolerance threshold for convergence (metric: Root Mean Squared Error)
 #' @param verbose Print statements?
 #' @param init Initialisation method for the model ("random","eigen-quick","eigen-dense","svd-quick","svd-dense")
@@ -53,15 +54,15 @@ extract_transfer_framework <- function(verbose=T){
 #'
 #' Can recover data points by imputing or predicting missing values
 #'
-#' @param task Allows user to specify either a regression or classification task
-#' @param method The algorithm for the task (Options are regression: "knn.reg","matrix.projection", -- provide your own --   ;   classification: "label.projection")
+#' @param task Allows user to specify either a regression, classification, or imputation task
+#' @param method The algorithm for the task (Options are regression/imputation: "knn","matrix.projection", -- provide your own --   ;   classification: "label.projection")
 #' @param design.list A list of design structures where each element is given a 1 to indicate the test set, 0 indicates the train set.
 #' @param labels For classification, these are the pre-defined labels
 #' @return  Prediction framework for gcproc
 #' @export
 extract_recovery_framework <- function(verbose=T){
   recover <- list(
-    task = c("regression"),    # c("classification","regression-quick")
+    task = c("regression"),    # c("classification","imputation")
     method = c("matrix.projection","knn"),     # c("label.projection)
     design.list = NULL,
     labels = NULL

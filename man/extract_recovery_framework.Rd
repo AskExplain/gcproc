@@ -7,9 +7,9 @@
 extract_recovery_framework(verbose = T)
 }
 \arguments{
-\item{task}{Allows user to specify either a regression or classification task}
+\item{task}{Allows user to specify either a regression, classification, or imputation task}
 
-\item{method}{The algorithm for the task (Options are regression: "knn.reg","matrix.projection", -- provide your own --   ;   classification: "label.projection")}
+\item{method}{The algorithm for the task (Options are regression/imputation: "knn","matrix.projection", -- provide your own --   ;   classification: "label.projection")}
 
 \item{design.list}{A list of design structures where each element is given a 1 to indicate the test set, 0 indicates the train set.}
 
