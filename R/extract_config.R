@@ -28,44 +28,24 @@ extract_config <- function(verbose=T){
 
 #' Extract anchor framework to put into gcproc
 #'
-#' Anchors allow the transfer of learned parameters from a pre-trained model.
+#' Transfers learned parameters from a pre-trained model.
 #' NOTE: This is an empty framework that the user must fill in.
 #'
 #' @param code Anchor the code
 #' @return  Anchor framework for gcproc
 #' @export
-extract_anchors_framework <- function(verbose=T){
-  anchors <- list(
-    code = NULL
+extract_transfer_framework <- function(verbose=T){
+  transfer <- list(
+    code = NULL,
+    pivot = NULL
   )
 
   if (verbose == T){
-    print(anchors)
+    print(transfer)
   }
 
-  return(anchors)
+  return(transfer)
 }
-
-#' Extract pivot framework to put into gcproc.
-#'
-#' Pivots allow initialisation of parameters as input.
-#' NOTE: This is an empty framework that the user must fill in.
-#'
-#' @param code code
-#' @return  Pivot framework for gcproc
-#' @export
-extract_pivots_framework <- function(verbose=T){
-  pivots <- list(
-    code = NULL
-  )
-
-  if (verbose == T){
-    print(pivots)
-  }
-
-  return(pivots)
-}
-
 
 
 #' Extract recovery framework to put into gcproc
@@ -76,7 +56,6 @@ extract_pivots_framework <- function(verbose=T){
 #' @param method The algorithm for the task (Options are regression: "knn.reg","matrix.projection", -- provide your own --   ;   classification: "label.projection")
 #' @param design.list A list of design structures where each element is given a 1 to indicate the test set, 0 indicates the train set.
 #' @param labels For classification, these are the pre-defined labels
-#' @param predict.list This will be filled in by gpcroc with the predictions and return a prediction for indicated design matrices only. Leave as NULL to begin.
 #' @return  Prediction framework for gcproc
 #' @export
 extract_recovery_framework <- function(verbose=T){
@@ -84,8 +63,7 @@ extract_recovery_framework <- function(verbose=T){
     task = c("regression"),    # c("classification")
     method = c("knn.reg"),     # c("label.projection)
     design.list = NULL,
-    labels = NULL,
-    predict.list = NULL
+    labels = NULL
   )
 
   if (verbose == T){
@@ -100,19 +78,19 @@ extract_recovery_framework <- function(verbose=T){
 
 
 
-#' Extract fixed framework to put into gcproc
+#' Extract join framework to put into gcproc
 #'
-#' Fix data to improve modelling capacity for similar axes
-#' @param alpha Fixing the alpha parameters. A vector of integers, where identical integers indicate same the data axis. Axes that are not shared are given NA.
-#' @param beta Fixing the beta parameters. A vector of integers, where identical integers indicate same the data axis. Axes that are not shared are given NA.
+#' Join data to improve modelling capacity for similar axes
+#' @param alpha Joining the alpha parameters. A vector of integers, where identical integers indicate same the data axis to be joined. Axes that should not be shared are given NA.
+#' @param beta Joining the beta parameters. A vector of integers, where identical integers indicate same the data axis to be joined. Axes that should not be shared are given NA.
 #' @export
-extract_fixed_framework <- function(verbose=T){
-  fixed <- list(alpha=NULL,
+extract_join_framework <- function(verbose=T){
+  join <- list(alpha=NULL,
                 beta=NULL)
 
   if (verbose == T){
-    print(fixed)
+    print(join)
   }
 
-  return(fixed)
+  return(join)
 }

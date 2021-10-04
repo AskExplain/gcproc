@@ -4,10 +4,9 @@
 #'
 #' @param data_list List of data matrices of varying dimensionality. Attempts to find similarities among all datasets with a core structure.
 #' @param config Configuration parameters (required, default provided)
-#' @param anchors Transferring pre-trained model parameters (not required)
-#' @param pivots Initialisation of model parameters (not required)
-#' @param recover Important information for prediction or imputation (not required)
-#' @param fixed Constrain parameters that share the same axes to be similar (not required)
+#' @param transfer Transferring pre-trained model parameters (not required)
+#' @param recover Important information used for prediction or imputation (not required)
+#' @param join Join parameters that share the same axes to be similar (not required)
 #'
 #' @return Main parameters contains the learned model parameters. The alpha and beta matrix multiply example datasets x and y by, (K)(Y)(v) and (L)(X)(u). By multiplying with the parameter, the dimension of the samples and features can be dimensionally reduced for further visualisation analysis such as embedding or projection.
 #'
@@ -18,10 +17,9 @@
 #' @export
 gcproc <- function(data_list,
                    config = gcproc::extract_config(verbose = F),
-                   anchors = gcproc::extract_anchors_framework(verbose = F),
-                   pivots = gcproc::extract_pivots_framework(verbose = F),
+                   transfer = gcproc::extract_transfer_framework(verbose = F),
                    recover = gcproc::extract_recovery_framework(verbose = F),
-                   fixed = gcproc::extract_fixed_framework(verbose=F)
+                   join = gcproc::extract_join_framework(verbose=F)
 ){
 
   runtime.start <- Sys.time()
@@ -41,10 +39,10 @@ gcproc <- function(data_list,
 
     initialise.model <- initialise.gcproc(data_list = data_list,
                                           config = config,
-                                          anchors = anchors)
+                                          transfer = transfer)
 
     main.parameters <- initialise.model$main.parameters
-    code <- if(is.null(pivots$code)){initialise.model$code}else{pivots$code}
+    code <- initialise.model$code
   }
 
   if (config$verbose){
@@ -58,18 +56,19 @@ gcproc <- function(data_list,
 
       return_update <- update_set(x = as.matrix(data_list[[i]]),
                                   main.parameters = main.parameters[[i]],
-                                  code = code
+                                  code = code,
+                                  transfer = transfer
       )
 
       main.parameters[[i]] <- return_update$main.parameters
-      code <- if(is.null(anchors$code)){return_update$code}else{anchors$code}
+      code <- return_update$code
 
 
-      if (i %in% fixed$alpha | i %in% fixed$beta){
+      if (i %in% join$alpha | i %in% join$beta){
 
-        if (!is.null(fixed$alpha)){
+        if (!is.null(join$alpha)){
 
-          a_id <- which(fixed$alpha == fixed$alpha[i])
+          a_id <- which(join$alpha == join$alpha[i])
           main.alpha <- main.parameters[[i]]$alpha
 
           for (a in a_id){
@@ -77,9 +76,9 @@ gcproc <- function(data_list,
           }
         }
 
-        if (!is.null(fixed$beta)){
+        if (!is.null(join$beta)){
 
-          b_id <- which(fixed$beta == unique(fixed$beta)[i])
+          b_id <- which(join$beta == unique(join$beta)[i])
           main.beta <- main.parameters[[b_id[1]]]$beta
 
           for (b in b_id){
@@ -171,7 +170,7 @@ gcproc <- function(data_list,
 
     meta.parameters = list(
       config = config,
-      fixed = fixed,
+      join = join,
       runtime = list(
         runtime.start = runtime.start,
         runtime.end = runtime.end,
@@ -194,14 +193,21 @@ gcproc <- function(data_list,
 
 update_set <- function(x,
                        main.parameters,
-                       code
+                       code,
+                       transfer
                        ){
 
   main.parameters$alpha <- t(x%*%t((code$decode)%*%t(main.parameters$beta))%*%MASS::ginv(((code$decode)%*%t(main.parameters$beta))%*%t((code$decode)%*%t(main.parameters$beta))))
   main.parameters$beta <- t(MASS::ginv(t((t(main.parameters$alpha)%*%(code$decode)))%*%((t(main.parameters$alpha)%*%(code$decode))))%*%t(t(main.parameters$alpha)%*%(code$decode))%*%x)
 
   code$encode <- (main.parameters$alpha%*%( x )%*%(main.parameters$beta))
-  code$decode <- MASS::ginv((main.parameters$alpha)%*%t(main.parameters$alpha))%*%code$encode%*%MASS::ginv(t(main.parameters$beta)%*%(main.parameters$beta))
+
+  if (transfer$pivot == T){
+    code$decode <- MASS::ginv((main.parameters$alpha)%*%t(main.parameters$alpha))%*%code$encode%*%MASS::ginv(t(main.parameters$beta)%*%(main.parameters$beta))
+  }
+  if (transfer$pivot == F){
+    code$decode <- transfer$code$decode
+  }
 
   return(list(main.parameters = main.parameters,
               code = code

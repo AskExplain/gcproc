@@ -1,7 +1,7 @@
 #' @export
 initialise.gcproc <- function(data_list,
                               config,
-                              anchors=NULL){
+                              transfer){
 
 
   if (config$verbose){
@@ -24,25 +24,28 @@ initialise.gcproc <- function(data_list,
     alpha <- initial.param$pivot_x.sample
     beta <- initial.param$pivot_x.feature
 
-    # Find intercept in endecoded space
-    X_encode <- (alpha%*%as.matrix(data_list[[i]])%*%(beta))
-    X_code <- (MASS::ginv((alpha)%*%t(alpha))%*%(X_encode)%*%MASS::ginv(t(beta)%*%(beta)))
+    if (is.null(transfer$code)){
+      # Find intercept in endecoded space
+      X_encode <- (alpha%*%as.matrix(data_list[[i]])%*%(beta))
+      X_code <- (MASS::ginv((alpha)%*%t(alpha))%*%(X_encode)%*%MASS::ginv(t(beta)%*%(beta)))
 
-    decode <- X_code
+      decode <- X_code
+
+      code = list(
+        encode = X_encode,
+        decode = decode
+      )
+
+    } else {
+
+      code <- transfer$code
+
+    }
 
     main.parameters[[i]] = list(
       alpha = alpha,
       beta = beta
     )
-
-    code = list(
-      encode = X_encode,
-      decode = decode
-    )
-
-
-
-
 
   }
 
