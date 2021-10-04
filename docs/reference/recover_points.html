@@ -130,18 +130,18 @@
     <p>Main function to recover missing points. Used internally, but can be re-purposed by the user.</p>
     </div>
 
-    <pre class="usage"><span class='fu'>recover_points</span><span class='op'>(</span><span class='va'>x</span>, <span class='va'>y</span>, <span class='va'>main.parameters</span>, <span class='va'>config</span>, <span class='va'>recover</span>, <span class='va'>fixed</span><span class='op'>)</span></pre>
+    <pre class="usage"><span class='fu'>recover_points</span><span class='op'>(</span><span class='va'>data_list</span>, <span class='va'>code</span>, <span class='va'>main.parameters</span>, <span class='va'>config</span>, <span class='va'>recover</span><span class='op'>)</span></pre>
 
     <h2 class="hasAnchor" id="arguments"><a class="anchor" href="#arguments"></a>Arguments</h2>
     <table class="ref-arguments">
     <colgroup><col class="name" /><col class="desc" /></colgroup>
     <tr>
-      <th>x</th>
-      <td><p>Matrix of dataset x</p></td>
+      <th>data_list</th>
+      <td><p>A list of datasets (matrix or tensor etc.)</p></td>
     </tr>
     <tr>
-      <th>y</th>
-      <td><p>Matrix of dataset y</p></td>
+      <th>code</th>
+      <td><p>Code parameters from gcproc</p></td>
     </tr>
     <tr>
       <th>main.parameters</th>
@@ -154,10 +154,6 @@
     <tr>
       <th>recover</th>
       <td><p>Recover list from gcproc</p></td>
-    </tr>
-    <tr>
-      <th>fixed</th>
-      <td><p>Fixed parameters from gcproc</p></td>
     </tr>
     </table>
 

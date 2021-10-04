@@ -44,11 +44,10 @@ kidney_nanostring_rnaseq_train <- read.delim("../../data/kidney_nanostring_spati
 kidney_nanostring_pixel_train <- read.csv("../../data/kidney_nanostring_spatial/TRAIN_pixels_color.csv",row.names=1)
 
 kidney_sc_rnaseq <- read.csv("../../data/kidney_nanostring_spatial/wu_counts.csv",row.names=1)
-kidney_nanostring_pixel_test <- read.csv("../../data/kidney_nanostring_spatial/TEST_pixels_color.csv",row.names=1)
 
 matched_genes <- row.names(kidney_nanostring_rnaseq_train)[row.names(kidney_nanostring_rnaseq_train) %in% row.names(kidney_sc_rnaseq)]
 
-top_shared_var_genes <- sort(matched_genes[order(apply(kidney_nanostring_rnaseq_train[matched_genes,],1,var)+apply(kidney_sc_rnaseq[matched_genes,],1,var),decreasing = T)[1:2000]])
+top_shared_var_genes <- sort(matched_genes[order(apply(kidney_nanostring_rnaseq_train[matched_genes,],1,var)+apply(kidney_sc_rnaseq[matched_genes,],1,var),decreasing = T)[1:10000]])
 
 kidney_nanostring_rnaseq_train.select <- t(kidney_nanostring_rnaseq_train[top_shared_var_genes,])
 kidney_sc_rnaseq.select <- t(kidney_sc_rnaseq[top_shared_var_genes,])
@@ -56,8 +55,6 @@ kidney_sc_rnaseq.select <- t(kidney_sc_rnaseq[top_shared_var_genes,])
 kidney_nanostring_rnaseq_train.select.copy <- kidney_nanostring_rnaseq_train.select <- kidney_nanostring_rnaseq_train.select
 
 kidney_nanostring_pixel_train.select <- kidney_nanostring_pixel_train
-
-kidney_nanostring_pixel_test.select <- kidney_nanostring_pixel_test
 
 
 ```
@@ -71,12 +68,9 @@ The default parameters in the configuration variable are modified to adjust for 
 
 config <- gcproc::extract_config(verbose=F)
 config$i_dim <- 50
-config$j_dim <- 25
+config$j_dim <- 50
 config$max_iter <- 350
 config$verbose <- F
-
-config.recover <- config.encode <- config
-
 
 ```
 
@@ -89,12 +83,14 @@ The top 21 components out of 70 are plotted to reveal the structure and profile 
 
 ```{r step_3, fig.width = 10, fig.height=8, warning=F}
 
-gcproc.encode <- gcproc::gcproc(
+data_list.encode <- list(
   y=as.matrix(kidney_nanostring_pixel_train.select),
-  x=as.matrix(kidney_nanostring_pixel_train.select),
-  config = config.encode,
-  fixed = list(i_dim=T,j_dim=T),
-  reference = "y"
+  x=as.matrix(kidney_sc_rnaseq)
+  )
+
+gcproc.encode <- gcproc::gcproc(
+  data_list = data_list.encode,
+  config = config
   )
 
 library(png)
@@ -114,7 +110,7 @@ convert_to_HEAT <- function(x){
 # Plot top 21 components
 
 gl <- lapply(c(1:21),function(i){
-  g <- (convert_to_HEAT(aperm(array(gcproc.encode$dimension_reduction$K.y_dim_red[,i],dim=c(3,32,32)),c(2,3,1))))
+  g <- (convert_to_HEAT(aperm(array(gcproc.encode$dimension_reduction[[1]]$feature_x.dim_reduce.code[,i],dim=c(3,32,32)),c(2,3,1))))
   g <- rasterGrob(g, interpolate=TRUE)
   p.main <- ggplot2::qplot(1:10, 1:10, geom="blank") +
     annotation_custom(g, xmin=-Inf, xmax=Inf, ymin=-Inf, ymax=Inf)
@@ -166,34 +162,44 @@ set.seed(10)
 train_ids <- sample(c(1:231),201)
 
 design_recover <- gcproc::extract_recovery_framework(F)
-design_recover$x <- kidney_nanostring_rnaseq_train.select - kidney_nanostring_rnaseq_train.select
-design_recover$x[-train_ids,which(!colnames(kidney_nanostring_rnaseq_train.select) %in% c(gene_marker_present_in_histology_taken_as_example))] <- 1
-design_recover$x[train_ids,which(colnames(kidney_nanostring_rnaseq_train.select) %in% c(gene_marker_present_in_histology_taken_as_example))] <- 0
+design_recover.x <- kidney_nanostring_rnaseq_train.select - kidney_nanostring_rnaseq_train.select
+design_recover.x[-train_ids,which(!colnames(kidney_nanostring_rnaseq_train.select) %in% c(gene_marker_present_in_histology_taken_as_example))] <- 1
+design_recover.x[train_ids,which(colnames(kidney_nanostring_rnaseq_train.select) %in% c(gene_marker_present_in_histology_taken_as_example))] <- 0
 
-design_recover$method <- c("matrix.projection")
+design_recover$method <- c("knn.reg")
+design_recover$design.list <- list( y=NULL,
+      x=as.matrix(design_recover.x)
+      )
 
-kidney_nanostring_rnaseq_train.select <- kidney_nanostring_rnaseq_train.select.copy*(1-design_recover$x) + do.call('cbind',lapply(c(1:dim(design_recover$x)[2]),function(X){(design_recover$x[,X])*median(kidney_nanostring_rnaseq_train.select.copy[which((1-design_recover$x)[,X]==1),X])}))
+kidney_nanostring_rnaseq_train.select <- kidney_nanostring_rnaseq_train.select.copy*(1-design_recover.x) + do.call('cbind',lapply(c(1:dim(design_recover.x)[2]),function(X){(design_recover.x[,X])*median(kidney_nanostring_rnaseq_train.select.copy[which((1-design_recover.x)[,X]==1),X])}))
+
+data_list.transfer <- list( y=as.matrix(kidney_nanostring_pixel_train.select),
+      x=as.matrix(kidney_nanostring_rnaseq_train.select)
+      )
 
 
-anchors.transfer <- gcproc::extract_anchors_framework(F)
-anchors.transfer$anchor_y.feature <- (gcproc.encode$main.parameters$u.beta)
+fixed <- gcproc::extract_fixed_framework(F)
+fixed$alpha <- c(1,1)
 
-gcproc.transfer <- gcproc::gcproc(y=as.matrix(kidney_nanostring_pixel_train.select),
-               x=as.matrix(kidney_nanostring_rnaseq_train.select),
-               config = config.recover,
-               recover = design_recover,
-               anchors = anchors.transfer,
-               fixed = list(i_dim=T,j_dim=F),
-               reference = "y"
+anchors <- gcproc::extract_anchors_framework(F)
+anchors$code <- gcproc.encode$code
+
+library(gcproc)
+gcproc.transfer <- gcproc::gcproc(
+               data_list = data_list.transfer,
+               config = config,
+               recover = design_recover, 
+               anchors = anchors,
+               fixed = fixed
                )
 
 corr_genes <- do.call('c',lapply(c(1:dim(kidney_nanostring_rnaseq_train.select.copy)[2]),function(i){
-  cor(kidney_nanostring_rnaseq_train.select.copy[-train_ids,i],(gcproc.transfer$recover$predict.x)[-train_ids,i])
+  cor(kidney_nanostring_rnaseq_train.select.copy[-train_ids,i],(gcproc.transfer$recover$predict.list[[2]])[-train_ids,i])
 }))
 
 other_than_key_gene.id <- which(!colnames(kidney_nanostring_rnaseq_train.select) %in% c(gene_marker_present_in_histology_taken_as_example))
 corr_cells_remove_key_genes <- do.call('c',lapply(c(1:dim(kidney_nanostring_rnaseq_train.select.copy)[1])[-train_ids],function(i){
-  cor(kidney_nanostring_rnaseq_train.select.copy[i,other_than_key_gene.id],(gcproc.transfer$recover$predict.x)[i,other_than_key_gene.id])
+  cor(kidney_nanostring_rnaseq_train.select.copy[i,other_than_key_gene.id],(gcproc.transfer$recover$predict.list[[2]])[i,other_than_key_gene.id])
 }))
 
 corr_data <- data.frame(Axis = c(rep("Gene Correlations",length(corr_genes)),rep("Cell Correlations",length(corr_cells_remove_key_genes))), Pearson = c(corr_genes,corr_cells_remove_key_genes))
@@ -205,9 +211,9 @@ ggplot(corr_data, aes(x=Axis, y=Pearson)) +
 par(mfcol=c(4,2))
 for (i in which(colnames(kidney_nanostring_rnaseq_train.select.copy)%in%c("HLA-A","CD74","AQP2","KRT8","NPHS2","ITGB1","PAX8","PDGFRA"))){
   
-  adj.r.squared <- summary(lm(kidney_nanostring_rnaseq_train.select.copy[-train_ids,i]~(gcproc.transfer$recover$predict.x)[-train_ids,i]))$adj.r.squared
+  adj.r.squared <- summary(lm(kidney_nanostring_rnaseq_train.select.copy[-train_ids,i]~(gcproc.transfer$recover$predict.list[[2]])[-train_ids,i]))$adj.r.squared
   
-  plot(x = (gcproc.transfer$recover$predict.x)[-train_ids,i],y = kidney_nanostring_rnaseq_train.select.copy[-train_ids,i],main=paste(colnames(kidney_nanostring_rnaseq_train.select)[i]," \n Adj. R^2: ",adj.r.squared,sep=""), xlab = "recovered RNA levels", ylab = "Observed RNA levels",cex=1.5,pch=19)
+  plot(x = (gcproc.transfer$recover$predict.list[[2]])[-train_ids,i],y = kidney_nanostring_rnaseq_train.select.copy[-train_ids,i],main=paste(colnames(kidney_nanostring_rnaseq_train.select)[i]," \n Adj. R^2: ",adj.r.squared,sep=""), xlab = "recovered RNA levels", ylab = "Observed RNA levels",cex=1.5,pch=19)
 }
 
 ```

@@ -1,19 +1,19 @@
 #' Generalised Canonical Procrustes
 #'
-#' A method that uses a likelihood model to align two datasets via an encoding in a lower dimensional space. The coding of the datasets simultaneously can be used to reconstruct the data to predict missing test points. The parameters can be used to reduce either the feature or the sample dimensions into a smaller subspace for further embedding or projection. To run as default, only requires x and y as inputs.
+#' A method that uses a likelihood model to align multiple datasets via an encoding in a lower dimensional space. The parameters can be used to reduce either the feature or the sample dimensions into a smaller subspace for further embedding or prediction. To run as default, only a data list is required - please review the config parameters at gcproc::extract_config(T)  .
 #'
-#' @param x Reference dataset of sample by feature matrix (required)
-#' @param y Experimental dataset of sample by feature matrix (required)
+#' @param data_list List of data matrices of varying dimensionality. Attempts to find similarities among all datasets with a core structure.
 #' @param config Configuration parameters (required, default provided)
 #' @param anchors Transferring pre-trained model parameters (not required)
 #' @param pivots Initialisation of model parameters (not required)
 #' @param recover Important information for prediction or imputation (not required)
+#' @param fixed Constrain parameters that share the same axes to be similar (not required)
 #'
-#' @return Main parameters contains the learned model parameters. The alpha and beta matrix multiply x and y by, (K)(Y)(v) and (L)(X)(u). By multiplying with the parameter, the dimension of the samples and features can be dimensionally reduced for further visualisation analysis such as embedding or projection.
+#' @return Main parameters contains the learned model parameters. The alpha and beta matrix multiply example datasets x and y by, (K)(Y)(v) and (L)(X)(u). By multiplying with the parameter, the dimension of the samples and features can be dimensionally reduced for further visualisation analysis such as embedding or projection.
 #'
 #' @return Code contains the learned shared encoding space. The encoded space refers to the full dimension reduction of both samples and features after matrix multiplication by parameters K and v for y, as well as, L and u for x. The decode is an estimation of the full matrix dataset, where the code is used and matrix multiplied as t(K)(Y_code)t(v), and t(L)(X_code)t(u) to calculate the decoded estimation.
 #'
-#' @return Recover contains the predictions for the test dataset as indicated by a 1 in the binary prediction matrices. In addition to the x and y variables within this list that correspond to the input binary design matrix, the predict.y and predict.x datasets represent the decoded estimation, and predicts any missing test data.
+#' @return Recover contains the list of predictions for the test dataset as indicated by a 1 in the binary prediction matrices. The prediction occurs in the shared lower dimensional space where all data sets in the list are projected to using a common latent code.
 #'
 #' @export
 gcproc <- function(data_list,
@@ -22,11 +22,11 @@ gcproc <- function(data_list,
                    pivots = gcproc::extract_pivots_framework(verbose = F),
                    recover = gcproc::extract_recovery_framework(verbose = F),
                    fixed = gcproc::extract_fixed_framework(verbose=F)
-                   ){
+){
+
   runtime.start <- Sys.time()
 
 
-  prepare_data = TRUE
   initialise = TRUE
 
   if (initialise==T){
@@ -37,7 +37,7 @@ gcproc <- function(data_list,
     score_lag <- 2 # How many previous scores kept track of
     accept_score <- 1 # How many scores used to calculate previous and current "mean score"
 
-    recover$predict.list <- recover$design.list
+    recover$predict.list <- lapply(c(1:length(data_list)),function(X){NULL})
 
     initialise.model <- initialise.gcproc(data_list = data_list,
                                           config = config,
@@ -48,7 +48,7 @@ gcproc <- function(data_list,
   }
 
   if (config$verbose){
-    print(paste("Beginning gcproc learning with:    Sample dimension reduction (config$i_dim): ",config$i_dim, "    Feature dimension reduction (config$j_dim): ", config$j_dim,"    Tolerance Threshold: ", config$tol, "   Maximum number of iterations: ", config$max_iter, "   Verbose: ", config$verbose,sep=""))
+    print(paste("Beginning gcproc learning with:    Sample dimension reduction (config$i_dim): ",config$i_dim, "    Feature dimension reduction (config$j_dim): ", config$j_dim,"    Tolerance Threshold: ", config$tol, "   Maximum number of iterations: ", config$max_iter, "   Verbose: ", config$verbose, sep=""))
   }
 
   while (T){
@@ -59,7 +59,7 @@ gcproc <- function(data_list,
       return_update <- update_set(x = as.matrix(data_list[[i]]),
                                   main.parameters = main.parameters[[i]],
                                   code = code
-                                  )
+      )
 
       main.parameters[[i]] <- return_update$main.parameters
       code <- if(is.null(anchors$code)){return_update$code}else{anchors$code}
@@ -89,10 +89,7 @@ gcproc <- function(data_list,
 
       }
 
-
-
     }
-
 
 
     matrix.residuals <- code$encode - prev_code$encode
@@ -109,7 +106,9 @@ gcproc <- function(data_list,
         print(paste("Iteration: ",count," with Tolerance of: ", abs(prev.MSE - MSE),sep=""))
       }
     } else {
-      print(paste("Iteration: ",count," ... initialising ... ",sep=""))
+      if (config$verbose){
+        print(paste("Iteration: ",count," ... initialising ... ",sep=""))
+      }
     }
 
     if (count > config$min_iter){
@@ -118,13 +117,13 @@ gcproc <- function(data_list,
       }
     }
 
-
     count = count + 1
-
-
 
   }
 
+  if (config$verbose){
+    print("Learning has converged for gcproc, beginning prediction (if requested) and dimension reduction")
+  }
 
   if (any(do.call('c',lapply(recover$design.list,function(X){!is.null(X)})))){
 
@@ -136,40 +135,39 @@ gcproc <- function(data_list,
       recover = recover
     )
 
-    for (i in 1:length(data_list)){
-      if (!is.null(recover$predict.list[[i]])){
-        data_list[[i]] <- recover$predict.list[[i]]
-      }
-    }
-
   }
 
+  dimension_reduction <- lapply(c(1:length(data_list)),function(X){
+    feature_x.dim_reduce.encode <- t(main.parameters[[X]]$alpha%*%data_list[[X]])
+    sample_x.dim_reduce.encode <- data_list[[X]]%*%main.parameters[[X]]$beta
 
+    feature_x.dim_reduce.code <- t(MASS::ginv((main.parameters[[X]]$alpha)%*%t(main.parameters[[X]]$alpha))%*%main.parameters[[X]]$alpha%*%data_list[[X]])
+    sample_x.dim_reduce.code <- data_list[[X]]%*%main.parameters[[X]]$beta%*%MASS::ginv(t(main.parameters[[X]]$beta)%*%(main.parameters[[X]]$beta))
 
-
-
-#   dimension_reduction <- list()
-#   dimension_reduction$K.y_dim_red <- t(main.parameters$alpha.K%*%y)
-#   dimension_reduction$y.v_dim_red <- y%*%main.parameters$v.beta
-#   dimension_reduction$L.x_dim_red <- t(main.parameters$alpha.L%*%x)
-#   dimension_reduction$x.u_dim_red <- x%*%main.parameters$u.beta
-
-  # code$Y_decoded <- t(main.parameters$alpha.K)%*%(code$decode)%*%t(main.parameters$v.beta)
-  # code$X_decoded <- t(main.parameters$alpha.L)%*%(code$decode)%*%t(main.parameters$u.beta)
-
-  # code$decode <- t(main.parameters$s_code)%*%main.parameters$s_code
+    return(list(
+      feature_x.dim_reduce.encode = feature_x.dim_reduce.encode,
+      sample_x.dim_reduce.encode = sample_x.dim_reduce.encode,
+      feature_x.dim_reduce.code = feature_x.dim_reduce.code,
+      sample_x.dim_reduce.code = sample_x.dim_reduce.code
+    ))
+  })
 
   runtime.end <- Sys.time()
+
+
+  if (config$verbose){
+    print(paste("Done! Total runtime of   ", runtime.end - runtime.start ,sep=""))
+  }
 
   return(list(
 
     main.parameters = main.parameters,
 
+    code = code,
+
     recover =  recover,
 
-    # dimension_reduction = dimension_reduction,
-
-    code = code,
+    dimension_reduction = dimension_reduction,
 
     meta.parameters = list(
       config = config,
@@ -186,7 +184,6 @@ gcproc <- function(data_list,
       score.vec = score.vec
     )
 
-
   ))
 
 
@@ -195,11 +192,9 @@ gcproc <- function(data_list,
 
 
 
-
 update_set <- function(x,
                        main.parameters,
-                       code,
-                       anchors
+                       code
                        ){
 
   main.parameters$alpha <- t(x%*%t((code$decode)%*%t(main.parameters$beta))%*%MASS::ginv(((code$decode)%*%t(main.parameters$beta))%*%t((code$decode)%*%t(main.parameters$beta))))
@@ -210,8 +205,11 @@ update_set <- function(x,
 
   return(list(main.parameters = main.parameters,
               code = code
-              ))
+  ))
 
 }
+
+
+
 
 

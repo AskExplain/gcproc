@@ -7,6 +7,8 @@
 recover_points(data_list, code, main.parameters, config, recover)
 }
 \arguments{
+\item{data_list}{A list of datasets (matrix or tensor etc.)}
+
 \item{code}{Code parameters from gcproc}
 
 \item{main.parameters}{Main parameters from gcproc}
@@ -14,12 +16,6 @@ recover_points(data_list, code, main.parameters, config, recover)
 \item{config}{Configuration parameters from gcproc}
 
 \item{recover}{Recover list from gcproc}
-
-\item{x}{Matrix of dataset x}
-
-\item{y}{Matrix of dataset y}
-
-\item{fixed}{Fixed parameters from gcproc}
 }
 \value{
 Recovered data from imputation or prediction, with the design matrices and any user input parameters and functions

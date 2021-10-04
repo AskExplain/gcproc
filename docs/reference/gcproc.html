@@ -40,7 +40,7 @@
 
 
 <meta property="og:title" content="Generalised Canonical Procrustes — gcproc" />
-<meta property="og:description" content="A method that uses a likelihood model to align two datasets via an encoding in a lower dimensional space. The coding of the datasets simultaneously can be used to reconstruct the data to predict missing test points. The parameters can be used to reduce either the feature or the sample dimensions into a smaller subspace for further embedding or projection. To run as default, only requires x and y as inputs." />
+<meta property="og:description" content="A method that uses a likelihood model to align multiple datasets via an encoding in a lower dimensional space. The parameters can be used to reduce either the feature or the sample dimensions into a smaller subspace for further embedding or prediction. To run as default, only a data list is required - please review the config parameters at gcproc::extract_config(T)  ." />
 
 
 
@@ -127,38 +127,24 @@
     </div>
 
     <div class="ref-description">
-    <p>A method that uses a likelihood model to align two datasets via an encoding in a lower dimensional space. The coding of the datasets simultaneously can be used to reconstruct the data to predict missing test points. The parameters can be used to reduce either the feature or the sample dimensions into a smaller subspace for further embedding or projection. To run as default, only requires x and y as inputs.</p>
+    <p>A method that uses a likelihood model to align multiple datasets via an encoding in a lower dimensional space. The parameters can be used to reduce either the feature or the sample dimensions into a smaller subspace for further embedding or prediction. To run as default, only a data list is required - please review the config parameters at gcproc::extract_config(T)  .</p>
     </div>
 
     <pre class="usage"><span class='fu'>gcproc</span><span class='op'>(</span>
-  <span class='va'>x</span>,
-  <span class='va'>y</span>,
-  reference <span class='op'>=</span> <span class='st'>"y"</span>,
-  fixed <span class='op'>=</span> <span class='fu'><a href='https://rdrr.io/r/base/list.html'>list</a></span><span class='op'>(</span>i_dim <span class='op'>=</span> <span class='cn'>F</span>, j_dim <span class='op'>=</span> <span class='cn'>F</span><span class='op'>)</span>,
+  <span class='va'>data_list</span>,
   config <span class='op'>=</span> <span class='fu'>gcproc</span><span class='fu'>::</span><span class='fu'><a href='extract_config.html'>extract_config</a></span><span class='op'>(</span>verbose <span class='op'>=</span> <span class='cn'>F</span><span class='op'>)</span>,
   anchors <span class='op'>=</span> <span class='fu'>gcproc</span><span class='fu'>::</span><span class='fu'><a href='extract_anchors_framework.html'>extract_anchors_framework</a></span><span class='op'>(</span>verbose <span class='op'>=</span> <span class='cn'>F</span><span class='op'>)</span>,
   pivots <span class='op'>=</span> <span class='fu'>gcproc</span><span class='fu'>::</span><span class='fu'><a href='extract_pivots_framework.html'>extract_pivots_framework</a></span><span class='op'>(</span>verbose <span class='op'>=</span> <span class='cn'>F</span><span class='op'>)</span>,
-  recover <span class='op'>=</span> <span class='fu'>gcproc</span><span class='fu'>::</span><span class='fu'><a href='extract_recovery_framework.html'>extract_recovery_framework</a></span><span class='op'>(</span>verbose <span class='op'>=</span> <span class='cn'>F</span><span class='op'>)</span>
+  recover <span class='op'>=</span> <span class='fu'>gcproc</span><span class='fu'>::</span><span class='fu'><a href='extract_recovery_framework.html'>extract_recovery_framework</a></span><span class='op'>(</span>verbose <span class='op'>=</span> <span class='cn'>F</span><span class='op'>)</span>,
+  fixed <span class='op'>=</span> <span class='fu'>gcproc</span><span class='fu'>::</span><span class='fu'><a href='extract_fixed_framework.html'>extract_fixed_framework</a></span><span class='op'>(</span>verbose <span class='op'>=</span> <span class='cn'>F</span><span class='op'>)</span>
 <span class='op'>)</span></pre>
 
     <h2 class="hasAnchor" id="arguments"><a class="anchor" href="#arguments"></a>Arguments</h2>
     <table class="ref-arguments">
     <colgroup><col class="name" /><col class="desc" /></colgroup>
     <tr>
-      <th>x</th>
-      <td><p>Reference dataset of sample by feature matrix (required)</p></td>
-    </tr>
-    <tr>
-      <th>y</th>
-      <td><p>Experimental dataset of sample by feature matrix (required)</p></td>
-    </tr>
-    <tr>
-      <th>reference</th>
-      <td><p>Choice of shared space representing x or y (required)</p></td>
-    </tr>
-    <tr>
-      <th>fixed</th>
-      <td><p>Enforcing feature (i_dim) and, or sample parameters (j_dim) to be identical for x and y (required)</p></td>
+      <th>data_list</th>
+      <td><p>List of data matrices of varying dimensionality. Attempts to find similarities among all datasets with a core structure.</p></td>
     </tr>
     <tr>
       <th>config</th>
@@ -176,13 +162,17 @@
       <th>recover</th>
       <td><p>Important information for prediction or imputation (not required)</p></td>
     </tr>
+    <tr>
+      <th>fixed</th>
+      <td><p>Constrain parameters that share the same axes to be similar (not required)</p></td>
+    </tr>
     </table>
 
     <h2 class="hasAnchor" id="value"><a class="anchor" href="#value"></a>Value</h2>
 
-    <p>Main parameters contains the learned model parameters. The alpha and beta matrix multiply x and y by, (K)(Y)(v) and (L)(X)(u). By multiplying with the parameter, the dimension of the samples and features can be dimensionally reduced for further visualisation analysis such as embedding or projection.</p>
+    <p>Main parameters contains the learned model parameters. The alpha and beta matrix multiply example datasets x and y by, (K)(Y)(v) and (L)(X)(u). By multiplying with the parameter, the dimension of the samples and features can be dimensionally reduced for further visualisation analysis such as embedding or projection.</p>
 <p>Code contains the learned shared encoding space. The encoded space refers to the full dimension reduction of both samples and features after matrix multiplication by parameters K and v for y, as well as, L and u for x. The decode is an estimation of the full matrix dataset, where the code is used and matrix multiplied as t(K)(Y_code)t(v), and t(L)(X_code)t(u) to calculate the decoded estimation.</p>
-<p>Recover contains the predictions for the test dataset as indicated by a 1 in the binary prediction matrices. In addition to the x and y variables within this list that correspond to the input binary design matrix, the predict.y and predict.x datasets represent the decoded estimation, and predicts any missing test data.</p>
+<p>Recover contains the list of predictions for the test dataset as indicated by a 1 in the binary prediction matrices. The prediction occurs in the shared lower dimensional space where all data sets in the list are projected to using a common latent code.</p>
 
   </div>
   <div class="col-md-3 hidden-xs hidden-sm" id="pkgdown-sidebar">

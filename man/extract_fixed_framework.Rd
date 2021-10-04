@@ -6,6 +6,11 @@
 \usage{
 extract_fixed_framework(verbose = T)
 }
+\arguments{
+\item{alpha}{Fixing the alpha parameters. A vector of integers, where identical integers indicate same the data axis. Axes that are not shared are given NA.}
+
+\item{beta}{Fixing the beta parameters. A vector of integers, where identical integers indicate same the data axis. Axes that are not shared are given NA.}
+}
 \description{
 Fix data to improve modelling capacity for similar axes
 }

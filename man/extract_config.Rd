@@ -13,6 +13,8 @@ extract_config(verbose = T)
 
 \item{j_dim}{Dimension reduction for features (assumed to be along columns)}
 
+\item{min_iter}{Minimum iteration of gcproc}
+
 \item{max_iter}{Maximum iteration of gcproc}
 
 \item{tol}{Tolerance threshold for convergence (metric: Root Mean Squared Error)}

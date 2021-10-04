@@ -5,7 +5,7 @@ initialise.gcproc <- function(data_list,
 
 
   if (config$verbose){
-    print("Initialising data")
+    print(paste("Initialising data with : ",config$init,sep=""))
   }
 
   main.parameters <- list()
