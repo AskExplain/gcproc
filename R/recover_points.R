@@ -40,7 +40,7 @@ recover_points <- function(data_list,
                 })
               }
 
-              decoded_covariate <- cbind(1,scale(Reduce('+',lapply(c(1:length(recover$encoded_covariate)),function(X){
+              decoded_covariate <- cbind(1,scale(Reduce('+',lapply(c(1:length(recover$encoded_covariate))[-i],function(X){
                 t(main.parameters[[i]]$alpha)%*%recover$encoded_covariate[[X]]
               }))))
 
@@ -67,7 +67,7 @@ recover_points <- function(data_list,
                 })
               }
 
-              decoded_covariate <- cbind(1,scale(Reduce('+',lapply(c(1:length(recover$encoded_covariate)),function(X){
+              decoded_covariate <- cbind(1,scale(Reduce('+',lapply(c(1:length(recover$encoded_covariate))[-i],function(X){
                 t(main.parameters[[i]]$alpha)%*%recover$encoded_covariate[[X]]
               }))))
 
@@ -109,7 +109,7 @@ recover_points <- function(data_list,
                 })
               }
 
-              decoded_covariate <- cbind(1,scale(Reduce('+',lapply(c(1:length(recover$encoded_covariate)),function(X){
+              decoded_covariate <- cbind(1,scale(Reduce('+',lapply(c(1:length(recover$encoded_covariate))[-i],function(X){
                 t(main.parameters[[i]]$alpha)%*%recover$encoded_covariate[[X]]
               }))))
 
@@ -148,13 +148,13 @@ recover_points <- function(data_list,
             transformed.data <- as.matrix(MASS::ginv((main.parameters[[X]]$alpha)%*%t(main.parameters[[X]]$alpha))%*%(main.parameters[[X]]$alpha)%*%as.matrix(data_list[[X]])%*%(main.parameters[[X]]$beta)%*%MASS::ginv(t((main.parameters[[X]]$beta))%*%(main.parameters[[X]]$beta)))
           })
 
-          label.decoded_covariate <- scale(Reduce('+',lapply(c(1:length(recover$encoded_covariate)),function(X){
+          label.decoded_covariate <- scale(Reduce('+',lapply(c(1:length(recover$encoded_covariate))[-i],function(X){
             t(main.parameters[[j]]$alpha)%*%recover$encoded_covariate[[X]]
           })))
 
           for (i in which(recover$design.list==1)){
 
-            unlabel.decoded_covariate <- scale(Reduce('+',lapply(c(1:length(recover$encoded_covariate)),function(X){
+            unlabel.decoded_covariate <- scale(Reduce('+',lapply(c(1:length(recover$encoded_covariate))[-j],function(X){
               t(main.parameters[[i]]$alpha)%*%recover$encoded_covariate[[X]]
             })))
 
