@@ -120,23 +120,23 @@ gcproc <- function(data_list,
 
     count = count + 1
 
-    if (any(do.call('c',lapply(recover$design.list,function(X){!is.null(X)})))){
+  }
 
-      recover_data <- recover_points(
-        data_list,
-        code = code,
-        main.parameters = main.parameters,
-        config = config,
-        recover = recover
-      )
+  if (any(do.call('c',lapply(recover$design.list,function(X){!is.null(X)})))){
 
-      recover <- recover_data$recover
-      data_list <- recover_data$data_list
+    recover_data <- recover_points(
+      data_list,
+      code = code,
+      main.parameters = main.parameters,
+      config = config,
+      recover = recover
+    )
 
-    }
-
+    recover <- recover_data$recover
+    data_list <- recover_data$data_list
 
   }
+
 
 
 
