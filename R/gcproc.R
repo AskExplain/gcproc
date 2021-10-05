@@ -24,7 +24,6 @@ gcproc <- function(data_list,
 
   runtime.start <- Sys.time()
 
-
   initialise = TRUE
 
   if (initialise==T){
@@ -43,6 +42,8 @@ gcproc <- function(data_list,
 
     main.parameters <- initialise.model$main.parameters
     code <- initialise.model$code
+    config.restart <- config
+    config.restart$verbose <- F
   }
 
   if (config$verbose){
@@ -92,7 +93,6 @@ gcproc <- function(data_list,
     }
 
 
-
     matrix.residuals <- code$encode - prev_code$encode
 
     total.mse <- mean(abs(matrix.residuals))
@@ -120,19 +120,24 @@ gcproc <- function(data_list,
 
     count = count + 1
 
+    if (any(do.call('c',lapply(recover$design.list,function(X){!is.null(X)})))){
+
+      recover_data <- recover_points(
+        data_list,
+        code = code,
+        main.parameters = main.parameters,
+        config = config,
+        recover = recover
+      )
+
+      recover <- recover_data$recover
+      data_list <- recover_data$data_list
+
+    }
+
+
   }
 
-  if (any(do.call('c',lapply(recover$design.list,function(X){!is.null(X)})))){
-
-    recover <- recover_points(
-      data_list,
-      code = code,
-      main.parameters = main.parameters,
-      config = config,
-      recover = recover
-    )
-
-  }
 
 
 
@@ -200,11 +205,11 @@ gcproc <- function(data_list,
 update_set <- function(x,
                        main.parameters,
                        code,
-                       transfer
+                       transfer.param
                        ){
 
-  main.parameters$alpha <- t(x%*%t((code$decode)%*%t(main.parameters$beta))%*%MASS::ginv(((code$decode)%*%t(main.parameters$beta))%*%t((code$decode)%*%t(main.parameters$beta))))
-  main.parameters$beta <- t(MASS::ginv(t((t(main.parameters$alpha)%*%(code$decode)))%*%((t(main.parameters$alpha)%*%(code$decode))))%*%t(t(main.parameters$alpha)%*%(code$decode))%*%x)
+  main.parameters$alpha <- if(is.null(transfer.param$alpha)){t(x%*%t((code$decode)%*%t(main.parameters$beta))%*%MASS::ginv(((code$decode)%*%t(main.parameters$beta))%*%t((code$decode)%*%t(main.parameters$beta))))}else{transfer.param$alpha}
+  main.parameters$beta <- if(is.null(transfer.param$beta)){t(MASS::ginv(t((t(main.parameters$alpha)%*%(code$decode)))%*%((t(main.parameters$alpha)%*%(code$decode))))%*%t(t(main.parameters$alpha)%*%(code$decode))%*%x)}else{transfer.param$beta}
 
   code$encode <- (main.parameters$alpha%*%( x )%*%(main.parameters$beta))
 

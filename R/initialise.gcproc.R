@@ -13,12 +13,11 @@ initialise.gcproc <- function(data_list,
 
     initial.param <- list()
     # Initialise parameters
-    initial.param <-initialise.parameters(x = as.matrix(data_list[[i]]), i_dim=config$i_dim,j_dim=config$j_dim,init=config$init,verbose=config$verbose)
-
-
-    # Check pivoting parameters
-    initial.param$pivot_x.sample <- initial.param$pivot_x.sample
-    initial.param$pivot_x.feature <- initial.param$pivot_x.feature
+    if (!is.null(transfer$beta[[i]])|!is.null(transfer$alpha[[i]])){
+      initial.param <-initialise.parameters(x = as.matrix(data_list[[i]]), transfer = transfer$parameters[[i]], i_dim=config$i_dim,j_dim=config$j_dim,init=config$init,verbose=config$verbose)
+    } else {
+      initial.param <-initialise.parameters(x = as.matrix(data_list[[i]]), i_dim=config$i_dim,j_dim=config$j_dim,init=config$init,verbose=config$verbose)
+    }
 
     # Check anchoring parameters
     alpha <- initial.param$pivot_x.sample
@@ -61,79 +60,35 @@ initialise.gcproc <- function(data_list,
 
 
 #' @export
-initialise.parameters <- function(x,i_dim=70,j_dim=70,init="svd-quick",verbose=F){
+initialise.parameters <- function(x,transfer=NULL,i_dim=70,j_dim=70,init="svd-quick",verbose=F){
 
   x <- Matrix::Matrix(x,sparse=T)
 
   set.seed(1)
 
   if (init=="random"){
-    param.beta <- matrix(rnorm(dim(x)[2]*j_dim),nrow=dim(x)[2],ncol=j_dim)
-    param.alpha = matrix(rnorm(dim(x)[1]*i_dim),nrow=i_dim,ncol=dim(x)[1])
+    param.beta <- if(is.null(transfer$beta)){matrix(rnorm(dim(x)[2]*j_dim),nrow=dim(x)[2],ncol=j_dim)}else{transfer$beta}
+    param.alpha = if(is.null(transfer$alpha)){matrix(rnorm(dim(x)[1]*i_dim),nrow=i_dim,ncol=dim(x)[1])}else{transfer$alpha}
   } else {
     cov_x <- corpcor::cov.shrink(x,verbose = F)
     cov_tx <- corpcor::cov.shrink(Matrix::t(x),verbose = F)
   }
 
-  if (init=="svd-quick"){
+  if (init=="svd"){
     param.beta.svd <- irlba::irlba(
-      cov_x,j_dim,maxit = 10000,verbose = F)
+      cov_x,j_dim,verbose = F)
     rm(cov_x)
 
-    param.beta <- param.beta.svd$v
+    param.beta <- if(is.null(transfer$beta)){param.beta.svd$v}else{transfer$beta}
 
 
     param.alpha.J.svd <- irlba::irlba(
-      cov_tx,i_dim,maxit = 10000,verbose = F)
+      cov_tx,i_dim,verbose = F)
     rm(cov_tx)
 
-    param.alpha = t(param.alpha.J.svd$u)
+    param.alpha = if(is.null(transfer$alpha)){t(param.alpha.J.svd$u)}else{transfer$alpha}
 
   }
-  if (init=="svd-dense"){
-    param.beta.svd <- svd(
-      cov_x,j_dim)
-    rm(cov_x)
-
-    param.beta <- param.beta.svd$v[,c(1:j_dim)]
-
-    param.alpha.J.svd <- svd(
-      cov_tx,i_dim)
-    rm(cov_tx)
-
-    param.alpha = t(param.alpha.J.svd$u[,c(1:i_dim)])
-
-  }
-  if (init=="eigen-quick"){
-    param.beta.svd <- RSpectra::eigs(
-      cov_x,j_dim)
-    rm(cov_x)
-
-    param.beta <- param.beta.svd$vectors
-
-    param.alpha.J.svd <- RSpectra::eigs(
-      cov_tx,i_dim)
-    rm(cov_tx)
-
-    param.alpha = t(param.alpha.J.svd$vectors)
-
-  }
-  if (init=="eigen-dense"){
-
-    param.beta.svd <- eigen(
-      cov_x,j_dim)
-    rm(cov_x)
-
-    param.beta <- param.beta.svd$vectors[,c(1:j_dim)]
-
-    param.alpha.J.svd <- eigen(
-      cov_tx)
-    rm(cov_tx)
-
-    param.alpha = t(param.alpha.J.svd$vectors[,c(1:i_dim)])
-
-  }
-
 
   pivots <- list(
                    pivot_x.sample = as.matrix(param.alpha),
