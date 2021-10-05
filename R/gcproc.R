@@ -203,8 +203,11 @@ update_set <- function(x,
                        transfer
                        ){
 
-  main.parameters$alpha <- t(x%*%t((code$decode)%*%t(main.parameters$beta))%*%MASS::ginv(((code$decode)%*%t(main.parameters$beta))%*%t((code$decode)%*%t(main.parameters$beta))))
-  main.parameters$beta <- t(MASS::ginv(t((t(main.parameters$alpha)%*%(code$decode)))%*%((t(main.parameters$alpha)%*%(code$decode))))%*%t(t(main.parameters$alpha)%*%(code$decode))%*%x)
+  lambda <- 0.000001
+  alpha <- 0.5
+
+  main.parameters$alpha <- S.z.g(S.z = t(x%*%t((code$decode)%*%t(main.parameters$beta))%*%MASS::ginv(((code$decode)%*%t(main.parameters$beta))%*%t((code$decode)%*%t(main.parameters$beta)))),S.g = lambda*alpha, S.d = 1+(lambda*(1-alpha)))
+  main.parameters$beta <- S.z.g(S.z = t(MASS::ginv(t((t(main.parameters$alpha)%*%(code$decode)))%*%((t(main.parameters$alpha)%*%(code$decode))))%*%t(t(main.parameters$alpha)%*%(code$decode))%*%x),S.g = lambda*alpha, S.d = 1+(lambda*(1-alpha)))
 
   code$encode <- (main.parameters$alpha%*%( x )%*%(main.parameters$beta))
 
@@ -223,5 +226,10 @@ update_set <- function(x,
 
 
 
-
+S.z.g <- function(S.z,S.g,S.d){
+  to_return <-
+    (S.z - S.g) * ((S.z > 0) * (S.g < abs(S.z))) +
+    (S.z + S.g) * ((S.z < 0) * (S.g < abs(S.z)))
+  return(to_return/S.d)
+}
 
