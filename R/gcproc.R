@@ -122,10 +122,6 @@ gcproc <- function(data_list,
 
   }
 
-  if (config$verbose){
-    print("Learning has converged for gcproc, beginning prediction (if requested) and dimension reduction")
-  }
-
   if (any(do.call('c',lapply(recover$design.list,function(X){!is.null(X)})))){
 
     recover <- recover_points(
@@ -137,6 +133,13 @@ gcproc <- function(data_list,
     )
 
   }
+
+
+
+  if (config$verbose){
+    print("Learning has converged for gcproc, beginning prediction (if requested) and dimension reduction")
+  }
+
 
 
   dimension_reduction <- lapply(c(1:length(data_list)),function(X){
