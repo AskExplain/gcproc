@@ -1,9 +1,9 @@
-# Generalised Canonical Procrustes
+# Generalised Canonical Procrustes - Under Development
 A generative encoding method - ideas stemming from the geometric Procrustes, the statistical Canonical Correlation Analysis, and the neural network Autoencoder.
 
 A method that aligns multiple datasets of various matrix size via an encoding into a lower dimensional space. 
 
-By learning the encoding structure of the data, can also predict and impute missing values.
+By learning the encoding structure of the data, can also predict missing values and embed points for dimensionality reduction.
 
 Documentation and Example code
 https://askexplain.github.io/gcproc/
