@@ -27,6 +27,23 @@ recover_points <- function(data_list,
 
           if (!is.null(recover$design.list[[i]])){
 
+            if ("decode" %in% method){
+
+              x <- as.matrix(data_list[[i]])
+
+              row_with_missing_points <- which((rowSums(recover$design.list[[i]])>0)==T,arr.ind = T)
+              column_with_missing_points <- which((colSums(recover$design.list[[i]])>0)==T,arr.ind = T)
+
+              pred <- t(main.parameters[[i]]$alpha[,row_with_missing_points])%*%code$decode%*%t(main.parameters[[i]]$beta[column_with_missing_points,])
+
+              x[row_with_missing_points,column_with_missing_points]  <- pred
+
+              data_list[[i]] <- recover$predict.list[[i]] <- x
+
+
+            }
+
+
             if ("matrix.projection" %in% method){
 
 
@@ -176,4 +193,9 @@ recover_points <- function(data_list,
   return(list(recover=recover,
               data_list=data_list))
 }
+
+
+
+
+
 

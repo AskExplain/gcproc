@@ -14,9 +14,8 @@ extract_config <- function(verbose=T){
   config <- list(
     i_dim = 30,
     j_dim = 30,
-    min_iter=2,
-    max_iter=350,
-    n_cores=2,
+    min_iter=1,
+    max_iter=150,
     tol=1,
     verbose=T,
     init="random")
@@ -38,8 +37,7 @@ extract_config <- function(verbose=T){
 #' @export
 extract_transfer_framework <- function(verbose=T){
   transfer <- list(
-    code = NULL,
-    pivot = T
+    code = NULL
   )
 
   if (verbose == T){
@@ -62,11 +60,18 @@ extract_transfer_framework <- function(verbose=T){
 #' @export
 extract_recovery_framework <- function(verbose=T){
   recover <- list(
-    task = c("regression"),    # c("classification","imputation")
-    method = c("matrix.projection","knn"),     # c("label.projection)
+    task = c("regression"),
+    method = c("matrix.projection"),
     design.list = NULL,
     labels = NULL
   )
+
+  # recover <- list(
+  #   task = c("classification"),
+  #   method = c("label.projection"),
+  #   design.list = NULL,
+  #   labels = NULL
+  # )
 
   if (verbose == T){
     print(recover)

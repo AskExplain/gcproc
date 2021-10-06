@@ -44,6 +44,10 @@ gcproc <- function(data_list,
     code <- initialise.model$code
     config.restart <- config
     config.restart$verbose <- F
+
+    decode <- recover
+    decode$task <- "regression"
+    decode$method <- c("decode")
   }
 
   if (config$verbose){
@@ -52,7 +56,23 @@ gcproc <- function(data_list,
 
   while (T){
 
+
+    decode_data <- recover_points(
+      data_list,
+      code = code,
+      main.parameters = main.parameters,
+      config = config,
+      recover = decode
+    )
+
+    data_list <- decode_data$data_list
+    decode <- decode_data$recover
+
+
+
+
     prev_code <- code
+
     for (i in 1:length(data_list)){
 
       return_update <- update_set(x = as.matrix(data_list[[i]]),
@@ -175,6 +195,8 @@ gcproc <- function(data_list,
 
     code = code,
 
+    decode = decode,
+
     recover =  recover,
 
     dimension_reduction = dimension_reduction,
@@ -206,17 +228,17 @@ update_set <- function(x,
                        main.parameters,
                        code,
                        transfer.param
-                       ){
+){
 
   main.parameters$alpha <- if(is.null(transfer.param$alpha)){t(x%*%t((code$decode)%*%t(main.parameters$beta))%*%MASS::ginv(((code$decode)%*%t(main.parameters$beta))%*%t((code$decode)%*%t(main.parameters$beta))))}else{transfer.param$alpha}
   main.parameters$beta <- if(is.null(transfer.param$beta)){t(MASS::ginv(t((t(main.parameters$alpha)%*%(code$decode)))%*%((t(main.parameters$alpha)%*%(code$decode))))%*%t(t(main.parameters$alpha)%*%(code$decode))%*%x)}else{transfer.param$beta}
 
   code$encode <- (main.parameters$alpha%*%( x )%*%(main.parameters$beta))
 
-  if (transfer$pivot == T){
+  if (is.null(transfer$code)){
     code$decode <- MASS::ginv((main.parameters$alpha)%*%t(main.parameters$alpha))%*%code$encode%*%MASS::ginv(t(main.parameters$beta)%*%(main.parameters$beta))
   }
-  if (transfer$pivot == F){
+  else {
     code$decode <- transfer$code$decode
   }
 
@@ -225,8 +247,4 @@ update_set <- function(x,
   ))
 
 }
-
-
-
-
 

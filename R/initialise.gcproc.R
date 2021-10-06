@@ -11,13 +11,7 @@ initialise.gcproc <- function(data_list,
   main.parameters <- list()
   for (i in 1:length(data_list)){
 
-    initial.param <- list()
-    # Initialise parameters
-    if (!is.null(transfer$beta[[i]])|!is.null(transfer$alpha[[i]])){
-      initial.param <-initialise.parameters(x = as.matrix(data_list[[i]]), transfer = transfer$parameters[[i]], i_dim=config$i_dim,j_dim=config$j_dim,init=config$init,verbose=config$verbose)
-    } else {
-      initial.param <-initialise.parameters(x = as.matrix(data_list[[i]]), i_dim=config$i_dim,j_dim=config$j_dim,init=config$init,verbose=config$verbose)
-    }
+    initial.param <-initialise.parameters(x = as.matrix(data_list[[i]]), i_dim=config$i_dim,j_dim=config$j_dim,init=config$init,verbose=config$verbose)
 
     # Check anchoring parameters
     alpha <- initial.param$pivot_x.sample
@@ -91,8 +85,8 @@ initialise.parameters <- function(x,transfer=NULL,i_dim=70,j_dim=70,init="svd-qu
   }
 
   pivots <- list(
-                   pivot_x.sample = as.matrix(param.alpha),
-                   pivot_x.feature = as.matrix(param.beta)  )
+    pivot_x.sample = as.matrix(param.alpha),
+    pivot_x.feature = as.matrix(param.beta)  )
   return(pivots)
 
 }
