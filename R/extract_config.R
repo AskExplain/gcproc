@@ -18,7 +18,6 @@ extract_config <- function(verbose=T){
     max_iter=150,
     tol=1,
     verbose=T,
-    n_cores=8,
     init="random")
 
   if (verbose == T){
