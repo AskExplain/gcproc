@@ -30,8 +30,9 @@ library(irlba,quietly = T)
 ```{r step_1}
 
 config.recover <- gcproc::extract_config(T)
-config.recover$i_dim <- 10
-config.recover$j_dim <- 10
+config.recover$i_dim <- 100
+config.recover$j_dim <- 30
+config.recover$init <- "random"
 config.recover$verbose <- F
 config.recover$n_cores <- 4
 
@@ -87,7 +88,7 @@ for (list_id in c(1:length(predict.list))){
   
   main_scores.1 <- c()
   
-  for (seed in c(1:30)){
+  for (seed in c(1:100)){
     
     # Set up training ids
     set.seed(seed)
@@ -106,7 +107,8 @@ for (list_id in c(1:length(predict.list))){
     
     # Set up recovery for gcproc
     recover <- gcproc::extract_recovery_framework(F)
-    recover$method <- "matrix.projection"
+    recover$task <- c("regression")
+    recover$method <- c("knn")
     recover.x <- array(0,dim=dim(data___x))
     recover.x[-train_id,y_predict.id_col] <- 1
     
@@ -116,9 +118,8 @@ for (list_id in c(1:length(predict.list))){
     
     main_data <- list(x.x.check,x.x.check)
     
-    recover$design.list <- list(recover.x,NULL)
+    recover$design.list <- list(recover.x,recover.x)
     
-
     # Run gcproc
     gcproc.model <- gcproc::gcproc(main_data,
                                    config = config.recover,
@@ -181,7 +182,7 @@ for (list_id in c(1:length(predict.list))){
 
   main_scores.2<-c()
   
-  for (seed in 1:30){
+  for (seed in 1:10){
     
     set.seed(seed)
     
@@ -202,7 +203,13 @@ for (list_id in c(1:length(predict.list))){
     
     main_data <- list(x.x.check,x.x.check)
     
-    recover$design.list <- list(recover.x,NULL)
+    recover$design.list <- list(recover.x,recover.x)
+    recover$task <- c("regression")
+    recover$method <- c("knn")
+    
+    join <- gcproc::extract_join_framework(F)
+    join$alpha <- c(1,1)
+    join$beta <- c(1,1)
     
     # Run gcproc
     gcproc.model <- gcproc::gcproc(main_data,

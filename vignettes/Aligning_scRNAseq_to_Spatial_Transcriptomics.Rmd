@@ -47,7 +47,7 @@ kidney_sc_rnaseq <- read.csv("../../data/kidney_nanostring_spatial/wu_counts.csv
 
 matched_genes <- row.names(kidney_nanostring_rnaseq_train)[row.names(kidney_nanostring_rnaseq_train) %in% row.names(kidney_sc_rnaseq)]
 
-top_shared_var_genes <- sort(matched_genes[order(apply(kidney_nanostring_rnaseq_train[matched_genes,],1,var)+apply(kidney_sc_rnaseq[matched_genes,],1,var),decreasing = T)[1:10000]])
+top_shared_var_genes <- sort(matched_genes[order(apply(kidney_nanostring_rnaseq_train[matched_genes,],1,var)+apply(kidney_sc_rnaseq[matched_genes,],1,var),decreasing = T)[1:1000]])
 
 kidney_nanostring_rnaseq_train.select <- t(kidney_nanostring_rnaseq_train[top_shared_var_genes,])
 kidney_sc_rnaseq.select <- t(kidney_sc_rnaseq[top_shared_var_genes,])
@@ -69,7 +69,7 @@ The default parameters in the configuration variable are modified to adjust for 
 config <- gcproc::extract_config(verbose=F)
 config$i_dim <- 50
 config$j_dim <- 50
-config$max_iter <- 350
+config$max_iter <- 30
 config$verbose <- F
 
 ```
@@ -146,7 +146,7 @@ plot(gg1)
 
 ### Step 4 - Recover gene expression on histology tissue with a few gene markers present
 
-With the pixel information encoded to better represent the immunofluorescent kidney tissue, the newly encoded features can be used for further analysis. The transfer of parameters can be done via the anchor framework. Just as an anchor would position a ship at sea, an anchored parameter would freeze the parameter in place, while learning other parameters jointly in relation to the fixeded anchor.
+With the pixel information encoded to better represent the immunofluorescent kidney tissue, the newly encoded features can be used for further analysis. The transfer of parameters can be done via the anchor framework. Just as an anchor would position a ship at sea, an anchored parameter would freeze the parameter in place, while learning other parameters jointly in relation to the anchor.
 
 An example analysis is the recovery of missing gene expression, imputed from image-based histology with a few kidney gene markers. 
 
@@ -166,7 +166,7 @@ design_recover.x <- kidney_nanostring_rnaseq_train.select - kidney_nanostring_rn
 design_recover.x[-train_ids,which(!colnames(kidney_nanostring_rnaseq_train.select) %in% c(gene_marker_present_in_histology_taken_as_example))] <- 1
 design_recover.x[train_ids,which(colnames(kidney_nanostring_rnaseq_train.select) %in% c(gene_marker_present_in_histology_taken_as_example))] <- 0
 
-design_recover$method <- c("knn.reg")
+design_recover$method <- c("knn")
 design_recover$design.list <- list( y=NULL,
       x=as.matrix(design_recover.x)
       )
@@ -178,19 +178,15 @@ data_list.transfer <- list( y=as.matrix(kidney_nanostring_pixel_train.select),
       )
 
 
-fixed <- gcproc::extract_fixed_framework(F)
-fixed$alpha <- c(1,1)
-
-anchors <- gcproc::extract_anchors_framework(F)
-anchors$code <- gcproc.encode$code
+join <- gcproc::extract_join_framework(F)
+join$alpha <- c(1,1)
 
 library(gcproc)
 gcproc.transfer <- gcproc::gcproc(
                data_list = data_list.transfer,
                config = config,
                recover = design_recover, 
-               anchors = anchors,
-               fixed = fixed
+               join = join
                )
 
 corr_genes <- do.call('c',lapply(c(1:dim(kidney_nanostring_rnaseq_train.select.copy)[2]),function(i){
