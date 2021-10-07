@@ -7,10 +7,9 @@
 gcproc(
   data_list,
   config = gcproc::extract_config(verbose = F),
-  anchors = gcproc::extract_anchors_framework(verbose = F),
-  pivots = gcproc::extract_pivots_framework(verbose = F),
+  transfer = gcproc::extract_transfer_framework(verbose = F),
   recover = gcproc::extract_recovery_framework(verbose = F),
-  fixed = gcproc::extract_fixed_framework(verbose = F)
+  join = gcproc::extract_join_framework(verbose = F)
 )
 }
 \arguments{
@@ -18,13 +17,11 @@ gcproc(
 
 \item{config}{Configuration parameters (required, default provided)}
 
-\item{anchors}{Transferring pre-trained model parameters (not required)}
+\item{transfer}{Transferring pre-trained model parameters (not required)}
 
-\item{pivots}{Initialisation of model parameters (not required)}
+\item{recover}{Important information used for prediction or imputation (not required)}
 
-\item{recover}{Important information for prediction or imputation (not required)}
-
-\item{fixed}{Constrain parameters that share the same axes to be similar (not required)}
+\item{join}{Join parameters that share the same axes to be similar (not required)}
 }
 \value{
 Main parameters contains the learned model parameters. The alpha and beta matrix multiply example datasets x and y by, (K)(Y)(v) and (L)(X)(u). By multiplying with the parameter, the dimension of the samples and features can be dimensionally reduced for further visualisation analysis such as embedding or projection.

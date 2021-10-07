@@ -4,6 +4,7 @@
 #' @param j_dim Dimension reduction for features (assumed to be along columns)
 #' @param min_iter Minimum iteration of gcproc
 #' @param max_iter Maximum iteration of gcproc
+#' @param n_cores Number of CPU cores, used for prediction only
 #' @param tol Tolerance threshold for convergence (metric: Root Mean Squared Error)
 #' @param verbose Print statements?
 #' @param init Initialisation method for the model ("random","eigen-quick","eigen-dense","svd-quick","svd-dense")
@@ -11,13 +12,14 @@
 #' @export
 extract_config <- function(verbose=T){
   config <- list(
+    init="random",
     i_dim = 30,
     j_dim = 30,
     min_iter=2,
-    max_iter=350,
+    max_iter=150,
+    seed = 1e-2,
     tol=1,
-    verbose=T,
-    init="random")
+    verbose=T)
 
   if (verbose == T){
     print(config)
@@ -28,65 +30,49 @@ extract_config <- function(verbose=T){
 
 #' Extract anchor framework to put into gcproc
 #'
-#' Anchors allow the transfer of learned parameters from a pre-trained model.
+#' Transfers learned parameters from a pre-trained model.
 #' NOTE: This is an empty framework that the user must fill in.
 #'
 #' @param code Anchor the code
 #' @return  Anchor framework for gcproc
 #' @export
-extract_anchors_framework <- function(verbose=T){
-  anchors <- list(
+extract_transfer_framework <- function(verbose=T){
+  transfer <- list(
     code = NULL
   )
 
   if (verbose == T){
-    print(anchors)
+    print(transfer)
   }
 
-  return(anchors)
+  return(transfer)
 }
-
-#' Extract pivot framework to put into gcproc.
-#'
-#' Pivots allow initialisation of parameters as input.
-#' NOTE: This is an empty framework that the user must fill in.
-#'
-#' @param code code
-#' @return  Pivot framework for gcproc
-#' @export
-extract_pivots_framework <- function(verbose=T){
-  pivots <- list(
-    code = NULL
-  )
-
-  if (verbose == T){
-    print(pivots)
-  }
-
-  return(pivots)
-}
-
 
 
 #' Extract recovery framework to put into gcproc
 #'
 #' Can recover data points by imputing or predicting missing values
 #'
-#' @param task Allows user to specify either a regression or classification task
-#' @param method The algorithm for the task (Options are regression: "knn.reg","matrix.projection", -- provide your own --   ;   classification: "label.projection")
+#' @param task Allows user to specify either a regression, classification, or imputation task
+#' @param method The algorithm for the task (Options are regression/imputation: "knn","matrix.projection", -- provide your own --   ;   classification: "label.projection")
 #' @param design.list A list of design structures where each element is given a 1 to indicate the test set, 0 indicates the train set.
 #' @param labels For classification, these are the pre-defined labels
-#' @param predict.list This will be filled in by gpcroc with the predictions and return a prediction for indicated design matrices only. Leave as NULL to begin.
 #' @return  Prediction framework for gcproc
 #' @export
 extract_recovery_framework <- function(verbose=T){
   recover <- list(
-    task = c("regression"),    # c("classification")
-    method = c("knn.reg"),     # c("label.projection)
+    task = c("regression"),
+    method = c("matrix.projection"),
     design.list = NULL,
-    labels = NULL,
-    predict.list = NULL
+    labels = NULL
   )
+
+  # recover <- list(
+  #   task = c("classification"),
+  #   method = c("label.projection"),
+  #   design.list = NULL,
+  #   labels = NULL
+  # )
 
   if (verbose == T){
     print(recover)
@@ -100,19 +86,19 @@ extract_recovery_framework <- function(verbose=T){
 
 
 
-#' Extract fixed framework to put into gcproc
+#' Extract join framework to put into gcproc
 #'
-#' Fix data to improve modelling capacity for similar axes
-#' @param alpha Fixing the alpha parameters. A vector of integers, where identical integers indicate same the data axis. Axes that are not shared are given NA.
-#' @param beta Fixing the beta parameters. A vector of integers, where identical integers indicate same the data axis. Axes that are not shared are given NA.
+#' Join data to improve modelling capacity for similar axes
+#' @param alpha Joining the alpha parameters. A vector of integers, where identical integers indicate same the data axis to be joined. Axes that should not be shared are given NA.
+#' @param beta Joining the beta parameters. A vector of integers, where identical integers indicate same the data axis to be joined. Axes that should not be shared are given NA.
 #' @export
-extract_fixed_framework <- function(verbose=T){
-  fixed <- list(alpha=NULL,
+extract_join_framework <- function(verbose=T){
+  join <- list(alpha=NULL,
                 beta=NULL)
 
   if (verbose == T){
-    print(fixed)
+    print(join)
   }
 
-  return(fixed)
+  return(join)
 }
