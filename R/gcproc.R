@@ -242,7 +242,7 @@ pinv <- function(X,regularise=F){
 
   if (regularise){
 
-    return(invcov.shrink(X))
+    return(corpcor::invcov.shrink(X))
 
   } else {
 
