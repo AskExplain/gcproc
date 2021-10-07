@@ -24,6 +24,8 @@ gcproc <- function(data_list,
 
   runtime.start <- Sys.time()
 
+  set.seed(config$seed)
+
   initialise = TRUE
 
   if (initialise==T){
