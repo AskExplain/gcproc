@@ -29,19 +29,9 @@ recover_points <- function(data_list,
 
             if ("decode" %in% method){
 
-
-              x <- as.matrix(data_list[[i]])
-
               pred <- t(main.parameters[[i]]$alpha)%*%code$code%*%t(main.parameters[[i]]$beta)
 
-              samples_with_missing_points <- which((rowSums(recover$design.list[[i]])>0)==T)
-              covariate_predictors <-  pred[-samples_with_missing_points,]
-              test_predictors <- pred[samples_with_missing_points,]
-
-              elements_with_missing_points <- which((recover$design.list[[i]]>0)[samples_with_missing_points,]==T,arr.ind = T)
-              x[samples_with_missing_points,][elements_with_missing_points]  <- (((test_predictors)%*%(MASS::ginv(t(covariate_predictors)%*%(covariate_predictors))%*%t(covariate_predictors)%*%(x[-samples_with_missing_points,]))))[elements_with_missing_points]
-
-              data_list[[i]] <- recover$predict.list[[i]] <- as.matrix(x)
+              data_list[[i]] <- recover$predict.list[[i]] <- as.matrix(pred)
 
 
             }

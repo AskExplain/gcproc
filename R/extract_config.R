@@ -17,7 +17,7 @@ extract_config <- function(verbose=T){
     j_dim = 30,
     min_iter=2,
     max_iter=150,
-    seed = 1e-2,
+    seed = 1,
     tol=1,
     verbose=T)
 
