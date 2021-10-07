@@ -20,7 +20,7 @@ initialise.gcproc <- function(data_list,
     if (is.null(transfer$code)){
       # Find intercept in endecoded space
       X_encode <- (alpha%*%as.matrix(data_list[[i]])%*%(beta))
-      X_code <- (MASS::ginv((alpha)%*%t(alpha))%*%(X_encode)%*%MASS::ginv(t(beta)%*%(beta)))
+      X_code <- (pinv(regularise=T,(alpha)%*%t(alpha))%*%(X_encode)%*%pinv(regularise=T,t(beta)%*%(beta)))
 
       code <- X_code
 

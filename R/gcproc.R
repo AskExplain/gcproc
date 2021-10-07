@@ -168,8 +168,8 @@ gcproc <- function(data_list,
     feature_x.dim_reduce.encode <- t(main.parameters[[Y]]$alpha%*%x)
     sample_x.dim_reduce.encode <- x%*%main.parameters[[Y]]$beta
 
-    feature_x.dim_reduce.code <- t(MASS::ginv((main.parameters[[Y]]$alpha)%*%t(main.parameters[[Y]]$alpha))%*%main.parameters[[Y]]$alpha%*%x)
-    sample_x.dim_reduce.code <- x%*%main.parameters[[Y]]$beta%*%MASS::ginv(t(main.parameters[[Y]]$beta)%*%(main.parameters[[Y]]$beta))
+    feature_x.dim_reduce.code <- t(pinv(regularise=T,(main.parameters[[Y]]$alpha)%*%t(main.parameters[[Y]]$alpha))%*%main.parameters[[Y]]$alpha%*%x)
+    sample_x.dim_reduce.code <- x%*%main.parameters[[Y]]$beta%*%pinv(regularise=T,t(main.parameters[[Y]]$beta)%*%(main.parameters[[Y]]$beta))
 
     return(list(
       feature_x.dim_reduce.encode = feature_x.dim_reduce.encode,
@@ -225,14 +225,31 @@ update_set <- function(x,
                        transfer = NULL
 ){
 
-  main.parameters$alpha <- t(x%*%t((code$code)%*%t(main.parameters$beta))%*%MASS::ginv(((code$code)%*%t(main.parameters$beta))%*%t((code$code)%*%t(main.parameters$beta))))
-  main.parameters$beta <- t(MASS::ginv(t((t(main.parameters$alpha)%*%(code$code)))%*%((t(main.parameters$alpha)%*%(code$code))))%*%t(t(main.parameters$alpha)%*%(code$code))%*%x)
+  main.parameters$alpha <- t(x%*%t((code$code)%*%t(main.parameters$beta))%*%pinv(regularise=T,((code$code)%*%t(main.parameters$beta))%*%t((code$code)%*%t(main.parameters$beta))))
+  main.parameters$beta <- t(pinv(regularise=T,t((t(main.parameters$alpha)%*%(code$code)))%*%((t(main.parameters$alpha)%*%(code$code))))%*%t(t(main.parameters$alpha)%*%(code$code))%*%x)
 
   code$encode <- (main.parameters$alpha%*%( x )%*%(main.parameters$beta))
-  code$code <- MASS::ginv((main.parameters$alpha)%*%t(main.parameters$alpha))%*%code$encode%*%MASS::ginv(t(main.parameters$beta)%*%(main.parameters$beta))
+  code$code <- pinv(regularise=T,(main.parameters$alpha)%*%t(main.parameters$alpha))%*%code$encode%*%pinv(regularise=T,t(main.parameters$beta)%*%(main.parameters$beta))
 
   return(list(main.parameters = main.parameters,
               code = code
   ))
 
 }
+
+
+pinv <- function(X,regularise=F){
+
+  if (regularise){
+
+    return(invcov.shrink(X))
+
+  } else {
+
+    return(MASS::ginv(t(X)%*%X))
+
+  }
+
+}
+
+
