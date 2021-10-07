@@ -29,16 +29,19 @@ recover_points <- function(data_list,
 
             if ("decode" %in% method){
 
+
               x <- as.matrix(data_list[[i]])
 
-              row_with_missing_points <- which((rowSums(recover$design.list[[i]])>0)==T,arr.ind = T)
-              column_with_missing_points <- which((colSums(recover$design.list[[i]])>0)==T,arr.ind = T)
+              pred <- t(main.parameters[[i]]$alpha)%*%code$code%*%t(main.parameters[[i]]$beta)
 
-              pred <- t(main.parameters[[i]]$alpha[,row_with_missing_points])%*%code$decode%*%t(main.parameters[[i]]$beta[column_with_missing_points,])
+              samples_with_missing_points <- which((rowSums(recover$design.list[[i]])>0)==T)
+              covariate_predictors <-  pred[-samples_with_missing_points,]
+              test_predictors <- pred[samples_with_missing_points,]
 
-              x[row_with_missing_points,column_with_missing_points]  <- pred
+              elements_with_missing_points <- which((recover$design.list[[i]]>0)[samples_with_missing_points,]==T,arr.ind = T)
+              x[samples_with_missing_points,][elements_with_missing_points]  <- (((test_predictors)%*%(MASS::ginv(t(covariate_predictors)%*%(covariate_predictors))%*%t(covariate_predictors)%*%(x[-samples_with_missing_points,]))))[elements_with_missing_points]
 
-              data_list[[i]] <- recover$predict.list[[i]] <- x
+              data_list[[i]] <- recover$predict.list[[i]] <- as.matrix(x)
 
 
             }
@@ -53,7 +56,8 @@ recover_points <- function(data_list,
 
               if (is.null(recover$encoded_covariate)){
                 recover$encoded_covariate <- lapply(c(1:length(data_list)),function(X){
-                  transformed.data <- as.matrix(MASS::ginv((main.parameters[[X]]$alpha)%*%t(main.parameters[[X]]$alpha))%*%(main.parameters[[X]]$alpha)%*%as.matrix(data_list[[X]])%*%(main.parameters[[X]]$beta)%*%MASS::ginv(t((main.parameters[[X]]$beta))%*%(main.parameters[[X]]$beta)))
+                  # Predict using encode space
+                  transformed.data <- as.matrix(MASS::ginv((main.parameters[[X]]$alpha)%*%t(main.parameters[[X]]$alpha))%*%(main.parameters[[X]]$alpha)%*%as.matrix(data_list[[X]])%*%(main.parameters[[X]]$beta)%*%MASS::ginv(t(main.parameters[[X]]$beta)%*%(main.parameters[[X]]$beta)))
                 })
               }
 
@@ -68,7 +72,7 @@ recover_points <- function(data_list,
               elements_with_missing_points <- which((recover$design.list[[i]]>0)[samples_with_missing_points,]==T,arr.ind = T)
               x[samples_with_missing_points,][elements_with_missing_points]  <- (((test_predictors)%*%(MASS::ginv(t(covariate_predictors)%*%(covariate_predictors))%*%t(covariate_predictors)%*%(x[-samples_with_missing_points,]))))[elements_with_missing_points]
 
-              data_list[[i]] <- recover$predict.list[[i]] <- x
+              data_list[[i]] <- recover$predict.list[[i]] <- as.matrix(x)
             }
 
 
@@ -80,7 +84,8 @@ recover_points <- function(data_list,
 
               if (is.null(recover$encoded_covariate)){
                 recover$encoded_covariate <- lapply(c(1:length(data_list)),function(X){
-                  transformed.data <- as.matrix(MASS::ginv((main.parameters[[X]]$alpha)%*%t(main.parameters[[X]]$alpha))%*%(main.parameters[[X]]$alpha)%*%as.matrix(data_list[[X]])%*%(main.parameters[[X]]$beta)%*%MASS::ginv(t((main.parameters[[X]]$beta))%*%(main.parameters[[X]]$beta)))
+                  # Predict using encode space
+                  transformed.data <- as.matrix(MASS::ginv((main.parameters[[X]]$alpha)%*%t(main.parameters[[X]]$alpha))%*%(main.parameters[[X]]$alpha)%*%as.matrix(data_list[[X]])%*%(main.parameters[[X]]$beta)%*%MASS::ginv(t(main.parameters[[X]]$beta)%*%(main.parameters[[X]]$beta)))
                 })
               }
 
@@ -109,7 +114,7 @@ recover_points <- function(data_list,
               elements_with_missing_points <- which((recover$design.list[[i]]>0)[samples_with_missing_points,]==T,arr.ind = T)
               x[samples_with_missing_points,][elements_with_missing_points]  <- (pred)[elements_with_missing_points]
 
-              data_list[[i]] <- recover$predict.list[[i]] <- x
+              data_list[[i]] <- recover$predict.list[[i]] <- as.matrix(x)
 
             }
 
@@ -118,11 +123,10 @@ recover_points <- function(data_list,
 
               x <- as.matrix(data_list[[i]])
 
-
-
               if (is.null(recover$encoded_covariate)){
                 recover$encoded_covariate <- lapply(c(1:length(data_list)),function(X){
-                  transformed.data <- as.matrix(MASS::ginv((main.parameters[[X]]$alpha)%*%t(main.parameters[[X]]$alpha))%*%(main.parameters[[X]]$alpha)%*%as.matrix(data_list[[X]])%*%(main.parameters[[X]]$beta)%*%MASS::ginv(t((main.parameters[[X]]$beta))%*%(main.parameters[[X]]$beta)))
+                  # Predict using encode space
+                  transformed.data <- as.matrix(MASS::ginv((main.parameters[[X]]$alpha)%*%t(main.parameters[[X]]$alpha))%*%(main.parameters[[X]]$alpha)%*%as.matrix(data_list[[X]])%*%(main.parameters[[X]]$beta)%*%MASS::ginv(t(main.parameters[[X]]$beta)%*%(main.parameters[[X]]$beta)))
                 })
               }
 
@@ -140,7 +144,7 @@ recover_points <- function(data_list,
               elements_with_missing_points <- which((recover$design.list[[i]]>0)[samples_with_missing_points,]==T,arr.ind = T)
               x[samples_with_missing_points,][elements_with_missing_points]  <- (pred)[elements_with_missing_points]
 
-              data_list[[i]] <- recover$predict.list[[i]] <- x
+              data_list[[i]] <- recover$predict.list[[i]] <- as.matrix(x)
             }
 
 
@@ -162,7 +166,8 @@ recover_points <- function(data_list,
         for (j in which(recover$design.list==0)){
 
           recover$encoded_covariate <- lapply(c(1:length(data_list)),function(X){
-            transformed.data <- as.matrix(MASS::ginv((main.parameters[[X]]$alpha)%*%t(main.parameters[[X]]$alpha))%*%(main.parameters[[X]]$alpha)%*%as.matrix(data_list[[X]])%*%(main.parameters[[X]]$beta)%*%MASS::ginv(t((main.parameters[[X]]$beta))%*%(main.parameters[[X]]$beta)))
+            # Predict using encode space
+            transformed.data <- as.matrix(MASS::ginv((main.parameters[[X]]$alpha)%*%t(main.parameters[[X]]$alpha))%*%(main.parameters[[X]]$alpha)%*%as.matrix(data_list[[X]])%*%(main.parameters[[X]]$beta)%*%MASS::ginv(t(main.parameters[[X]]$beta)%*%(main.parameters[[X]]$beta)))
           })
 
           label.decoded_covariate <- scale(Reduce('+',lapply(c(1:length(recover$encoded_covariate))[-i],function(X){

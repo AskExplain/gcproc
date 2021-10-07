@@ -22,11 +22,11 @@ initialise.gcproc <- function(data_list,
       X_encode <- (alpha%*%as.matrix(data_list[[i]])%*%(beta))
       X_code <- (MASS::ginv((alpha)%*%t(alpha))%*%(X_encode)%*%MASS::ginv(t(beta)%*%(beta)))
 
-      decode <- X_code
+      code <- X_code
 
       code = list(
         encode = X_encode,
-        decode = decode
+        code = code
       )
 
     } else {
