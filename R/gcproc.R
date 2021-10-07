@@ -57,7 +57,7 @@ gcproc <- function(data_list,
 
     for (i in 1:length(data_list)){
 
-      return_update <- update_set(x = as.matrix(data_list[[i]]),
+      return_update <- update_set(x = if(config$augmentation==T){as.matrix(data_list[[i]])[sample(c(1:dim(data_list[[i]])[1])),sample(c(1:dim(data_list[[i]])[2]))]}else{as.matrix(data_list[[i]])},
                                   main.parameters = main.parameters[[i]],
                                   code = code,
                                   transfer = transfer

@@ -12,13 +12,14 @@
 #' @export
 extract_config <- function(verbose=T){
   config <- list(
+    augmentation = F,
+    init="random",
     i_dim = 30,
     j_dim = 30,
     min_iter=1,
     max_iter=150,
     tol=1,
-    verbose=T,
-    init="random")
+    verbose=T)
 
   if (verbose == T){
     print(config)
