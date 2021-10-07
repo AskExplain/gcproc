@@ -43,13 +43,6 @@ gcproc <- function(data_list,
   main.parameters <- initialise.model$main.parameters
   code <- initialise.model$code
 
-  code.initialise.model <- initialise.gcproc(data_list = list(code$code),
-                                        config = config,
-                                        transfer = NULL)
-
-  internal.main.parameters <- code.initialise.model$main.parameters
-  internal.code <- code.initialise.model$code
-
   if (config$verbose){
     print(paste("Beginning gcproc learning with:    Sample dimension reduction (config$i_dim): ",config$i_dim, "    Feature dimension reduction (config$j_dim): ", config$j_dim,"    Tolerance Threshold: ", config$tol, "   Maximum number of iterations: ", config$max_iter, "   Verbose: ", config$verbose, sep=""))
   }
@@ -90,16 +83,6 @@ gcproc <- function(data_list,
       main.parameters[[i]] <- return_update$main.parameters
       code <- return_update$code
 
-
-      code.return_update <- update_set(x = as.matrix(code$code),
-                                       main.parameters = internal.main.parameters[[1]],
-                                       code = internal.code
-      )
-
-      internal.main.parameters[[1]] <- code.return_update$main.parameters
-      internal.code <- code.return_update$code
-
-
       if (!is.null(join$alpha)){
 
         a_id <- which(join$alpha == join$alpha[i])
@@ -121,10 +104,6 @@ gcproc <- function(data_list,
       }
 
     }
-
-
-    code$code <- as.matrix(t(internal.main.parameters[[1]]$alpha)%*%internal.code$code%*%t(internal.main.parameters[[1]]$beta))
-
 
 
 
