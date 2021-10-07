@@ -29,9 +29,15 @@ recover_points <- function(data_list,
 
             if ("decode" %in% method){
 
+
+              x <- as.matrix(data_list[[i]])
+
               pred <- t(main.parameters[[i]]$alpha)%*%code$code%*%t(main.parameters[[i]]$beta)
 
-              data_list[[i]] <- recover$predict.list[[i]] <- as.matrix(pred)
+              elements_with_missing_points <- which((recover$design.list[[i]]>0)==T,arr.ind = T)
+              x[elements_with_missing_points]  <- (pred)[elements_with_missing_points]
+
+              data_list[[i]] <- recover$predict.list[[i]] <- as.matrix(x)
 
 
             }

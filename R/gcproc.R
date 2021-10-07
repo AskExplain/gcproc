@@ -43,6 +43,12 @@ gcproc <- function(data_list,
   main.parameters <- initialise.model$main.parameters
   code <- initialise.model$code
 
+  code.initialise.model <- initialise.gcproc(data_list = list(code$code),
+                                        config = config,
+                                        transfer = NULL)
+
+  internal.main.parameters <- code.initialise.model$main.parameters
+  internal.code <- code.initialise.model$code
 
   if (config$verbose){
     print(paste("Beginning gcproc learning with:    Sample dimension reduction (config$i_dim): ",config$i_dim, "    Feature dimension reduction (config$j_dim): ", config$j_dim,"    Tolerance Threshold: ", config$tol, "   Maximum number of iterations: ", config$max_iter, "   Verbose: ", config$verbose, sep=""))
@@ -50,7 +56,9 @@ gcproc <- function(data_list,
 
   while (T){
 
-    if (recover$method == "decode"){
+
+
+    if ("decode"%in%recover$method){
 
       recover_data <- recover_points(
         data_list,
@@ -68,10 +76,10 @@ gcproc <- function(data_list,
 
 
 
-
     prev_code <- code
 
     for (i in 1:length(data_list)){
+
 
       return_update <- update_set(x = as.matrix(data_list[[i]]),
                                   main.parameters = main.parameters[[i]],
@@ -81,6 +89,16 @@ gcproc <- function(data_list,
 
       main.parameters[[i]] <- return_update$main.parameters
       code <- return_update$code
+
+
+      code.return_update <- update_set(x = as.matrix(code$code),
+                                       main.parameters = internal.main.parameters[[1]],
+                                       code = internal.code
+      )
+
+      internal.main.parameters[[1]] <- code.return_update$main.parameters
+      internal.code <- code.return_update$code
+
 
       if (!is.null(join$alpha)){
 
@@ -103,6 +121,10 @@ gcproc <- function(data_list,
       }
 
     }
+
+
+    code$code <- as.matrix(t(internal.main.parameters[[1]]$alpha)%*%internal.code$code%*%t(internal.main.parameters[[1]]$beta))
+
 
 
 
@@ -221,24 +243,17 @@ gcproc <- function(data_list,
 update_set <- function(x,
                        main.parameters,
                        code,
-                       transfer
+                       transfer = NULL
 ){
 
   main.parameters$alpha <- t(x%*%t((code$code)%*%t(main.parameters$beta))%*%MASS::ginv(((code$code)%*%t(main.parameters$beta))%*%t((code$code)%*%t(main.parameters$beta))))
   main.parameters$beta <- t(MASS::ginv(t((t(main.parameters$alpha)%*%(code$code)))%*%((t(main.parameters$alpha)%*%(code$code))))%*%t(t(main.parameters$alpha)%*%(code$code))%*%x)
 
   code$encode <- (main.parameters$alpha%*%( x )%*%(main.parameters$beta))
-
-  if (is.null(transfer$code)){
-    code$code <- MASS::ginv((main.parameters$alpha)%*%t(main.parameters$alpha))%*%code$encode%*%MASS::ginv(t(main.parameters$beta)%*%(main.parameters$beta))
-  }
-  else {
-    code$code <- transfer$code$code
-  }
+  code$code <- MASS::ginv((main.parameters$alpha)%*%t(main.parameters$alpha))%*%code$encode%*%MASS::ginv(t(main.parameters$beta)%*%(main.parameters$beta))
 
   return(list(main.parameters = main.parameters,
               code = code
   ))
 
 }
-
