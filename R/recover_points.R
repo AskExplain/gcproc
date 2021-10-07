@@ -53,7 +53,7 @@ recover_points <- function(data_list,
               if (is.null(recover$encoded_covariate)){
                 recover$encoded_covariate <- lapply(c(1:length(data_list)),function(X){
                   # Predict using encode space
-                  transformed.data <- as.matrix(pinv(regularise=T,(main.parameters[[X]]$alpha)%*%t(main.parameters[[X]]$alpha))%*%(main.parameters[[X]]$alpha)%*%as.matrix(data_list[[X]])%*%(main.parameters[[X]]$beta)%*%pinv(regularise=T,t(main.parameters[[X]]$beta)%*%(main.parameters[[X]]$beta)))
+                  transformed.data <- as.matrix(pinv(regularise=T,(main.parameters[[X]]$alpha))%*%(main.parameters[[X]]$alpha)%*%as.matrix(data_list[[X]])%*%(main.parameters[[X]]$beta)%*%pinv(regularise=T,t(main.parameters[[X]]$beta)))
                 })
               }
 
@@ -81,7 +81,7 @@ recover_points <- function(data_list,
               if (is.null(recover$encoded_covariate)){
                 recover$encoded_covariate <- lapply(c(1:length(data_list)),function(X){
                   # Predict using encode space
-                  transformed.data <- as.matrix(pinv(regularise=T,(main.parameters[[X]]$alpha)%*%t(main.parameters[[X]]$alpha))%*%(main.parameters[[X]]$alpha)%*%as.matrix(data_list[[X]])%*%(main.parameters[[X]]$beta)%*%pinv(regularise=T,t(main.parameters[[X]]$beta)%*%(main.parameters[[X]]$beta)))
+                  transformed.data <- as.matrix(pinv(regularise=T,(main.parameters[[X]]$alpha))%*%(main.parameters[[X]]$alpha)%*%as.matrix(data_list[[X]])%*%(main.parameters[[X]]$beta)%*%pinv(regularise=T,t(main.parameters[[X]]$beta)))
                 })
               }
 
@@ -122,7 +122,7 @@ recover_points <- function(data_list,
               if (is.null(recover$encoded_covariate)){
                 recover$encoded_covariate <- lapply(c(1:length(data_list)),function(X){
                   # Predict using encode space
-                  transformed.data <- as.matrix(pinv(regularise=T,(main.parameters[[X]]$alpha)%*%t(main.parameters[[X]]$alpha))%*%(main.parameters[[X]]$alpha)%*%as.matrix(data_list[[X]])%*%(main.parameters[[X]]$beta)%*%pinv(regularise=T,t(main.parameters[[X]]$beta)%*%(main.parameters[[X]]$beta)))
+                  transformed.data <- as.matrix(pinv(regularise=T,(main.parameters[[X]]$alpha))%*%(main.parameters[[X]]$alpha)%*%as.matrix(data_list[[X]])%*%(main.parameters[[X]]$beta)%*%pinv(regularise=T,t(main.parameters[[X]]$beta)))
                 })
               }
 
@@ -163,7 +163,7 @@ recover_points <- function(data_list,
 
           recover$encoded_covariate <- lapply(c(1:length(data_list)),function(X){
             # Predict using encode space
-            transformed.data <- as.matrix(pinv(regularise=T,(main.parameters[[X]]$alpha)%*%t(main.parameters[[X]]$alpha))%*%(main.parameters[[X]]$alpha)%*%as.matrix(data_list[[X]])%*%(main.parameters[[X]]$beta)%*%pinv(regularise=T,t(main.parameters[[X]]$beta)%*%(main.parameters[[X]]$beta)))
+            transformed.data <- as.matrix(pinv(regularise=T,(main.parameters[[X]]$alpha))%*%(main.parameters[[X]]$alpha)%*%as.matrix(data_list[[X]])%*%(main.parameters[[X]]$beta)%*%pinv(regularise=T,t(main.parameters[[X]]$beta)))
           })
 
           label.decoded_covariate <- scale(Reduce('+',lapply(c(1:length(recover$encoded_covariate))[-i],function(X){
