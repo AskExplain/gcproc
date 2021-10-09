@@ -12,13 +12,18 @@
 #' @export
 extract_config <- function(verbose=T){
   config <- list(
+    dim_batches = NULL,
+    data_batches = NULL,
+    eta = NULL,
     init="random",
     i_dim = 30,
     j_dim = 30,
+    n_cores = 2,
     min_iter=2,
-    max_iter=150,
+    max_iter=350,
     seed = 1,
     tol=1,
+    vi = F,
     verbose=T)
 
   if (verbose == T){
