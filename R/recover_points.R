@@ -51,7 +51,7 @@ recover_points <- function(data_list,
 
               if (is.null(recover$encoded_covariate)){
                 recover$encoded_covariate <- lapply(c(1:length(data_list)),function(X){
-                  transformed.data <- as.matrix(MASS::ginv((main.parameters[[X]]$alpha)%*%t(main.parameters[[X]]$alpha))%*%(main.parameters[[X]]$alpha)%*%as.matrix(data_list[[X]])%*%(main.parameters[[X]]$beta)%*%MASS::ginv(t((main.parameters[[X]]$beta))%*%(main.parameters[[X]]$beta)))
+                  transformed.data <- as.matrix(data_list[[X]])%*%(main.parameters[[X]]$beta)%*%MASS::ginv(t((main.parameters[[X]]$beta))%*%(main.parameters[[X]]$beta)%*%MASS::ginv(t((main.parameters[[X]]$beta))%*%(main.parameters[[X]]$beta)))
 
                   return(transformed.data)
                 })
@@ -60,7 +60,7 @@ recover_points <- function(data_list,
 
               decoded_covariate <- cbind(1,
                                          scale(Reduce('+',lapply(c(1:length(recover$encoded_covariate))[-i],function(X){
-                                           t(main.parameters[[i]]$alpha)%*%recover$encoded_covariate[[X]]
+                                           recover$encoded_covariate[[X]]
                                          })))              )
 
               samples_with_missing_points <- which((rowSums(recover$design.list[[i]])>0)==T)
