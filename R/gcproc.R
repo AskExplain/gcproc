@@ -29,7 +29,9 @@ gcproc <- function(data_list,
   initialise = TRUE
 
   # Prepare convergence checking parameters
-  count = 1
+  count = 0
+  update = 0
+  bootstrap_predict = 0
   score.vec <- c()
 
   convergence.parameters <- list(count = count, score.vec = score.vec)
@@ -38,8 +40,8 @@ gcproc <- function(data_list,
   accept_score <- 1 # How many scores used to calculate previous and current "mean score"
 
   pivots <- list()
-  pivots$alpha <- c(1:10)
-  pivots$beta <- c(1:10)
+  pivots$alpha <- c(1:config$expand.dim)
+  pivots$beta <- c(1:config$expand.dim)
 
   recover$predict.list <- lapply(c(1:length(data_list)),function(X){NULL})
 
@@ -137,10 +139,44 @@ gcproc <- function(data_list,
     if (convergence.parameters$count > config$min_iter &  convergence.parameters$count > ( score_lag ) ){
       if (abs(convergence.parameters$prev.MAE - convergence.parameters$MAE) < config$tol){
         if ((convergence.parameters$count > config$max_iter ) | ( length(pivots$alpha) == config$i_dim & length(pivots$beta) == config$j_dim)){
-          break
+          if (update == 0){
+            main_pivot <- pivots
+          }
+          update = update + 1
+          pivots$alpha <- sample(main_pivot$alpha,config$expand.dim)
+          pivots$beta <- sample(main_pivot$beta,config$expand.dim)
+
+
+
+          if (update > config$update){
+
+
+            if (any(do.call('c',lapply(recover$design.list,function(X){!is.null(X)})))){
+
+              recover_data <- recover_points(
+                data_list,
+                code = code,
+                main.parameters = main.parameters,
+                config = config,
+                recover = recover
+              )
+
+              recover <- recover_data$recover
+              data_list <- recover_data$data_list
+
+              bootstrap_predict <- bootstrap_predict + 1
+              if (bootstrap_predict > config$bootstrap){
+                break
+              }
+
+            } else {
+              break
+            }
+
+          }
         }
-        if (length(pivots$alpha) != config$i_dim){
-          for (i in 1:10){
+        if (update ==  0 & length(pivots$alpha) != config$i_dim){
+          for (i in 1:config$expand.dim){
           pivots$alpha <- c(pivots$alpha,tail(pivots$alpha,1)+1)
           main.parameters <- lapply(c(1:length(data_list)),function(X){
             internal_alpha <- main.parameters[[X]]$alpha
@@ -152,8 +188,8 @@ gcproc <- function(data_list,
           code$encode[tail(pivots$alpha,1),1:tail(pivots$beta,1)] <- code$code[tail(pivots$alpha,1),1:tail(pivots$beta,1)] <- rnorm(tail(pivots$beta,1))
           }
         }
-        if (length(pivots$beta) != config$j_dim){
-          for (i in 1:10){
+        if (update == 0 & length(pivots$beta) != config$j_dim){
+          for (i in 1:config$expand.dim){
           pivots$beta <- c(pivots$beta,tail(pivots$beta,1)+1)
           main.parameters <- lapply(c(1:length(data_list)),function(X){
             internal_beta <- main.parameters[[X]]$beta
@@ -181,19 +217,6 @@ gcproc <- function(data_list,
   }
 
 
-  if (any(do.call('c',lapply(recover$design.list,function(X){!is.null(X)})))){
-
-    recover_data <- recover_points(
-      data_list,
-      code = code,
-      main.parameters = main.parameters,
-      config = config,
-      recover = recover
-    )
-
-    recover <- recover_data$recover
-    data_list <- recover_data$data_list
-  }
 
 
 
@@ -240,6 +263,7 @@ gcproc <- function(data_list,
       config = config,
       join = join,
       pivots = pivots,
+      update = update,
       runtime = list(
         runtime.start = runtime.start,
         runtime.end = runtime.end,
@@ -261,11 +285,22 @@ update_set <- function(x,
                        code,
                        pivots){
 
-  main.parameters$alpha[tail(pivots$alpha,10),] <- (t(x%*%t((code$code[tail(pivots$alpha,10),tail(pivots$beta,10)])%*%t(main.parameters$beta[,tail(pivots$beta,10)]))%*%pinv(t((code$code[tail(pivots$alpha,10),tail(pivots$beta,10)])%*%t(main.parameters$beta[,tail(pivots$beta,10)])))))
-  main.parameters$beta[,tail(pivots$beta,10)] <- (t(pinv(((t(main.parameters$alpha[tail(pivots$alpha,10),])%*%(code$code[tail(pivots$alpha,10),tail(pivots$beta,10)]))))%*%t(t(main.parameters$alpha[tail(pivots$alpha,10),])%*%(code$code[tail(pivots$alpha,10),tail(pivots$beta,10)]))%*%x))
+  main.parameters$alpha[tail(pivots$alpha,config$expand.dim),] <- (t(x%*%t((code$code[tail(pivots$alpha,config$expand.dim),tail(pivots$beta,config$expand.dim)])%*%t(main.parameters$beta[,tail(pivots$beta,config$expand.dim)]))%*%pinv(t((code$code[tail(pivots$alpha,config$expand.dim),tail(pivots$beta,config$expand.dim)])%*%t(main.parameters$beta[,tail(pivots$beta,config$expand.dim)])))))
+  main.parameters$beta[,tail(pivots$beta,config$expand.dim)] <- (t(pinv(((t(main.parameters$alpha[tail(pivots$alpha,config$expand.dim),])%*%(code$code[tail(pivots$alpha,config$expand.dim),tail(pivots$beta,config$expand.dim)]))))%*%t(t(main.parameters$alpha[tail(pivots$alpha,config$expand.dim),])%*%(code$code[tail(pivots$alpha,config$expand.dim),tail(pivots$beta,config$expand.dim)]))%*%x))
 
-  code$encode[tail(pivots$alpha,10),tail(pivots$beta,10)] <- (main.parameters$alpha[tail(pivots$alpha,10),]%*%( x )%*%(main.parameters$beta[,tail(pivots$beta,10)]))
-  code$code[tail(pivots$alpha,10),tail(pivots$beta,10)] = MASS::ginv(main.parameters$alpha[tail(pivots$alpha,10),]%*%t(main.parameters$alpha[tail(pivots$alpha,10),]))%*%(code$encode[tail(pivots$alpha,10),tail(pivots$beta,10)])%*%MASS::ginv(t(main.parameters$beta[,tail(pivots$beta,10)])%*%main.parameters$beta[,tail(pivots$beta,10)])
+  code$encode[tail(pivots$alpha,config$expand.dim),tail(pivots$beta,config$expand.dim)] <- (main.parameters$alpha[tail(pivots$alpha,config$expand.dim),]%*%( x )%*%(main.parameters$beta[,tail(pivots$beta,config$expand.dim)]))
+  code$code[tail(pivots$alpha,config$expand.dim),tail(pivots$beta,config$expand.dim)] = MASS::ginv(main.parameters$alpha[tail(pivots$alpha,config$expand.dim),]%*%t(main.parameters$alpha[tail(pivots$alpha,config$expand.dim),]))%*%(code$encode[tail(pivots$alpha,config$expand.dim),tail(pivots$beta,config$expand.dim)])%*%MASS::ginv(t(main.parameters$beta[,tail(pivots$beta,config$expand.dim)])%*%main.parameters$beta[,tail(pivots$beta,config$expand.dim)])
+
+  #
+#   sample_beta.pivot <- sample(pivots$beta,config$expand.dim)
+#   sample_alpha.pivot <- sample(pivots$alpha,config$expand.dim)
+#
+#   main.parameters$alpha[sample_alpha.pivot,] <- (t(x%*%t((code$code[sample_alpha.pivot,sample_beta.pivot])%*%t(main.parameters$beta[,sample_beta.pivot]))%*%pinv(t((code$code[sample_alpha.pivot,sample_beta.pivot])%*%t(main.parameters$beta[,sample_beta.pivot])))))
+#   main.parameters$beta[,sample_beta.pivot] <- (t(pinv(((t(main.parameters$alpha[sample_alpha.pivot,])%*%(code$code[sample_alpha.pivot,sample_beta.pivot]))))%*%t(t(main.parameters$alpha[sample_alpha.pivot,])%*%(code$code[sample_alpha.pivot,sample_beta.pivot]))%*%x))
+#
+#   code$encode[sample_alpha.pivot,sample_beta.pivot] <- (main.parameters$alpha[sample_alpha.pivot,]%*%( x )%*%(main.parameters$beta[,sample_beta.pivot]))
+#   code$code[sample_alpha.pivot,sample_beta.pivot] = MASS::ginv(main.parameters$alpha[sample_alpha.pivot,]%*%t(main.parameters$alpha[sample_alpha.pivot,]))%*%(code$encode[sample_alpha.pivot,sample_beta.pivot])%*%MASS::ginv(t(main.parameters$beta[,sample_beta.pivot])%*%main.parameters$beta[,sample_beta.pivot])
+
 
   return(list(main.parameters = main.parameters,
               code = code

@@ -34,7 +34,7 @@ recover_points <- function(data_list,
               row_with_missing_points <- which((rowSums(recover$design.list[[i]])>0)==T,arr.ind = T)
               column_with_missing_points <- which((colSums(recover$design.list[[i]])>0)==T,arr.ind = T)
 
-              pred <- t(main.parameters[[i]]$alpha[,row_with_missing_points])%*%code$decode%*%t(main.parameters[[i]]$beta[column_with_missing_points,])
+              pred <- t(main.parameters[[i]]$alpha[,row_with_missing_points])%*%code$code%*%t(main.parameters[[i]]$beta[column_with_missing_points,])
 
               x[row_with_missing_points,column_with_missing_points]  <- pred
 
@@ -50,7 +50,7 @@ recover_points <- function(data_list,
 
 
               if (is.null(recover$encoded_covariate)){
-                recover$encoded_covariate <- lapply(c(1:length(data_list))[-i],function(X){
+                recover$encoded_covariate <- lapply(c(1:length(data_list)),function(X){
                   transformed.data <- as.matrix(data_list[[X]])%*%(main.parameters[[X]]$beta)
                   return(transformed.data)
                 })
@@ -79,7 +79,7 @@ recover_points <- function(data_list,
               x <- as.matrix(data_list[[i]])
 
               if (is.null(recover$encoded_covariate)){
-                recover$encoded_covariate <- lapply(c(1:length(data_list))[-i],function(X){
+                recover$encoded_covariate <- lapply(c(1:length(data_list)),function(X){
                   transformed.data <- as.matrix(data_list[[X]])%*%(main.parameters[[X]]$beta)
                   return(transformed.data)
                 })
@@ -123,7 +123,7 @@ recover_points <- function(data_list,
               x <- as.matrix(data_list[[i]])
 
               if (is.null(recover$encoded_covariate)){
-                recover$encoded_covariate <- lapply(c(1:length(data_list))[-i],function(X){
+                recover$encoded_covariate <- lapply(c(1:length(data_list)),function(X){
                   transformed.data <- as.matrix(data_list[[X]])%*%(main.parameters[[X]]$beta)
                   return(transformed.data)
                 })
@@ -167,13 +167,13 @@ recover_points <- function(data_list,
         for (j in which(recover$design.list==0)){
 
           if (is.null(recover$encoded_covariate)){
-            recover$encoded_covariate <- lapply(c(1:length(data_list))[-i],function(X){
+            recover$encoded_covariate <- lapply(c(1:length(data_list)),function(X){
               transformed.data <- as.matrix(data_list[[X]])%*%(main.parameters[[X]]$beta)
               return(transformed.data)
             })
           }
 
-          label.decoded_covariate <- scale(Reduce('+',lapply(c(1:length(recover$encoded_covariate))[-i],function(X){
+          label.decoded_covariate <- scale(Reduce('+',lapply(c(1:length(recover$encoded_covariate)),function(X){
             t(main.parameters[[j]]$alpha)%*%recover$encoded_covariate[[X]]
           })))
 
