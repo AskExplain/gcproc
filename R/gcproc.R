@@ -279,13 +279,13 @@ vi_update_set <- function(x,
   config$dim_batches <- if(is.null(config$dim_batches)){30}else{config$dim_batches}
   config$data_batches <- if(is.null(config$data_batches)){30}else{config$data_batches}
 
-  x.g.sample <- chunk(sample(c(1:dim(x)[1])),config$data_batches)
-  x.v.sample <- chunk(sample(c(1:dim(x)[2])),config$data_batches)
+  x.g.sample <- chunk(sample(c(1:dim(x)[1])),if(dim(x)[1]<config$data_batches){3}else{config$data_batches})
+  x.v.sample <- chunk(sample(c(1:dim(x)[2])),if(dim(x)[2]<config$data_batches){3}else{config$data_batches})
 
   i.sample <- chunk(sample(c(1:config$i_dim)),config$dim_batches)
   j.sample <- chunk(sample(c(1:config$j_dim)),config$dim_batches)
 
-  data_batch_table <- c(1:config$data_batches)
+  data_batch_table <- if(dim(x)[1]<config$data_batches | dim(x)[2]<config$data_batches){3}else{config$data_batches}
   data_batch_table <- sapply(c(1:2),function(X){sample(data_batch_table,30,replace = T)})
 
   dim_batch_table <- c(1:config$dim_batches)
