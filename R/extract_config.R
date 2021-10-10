@@ -12,17 +12,19 @@
 #' @export
 extract_config <- function(verbose=T){
   config <- list(
-    bootstrap = 2,
-    expand.dim = 5,
+    extend_dim = 10,
     init="random",
     i_dim = 30,
     j_dim = 30,
     min_iter=2,
     max_iter=350,
+    n_cores = 2,
+    n_bootstrap = 3,
+    n_update = 3,
     seed = 1,
     tol=1,
-    verbose = T,
-    update = 5)
+    verbose = T
+    )
 
   if (verbose == T){
     print(config)
@@ -36,12 +38,15 @@ extract_config <- function(verbose=T){
 #' Transfers learned parameters from a pre-trained model.
 #' NOTE: This is an empty framework that the user must fill in.
 #'
-#' @param code Anchor the code
+#' @param code Transfer the code
+#' @param fix Fix anchors the code parameters, otherwise it will be updated
+
 #' @return  Anchor framework for gcproc
 #' @export
 extract_transfer_framework <- function(verbose=T){
   transfer <- list(
-    code = NULL
+    code = NULL,
+    fix = NULL
   )
 
   if (verbose == T){

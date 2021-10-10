@@ -34,9 +34,9 @@ recover_points <- function(data_list,
               row_with_missing_points <- which((rowSums(recover$design.list[[i]])>0)==T,arr.ind = T)
               column_with_missing_points <- which((colSums(recover$design.list[[i]])>0)==T,arr.ind = T)
 
-              pred <- t(main.parameters[[i]]$alpha[,row_with_missing_points])%*%code$code%*%t(main.parameters[[i]]$beta[column_with_missing_points,])
+              pred <- t(main.parameters[[i]]$alpha)%*%code$code%*%t(main.parameters[[i]]$beta)
 
-              x[row_with_missing_points,column_with_missing_points]  <- pred
+              x[row_with_missing_points,column_with_missing_points]  <- pred[row_with_missing_points,column_with_missing_points]
 
               data_list[[i]] <- recover$predict.list[[i]] <- x
 
@@ -201,6 +201,3 @@ recover_points <- function(data_list,
   return(list(recover=recover,
               data_list=data_list))
 }
-
-
-
