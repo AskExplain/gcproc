@@ -96,8 +96,6 @@ recover_points <- function(data_list,
               covariate_predictors <-  decoded_covariate[-samples_with_missing_points,]
               test_predictors <- decoded_covariate[samples_with_missing_points,]
 
-              print(test_predictors)
-
               knn_ix <- FNN::get.knnx(
                 covariate_predictors,
                 test_predictors,

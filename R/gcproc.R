@@ -195,8 +195,6 @@ gcproc <- function(data_list,
     convergence.parameters$MAE <- mean(tail(convergence.parameters$score.vec,accept_score))
     convergence.parameters$prev.MAE <- mean(tail(convergence.parameters$score.vec,score_lag)[1:accept_score])
 
-    print(abs(convergence.parameters$prev.MAE - convergence.parameters$MAE))
-
     if (convergence.parameters$count > config$min_iter &  convergence.parameters$count > ( score_lag ) ){
       if ((convergence.parameters$count > config$max_iter ) | abs(convergence.parameters$prev.MAE - convergence.parameters$MAE) < config$tol){
 
@@ -492,28 +490,57 @@ run_gcproc_single_pass <- function(data_list,
           break
         }
 
-        if (length(pivots$alpha) != config$i_dim){
-          pivots$alpha <- c(pivots$alpha,c(c(tail(pivots$alpha,1)+1):max(c(config$i_dim,c(tail(pivots$alpha,1)+config$extend_dim)))))
-          main.parameters <- lapply(c(1:length(data_list)),function(X){
-            internal_alpha <- main.parameters[[X]]$alpha
-            internal_alpha[tail(pivots$alpha,min(c(config$i_dim,config$extend_dim))),] <- rnorm(prod(dim(internal_alpha[tail(pivots$alpha,config$extend_dim),])))
+        # if (length(pivots$alpha) != config$i_dim){
+        #   pivots$alpha <- c(pivots$alpha,c(c(tail(pivots$alpha,1)+1):max(c(config$i_dim,c(tail(pivots$alpha,1)+config$extend_dim)))))
+        #   main.parameters <- lapply(c(1:length(data_list)),function(X){
+        #     internal_alpha <- main.parameters[[X]]$alpha
+        #     internal_alpha[tail(pivots$alpha,min(c(config$i_dim,config$extend_dim))),] <- rnorm(prod(dim(internal_alpha[tail(pivots$alpha,config$extend_dim),])))
+        #
+        #     return(list(alpha = internal_alpha,
+        #                 beta = main.parameters[[X]]$beta))
+        #   })
+        #   code$encode[tail(pivots$alpha,config$extend_dim),1:tail(pivots$beta,1)] <- code$code[tail(pivots$alpha,config$extend_dim),1:tail(pivots$beta,1)] <- rnorm(config$extend_dim*tail(pivots$alpha,1))
+        # }
+        # if (length(pivots$beta) != config$j_dim){
+        #   pivots$beta <- c(pivots$beta,c(c(tail(pivots$beta,1)+1):max(c(config$j_dim,c(tail(pivots$beta,1)+config$extend_dim)))))
+        #   main.parameters <- lapply(c(1:length(data_list)),function(X){
+        #     internal_beta <- main.parameters[[X]]$beta
+        #     internal_beta[,tail(pivots$beta,min(c(config$j_dim,config$extend_dim)))] <- rnorm(prod(dim(internal_beta[,tail(pivots$beta,config$extend_dim)])))
+        #
+        #     return(list(alpha = main.parameters[[X]]$alpha,
+        #                 beta = internal_beta))
+        #   })
+        #   code$encode[1:tail(pivots$alpha,1),tail(pivots$beta,config$extend_dim)] <- code$code[1:tail(pivots$alpha,1),tail(pivots$beta,config$extend_dim)] <- rnorm(config$extend_dim*tail(pivots$alpha,1))
+        # }
 
-            return(list(alpha = internal_alpha,
-                        beta = main.parameters[[X]]$beta))
-          })
-          code$encode[tail(pivots$alpha,config$extend_dim),1:tail(pivots$beta,1)] <- code$code[tail(pivots$alpha,config$extend_dim),1:tail(pivots$beta,1)] <- rnorm(config$extend_dim*tail(pivots$alpha,1))
-        }
-        if (length(pivots$beta) != config$j_dim){
-          pivots$beta <- c(pivots$beta,c(c(tail(pivots$beta,1)+1):max(c(config$j_dim,c(tail(pivots$beta,1)+config$extend_dim)))))
-          main.parameters <- lapply(c(1:length(data_list)),function(X){
-            internal_beta <- main.parameters[[X]]$beta
-            internal_beta[,tail(pivots$beta,min(c(config$j_dim,config$extend_dim)))] <- rnorm(prod(dim(internal_beta[,tail(pivots$beta,config$extend_dim)])))
 
-            return(list(alpha = main.parameters[[X]]$alpha,
-                        beta = internal_beta))
-          })
-          code$encode[1:tail(pivots$alpha,1),tail(pivots$beta,config$extend_dim)] <- code$code[1:tail(pivots$alpha,1),tail(pivots$beta,config$extend_dim)] <- rnorm(config$extend_dim*tail(pivots$alpha,1))
+        if (update ==  0 & length(pivots$alpha) != config$i_dim){
+          for (i in 1:config$extend_dim){
+            pivots$alpha <- c(pivots$alpha,tail(pivots$alpha,1)+1)
+            main.parameters <- lapply(c(1:length(data_list)),function(X){
+              internal_alpha <- main.parameters[[X]]$alpha
+              internal_alpha[tail(pivots$alpha,1),] <- rnorm(dim(data_list[[X]])[1])
+
+              return(list(alpha = internal_alpha,
+                          beta = main.parameters[[X]]$beta))
+            })
+            code$encode[tail(pivots$alpha,1),1:tail(pivots$beta,1)] <- code$code[tail(pivots$alpha,1),1:tail(pivots$beta,1)] <- rnorm(tail(pivots$beta,1))
+          }
         }
+        if (update == 0 & length(pivots$beta) != config$j_dim){
+          for (i in 1:config$extend_dim){
+            pivots$beta <- c(pivots$beta,tail(pivots$beta,1)+1)
+            main.parameters <- lapply(c(1:length(data_list)),function(X){
+              internal_beta <- main.parameters[[X]]$beta
+              internal_beta[,tail(pivots$beta,1)] <- rnorm(dim(data_list[[X]])[2])
+
+              return(list(alpha = main.parameters[[X]]$alpha,
+                          beta = internal_beta))
+            })
+            code$encode[1:tail(pivots$alpha,1),tail(pivots$beta,1)] <- code$code[1:tail(pivots$alpha,1),tail(pivots$beta,1)] <- rnorm(tail(pivots$alpha,1))
+          }
+        }
+
 
         sub.pivots <- list(
           alpha = tail(pivots$alpha,config$extend_dim),

@@ -12,15 +12,15 @@
 #' @export
 extract_config <- function(verbose=T){
   config <- list(
-    extend_dim = 10,
+    extend_dim = 100,
     init="random",
     i_dim = 30,
     j_dim = 30,
     min_iter=2,
     max_iter=350,
     n_cores = 2,
-    n_bootstrap = 3,
-    n_update = 3,
+    n_bootstrap = 1,
+    n_update = 1,
     seed = 1,
     tol=1,
     verbose = T
