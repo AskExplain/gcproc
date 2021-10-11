@@ -55,6 +55,7 @@ gcproc <- function(data_list,
                                         config = config,
                                         covariate = covariate,
                                         transfer = transfer,
+                                        join = join,
                                         pivots = pivots)
 
 
@@ -92,8 +93,6 @@ gcproc <- function(data_list,
 
     prev_code = main.code
 
-
-
     set.seed(main_sample_seed)
 
     anchor <- list(alpha = sample(1:config$i_dim,min(config$extend_dim,config$i_dim)),
@@ -111,8 +110,13 @@ gcproc <- function(data_list,
 
       index <- main.index[[j]]
 
+      internal.param <- list(
+        alpha = main.parameters$alpha[[join$alpha[j]]],
+        beta = main.parameters$beta[[join$beta[j]]]
+      )
+
       gcproc.update <- run_gcproc_parallel(x = as.matrix(data_list[[j]]),
-                                           main.parameters = main.parameters[[j]],
+                                           main.parameters = internal.param,
                                            main.code = main.code,
                                            config = config,
                                            fix = transfer$fix,
@@ -120,69 +124,15 @@ gcproc <- function(data_list,
                                            pivots = pivots,
                                            index = index)
 
+
+      main.parameters$alpha[[join$alpha[j]]] <- gcproc.update$main.parameters$alpha
+      main.parameters$beta[[join$beta[j]]] <- gcproc.update$main.parameters$beta
+
       main.code <- gcproc.update$main.code
-      main.parameters[[j]] <- gcproc.update$main.parameters
-
-      if (!is.null(join$alpha)){
-
-        a_id <- which(join$alpha == join$alpha[j])
-        shift.alpha <- main.parameters[[a_id[1]]]$alpha
-
-        for (a in a_id[-1]){
-          main.parameters[[a]]$alpha <- shift.alpha
-          shift.alpha <- main.parameters[[a]]$alpha
-        }
-
-        main.parameters[[a_id[1]]]$alpha <- shift.alpha
-
-      }
-      if (!is.null(join$beta)){
-
-        b_id <- which(join$beta == join$beta[j])
-        shift.beta <- main.parameters[[b_id[1]]]$beta
-
-        for (b in b_id[-1]){
-          main.parameters[[b]]$beta <- shift.beta
-          shift.beta <- main.parameters[[b]]$beta
-        }
-
-        main.parameters[[b_id[1]]]$beta <- shift.beta
-
-      }
 
     }
 
-    if (convergence.parameters$count <= 15){
-      if (config$verbose){
-        print(paste("Iteration: ",convergence.parameters$count,sep=""))
-      }
-    }
-    if (convergence.parameters$count > 15 & convergence.parameters$count <= 100){
-      if (convergence.parameters$count%%5 == 0 & config$verbose){
-        print(paste("Iteration: ",convergence.parameters$count,sep=""))
-      }
-    }
-    if (convergence.parameters$count > 100 & convergence.parameters$count <= 200){
-      if (convergence.parameters$count%%10 == 0 & config$verbose){
-        print(paste("Iteration: ",convergence.parameters$count,sep=""))
-      }
-    }
-    if (convergence.parameters$count > 200 & convergence.parameters$count <= 300){
-      if (convergence.parameters$count%%25 == 0 & config$verbose){
-        print(paste("Iteration: ",convergence.parameters$count,sep=""))
-      }
-    }
-    if (convergence.parameters$count > 300 & convergence.parameters$count <= 400){
-      if (convergence.parameters$count%%50 == 0 & config$verbose){
-        print(paste("Iteration: ",convergence.parameters$count,sep=""))
-      }
-    }
-    if (convergence.parameters$count > 400){
-      if (convergence.parameters$count%%100 == 0 & config$verbose){
-        print(paste("Iteration: ",convergence.parameters$count,sep=""))
-      }
-    }
-
+    print_iterations(convergence.parameters,config)
 
     matrix.residuals <- prev_code$encode - main.code$encode
 
@@ -207,7 +157,8 @@ gcproc <- function(data_list,
               main.code = main.code,
               main.parameters = main.parameters,
               config = config,
-              recover = recover
+              recover = recover,
+              join = join
             )
 
             recover <- recover_data$recover
@@ -248,11 +199,11 @@ gcproc <- function(data_list,
 
     x <- as.matrix(data_list[[Y]])
 
-    feature_x.dim_reduce.encode <- t(main.parameters[[Y]]$alpha%*%x)
-    sample_x.dim_reduce.encode <- x%*%main.parameters[[Y]]$beta
+    feature_x.dim_reduce.encode <- t(main.parameters$alpha[[join$alpha[Y]]]%*%x)
+    sample_x.dim_reduce.encode <- x%*%main.parameters$beta[[join$beta[Y]]]
 
-    feature_x.dim_reduce.code <- t(pinv(t(main.parameters[[Y]]$alpha))%*%main.parameters[[Y]]$alpha%*%x)
-    sample_x.dim_reduce.code <- x%*%main.parameters[[Y]]$beta%*%pinv((main.parameters[[Y]]$beta))
+    feature_x.dim_reduce.code <- t(pinv(t(main.parameters$alpha[[join$alpha[Y]]]))%*%main.parameters$alpha[[join$alpha[Y]]]%*%x)
+    sample_x.dim_reduce.code <- x%*%main.parameters$beta[[join$beta[Y]]]%*%pinv((main.parameters$beta[[join$beta[Y]]]))
 
     return(list(
       feature_x.dim_reduce.encode = feature_x.dim_reduce.encode,
@@ -318,16 +269,58 @@ update_set <- function(x,
   for (i in which(index[,2]==1)){
 
     if(!fix){
-      main.code$code[[i]][pivots$alpha,pivots$beta] <- MASS::ginv(main.parameters$alpha[pivots$alpha,]%*%t(main.parameters$alpha[pivots$alpha,]))%*%(main.code$encode[pivots$alpha,pivots$beta])%*%MASS::ginv(t(main.parameters$beta[,pivots$beta])%*%main.parameters$beta[,pivots$beta])
+      main.code$code[[i]][pivots$alpha,pivots$beta] <- pinv(t(main.parameters$alpha[pivots$alpha,]))%*%(main.code$encode[pivots$alpha,pivots$beta])%*%pinv(main.parameters$beta[,pivots$beta])
     }
 
   }
-
 
   return(list(main.parameters = main.parameters,
               main.code = main.code
   ))
 
+}
+
+
+
+transform.data <- function(x,method="scale"){
+
+  if (method == "scale"){
+    center = T
+    scale = T
+
+    x <- as.matrix(x)
+    nc <- ncol(x)
+    if (is.logical(center)) {
+      if (center) {
+        center <- colMeans(x, na.rm=TRUE)
+        x <- sweep(x, 2L, center, check.margin=FALSE)
+      }
+    }
+    else if (is.numeric(center) && (length(center) == nc))
+      x <- sweep(x, 2L, center, check.margin=FALSE)
+    else
+      stop("length of 'center' must equal the number of columns of 'x'")
+    if (is.logical(scale)) {
+      if (scale) {
+        f <- function(v) {
+          v <- v[!is.na(v)]
+          sqrt(sum(v^2) / max(1, length(v) - 1L))
+        }
+        scale <- apply(x, 2L, f)
+        scale <- sapply(scale,function(scale){if(scale==0|is.na(scale)){1}else{scale}})
+        x <- sweep(x, 2L, scale, "/", check.margin=FALSE)
+      }
+    }
+    else if (is.numeric(scale) && length(scale) == nc)
+      x <- sweep(x, 2L, scale, "/", check.margin=FALSE)
+    else
+      stop("length of 'scale' must equal the number of columns of 'x'")
+    if(is.numeric(center)) attr(x, "scaled:center") <- center
+    if(is.numeric(scale)) attr(x, "scaled:scale") <- scale
+    x
+  }
+
+  return(x)
 }
 
 
@@ -374,8 +367,6 @@ run_gcproc_parallel <- function(x,
                                     index = index)
 
         main.parameters <- return_update$main.parameters
-
-        prev_code = main.code
         main.code <- return_update$main.code
 
       }
@@ -393,10 +384,15 @@ run_gcproc_parallel <- function(x,
     main.parameters$alpha[main_batches[[i]]$pivots$alpha,] <- main_batches[[i]]$main.parameters$alpha[main_batches[[i]]$pivots$alpha,]
     main.parameters$beta[,main_batches[[i]]$pivots$beta] <- main_batches[[i]]$main.parameters$beta[,main_batches[[i]]$pivots$beta]
 
-    main.code$main.code[main_batches[[i]]$pivots$alpha,main_batches[[i]]$pivots$beta] <- main_batches[[i]]$main.code$main.code[main_batches[[i]]$pivots$alpha,main_batches[[i]]$pivots$beta]
     main.code$encode[main_batches[[i]]$pivots$alpha,main_batches[[i]]$pivots$beta] <- main_batches[[i]]$main.code$encode[main_batches[[i]]$pivots$alpha,main_batches[[i]]$pivots$beta]
 
+    for (j in 1:length(main_batches[[i]]$main.code$code)){
+      main.code$code[[j]][main_batches[[i]]$pivots$alpha,main_batches[[i]]$pivots$beta] <- main_batches[[i]]$main.code$code[[j]][main_batches[[i]]$pivots$alpha,main_batches[[i]]$pivots$beta]
+
+    }
+
   }
+
 
 
   return(list(main.parameters = main.parameters,
@@ -409,7 +405,39 @@ run_gcproc_parallel <- function(x,
 
 
 
+print_iterations <- function(convergence.parameters,config){
 
+  if (convergence.parameters$count <= 15){
+    if (config$verbose){
+      print(paste("Iteration: ",convergence.parameters$count,sep=""))
+    }
+  }
+  if (convergence.parameters$count > 15 & convergence.parameters$count <= 100){
+    if (convergence.parameters$count%%5 == 0 & config$verbose){
+      print(paste("Iteration: ",convergence.parameters$count,sep=""))
+    }
+  }
+  if (convergence.parameters$count > 100 & convergence.parameters$count <= 200){
+    if (convergence.parameters$count%%10 == 0 & config$verbose){
+      print(paste("Iteration: ",convergence.parameters$count,sep=""))
+    }
+  }
+  if (convergence.parameters$count > 200 & convergence.parameters$count <= 300){
+    if (convergence.parameters$count%%25 == 0 & config$verbose){
+      print(paste("Iteration: ",convergence.parameters$count,sep=""))
+    }
+  }
+  if (convergence.parameters$count > 300 & convergence.parameters$count <= 400){
+    if (convergence.parameters$count%%50 == 0 & config$verbose){
+      print(paste("Iteration: ",convergence.parameters$count,sep=""))
+    }
+  }
+  if (convergence.parameters$count > 400){
+    if (convergence.parameters$count%%100 == 0 & config$verbose){
+      print(paste("Iteration: ",convergence.parameters$count,sep=""))
+    }
+  }
+}
 
 
 
@@ -450,40 +478,25 @@ run_gcproc_single_pass <- function(data_list,
 
       index <- main.index[[i]]
 
+      internal.param <- list(
+                             alpha = main.parameters$alpha[[join$alpha[i]]],
+                             beta = main.parameters$beta[[join$beta[i]]]
+                             )
+
       return_update <- update_set(x = as.matrix(data_list[[i]]),
-                                  main.parameters = main.parameters[[i]],
+                                  main.parameters = internal.param,
                                   main.code = main.code,
                                   index = index,
                                   pivots = sub.pivots,
                                   fix = fix)
 
 
-      main.parameters[[i]] <- return_update$main.parameters
+      main.parameters$alpha[[join$alpha[i]]] <- internal.param$alpha
+      main.parameters$beta[[join$beta[i]]] <- internal.param$beta
+
       main.code <- return_update$main.code
 
-      if (!is.null(join$alpha)){
-
-        a_id <- which(join$alpha == join$alpha[i])
-        main.alpha <- main.parameters[[i]]$alpha
-
-        for (a in a_id){
-          main.parameters[[a]]$alpha <- main.alpha
-        }
-      }
-
-      if (!is.null(join$beta)){
-
-        b_id <- which(join$beta == unique(join$beta)[i])
-        main.beta <- main.parameters[[b_id[1]]]$beta
-
-        for (b in b_id){
-          main.parameters[[b]]$beta <- main.beta
-        }
-      }
-
     }
-
-
 
     matrix.residuals <- prev_code$encode - main.code$encode
 
@@ -506,12 +519,11 @@ run_gcproc_single_pass <- function(data_list,
         if (update ==  0 & length(pivots$alpha) != config$i_dim){
           for (i in 1:config$extend_dim){
             pivots$alpha <- c(pivots$alpha,tail(pivots$alpha,1)+1)
-            main.parameters <- lapply(c(1:length(data_list)),function(X){
-              internal_alpha <- main.parameters[[X]]$alpha
-              internal_alpha[tail(pivots$alpha,1),] <- rnorm(dim(data_list[[X]])[1])
+            main.parameters$alpha <- lapply(c(1:length(main.parameters$alpha)),function(X){
+              internal_alpha <- main.parameters$alpha[[X]]
+              internal_alpha[tail(pivots$alpha,1),] <- rnorm(dim(main.parameters$alpha[[X]])[2])
 
-              return(list(alpha = internal_alpha,
-                          beta = main.parameters[[X]]$beta))
+              return(internal_alpha)
             })
             main.code$encode[tail(pivots$alpha,1),1:tail(pivots$beta,1)] <- rnorm(tail(pivots$beta,1))
 
@@ -525,13 +537,13 @@ run_gcproc_single_pass <- function(data_list,
         if (update == 0 & length(pivots$beta) != config$j_dim){
           for (i in 1:config$extend_dim){
             pivots$beta <- c(pivots$beta,tail(pivots$beta,1)+1)
-            main.parameters <- lapply(c(1:length(data_list)),function(X){
-              internal_beta <- main.parameters[[X]]$beta
-              internal_beta[,tail(pivots$beta,1)] <- rnorm(dim(data_list[[X]])[2])
+            main.parameters$beta <- lapply(c(1:length(main.parameters$beta)),function(X){
+              internal_beta <- main.parameters$beta[[X]]
+              internal_beta[,tail(pivots$beta,1)] <- rnorm(dim(main.parameters$beta[[X]])[1])
 
-              return(list(alpha = main.parameters[[X]]$alpha,
-                          beta = internal_beta))
+              return(internal_beta)
             })
+
             main.code$encode[1:tail(pivots$alpha,1),tail(pivots$beta,1)] <- rnorm(tail(pivots$alpha,1))
 
 

@@ -24,7 +24,7 @@ extract_config <- function(verbose=T){
     seed = 1,
     tol=1,
     verbose = T
-    )
+  )
 
   if (verbose == T){
     print(config)
@@ -102,7 +102,7 @@ extract_recovery_framework <- function(verbose=T){
 #' @export
 extract_join_framework <- function(verbose=T){
   join <- list(alpha=NULL,
-                beta=NULL)
+               beta=NULL)
 
   if (verbose == T){
     print(join)
@@ -123,7 +123,7 @@ extract_join_framework <- function(verbose=T){
 #' @param factors Table of factors to put into gcproc - for each factor, there is a unique code
 #' @export
 extract_covariate_framework <- function(verbose=T){
-   covariate <- list(factors=NULL)
+  covariate <- list(factors=NULL)
 
   if (verbose == T){
     print(covariate)

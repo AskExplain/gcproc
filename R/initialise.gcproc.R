@@ -3,14 +3,17 @@ initialise.gcproc <- function(data_list,
                               config,
                               covariate,
                               transfer,
+                              join,
                               pivots){
-
-
 
   index <- list()
   if (is.null(covariate$factor)){
 
     covariate$factor <- data.frame(rep("ALL",length(data_list)))
+
+  } else {
+
+    covariate$factor <- data.frame(cbind("ALL",covariate$factor))
 
   }
 
@@ -22,8 +25,9 @@ initialise.gcproc <- function(data_list,
     print(paste("Initialising data with : ",config$init,sep=""))
   }
 
+  main.code <- list(code=list(),encode=list())
   main.index <- list()
-  main.parameters <- list()
+  main.parameters <- list(alpha = list(), beta = list())
   for (i in 1:length(data_list)){
 
     main.index[[i]] <- rbind(data.frame(factor = index$code_indicator,update = as.integer(index$code_indicator %in% c(covariate$factor[i,]))))
@@ -33,10 +37,7 @@ initialise.gcproc <- function(data_list,
 
     # Check anchoring parameters
     alpha <- initial.param$pivot_x.sample
-    alpha[-pivots$alpha,] <- 0
-
     beta <- initial.param$pivot_x.feature
-    beta[,-pivots$beta] <- 0
 
     if (is.null(transfer$code)){
       # Find intercept in endecoded space
@@ -56,20 +57,18 @@ initialise.gcproc <- function(data_list,
 
     }
 
+    main.code$encode <- code$encode
+    for (code.id in which(index$code_indicator %in% c(covariate$factor[i,]))){
+      main.code$code[[code.id]] <- code$code
+    }
 
-    main.parameters[[i]] = list(
-      alpha = alpha,
-      beta = beta
-      )
+    alpha[-pivots$alpha,] <- 0
+    beta[,-pivots$beta] <- 0
+
+    main.parameters$alpha[[join$alpha[i]]] <- alpha
+    main.parameters$beta[[join$beta[i]]] <- beta
 
   }
-
-  main.code <- list(encode = code$encode, code = list())
-  for (code.id in c(1:length(index$code_indicator))){
-    main.code$code[[code.id]] <- code$code
-  }
-
-
 
   return(
     list(

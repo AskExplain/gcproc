@@ -14,6 +14,7 @@ recover_points <- function(data_list,
                            main.code,
                            main.parameters,
                            config,
+                           join,
                            recover){
 
   for (task in recover$task){
@@ -31,12 +32,12 @@ recover_points <- function(data_list,
 
               x <- as.matrix(data_list[[i]])
 
-              row_with_missing_points <- which((rowSums(recover$design.list[[i]])>0)==T,arr.ind = T)
-              column_with_missing_points <- which((colSums(recover$design.list[[i]])>0)==T,arr.ind = T)
-
+              # row_with_missing_points <- which((rowSums(recover$design.list[[i]])>0)==T,arr.ind = T)
+              # column_with_missing_points <- which((colSums(recover$design.list[[i]])>0)==T,arr.ind = T)
+              #
               # pred <- t(main.parameters[[i]]$alpha)%*%main.code$code%*%t(main.parameters[[i]]$beta)
-
-              x[row_with_missing_points,column_with_missing_points]  <- pred[row_with_missing_points,column_with_missing_points]
+              #
+              # x[row_with_missing_points,column_with_missing_points]  <- pred[row_with_missing_points,column_with_missing_points]
 
               data_list[[i]] <- recover$predict.list[[i]] <- x
 
@@ -51,14 +52,14 @@ recover_points <- function(data_list,
 
               if (is.null(recover$encoded_covariate)){
                 recover$encoded_covariate <- lapply(c(1:length(data_list)),function(X){
-                  transformed.data <- as.matrix(data_list[[X]])%*%(main.parameters[[X]]$beta)
+                  transformed.data <- as.matrix(data_list[[X]])%*%(main.parameters$beta[[join$beta[X]]])
                   return(transformed.data)
                 })
               }
 
 
               decoded_covariate <- cbind(1,
-                                         scale(Reduce('+',lapply(c(1:length(recover$encoded_covariate)),function(X){
+                                         transform.data(Reduce('+',lapply(c(1:length(recover$encoded_covariate)),function(X){
                                            recover$encoded_covariate[[X]]
                                          })))              )
 
@@ -80,14 +81,14 @@ recover_points <- function(data_list,
 
               if (is.null(recover$encoded_covariate)){
                 recover$encoded_covariate <- lapply(c(1:length(data_list)),function(X){
-                  transformed.data <- as.matrix(data_list[[X]])%*%(main.parameters[[X]]$beta)
+                  transformed.data <- as.matrix(data_list[[X]])%*%(main.parameters$beta[[join$beta[X]]])
                   return(transformed.data)
                 })
               }
 
 
               decoded_covariate <- cbind(1,
-                                         scale(Reduce('+',lapply(c(1:length(recover$encoded_covariate)),function(X){
+                                         transform.data(Reduce('+',lapply(c(1:length(recover$encoded_covariate)),function(X){
                                            recover$encoded_covariate[[X]]
                                          })))              )
 
@@ -124,14 +125,14 @@ recover_points <- function(data_list,
 
               if (is.null(recover$encoded_covariate)){
                 recover$encoded_covariate <- lapply(c(1:length(data_list)),function(X){
-                  transformed.data <- as.matrix(data_list[[X]])%*%(main.parameters[[X]]$beta)
+                  transformed.data <- as.matrix(data_list[[X]])%*%(main.parameters$beta[[join$beta[X]]])
                   return(transformed.data)
                 })
               }
 
 
               decoded_covariate <- cbind(1,
-                                         scale(Reduce('+',lapply(c(1:length(recover$encoded_covariate)),function(X){
+                                         transform.data(Reduce('+',lapply(c(1:length(recover$encoded_covariate)),function(X){
                                            recover$encoded_covariate[[X]]
                                          })))              )
 
@@ -166,11 +167,11 @@ recover_points <- function(data_list,
 
         for (j in which(recover$design.list==0)){
 
-          label.decoded_covariate <- t(main.parameters[[j]]$alpha)
+          label.decoded_covariate <- t(main.parameters$alpha[[join$alpha[j]]])
 
           for (i in which(recover$design.list==1)){
 
-            unlabel.decoded_covariate <- t(main.parameters[[i]]$alpha)
+            unlabel.decoded_covariate <- t(main.parameters$alpha[[join$alpha[i]]])
 
             labels <- recover$labels
 
