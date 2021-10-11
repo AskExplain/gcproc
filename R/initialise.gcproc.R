@@ -33,7 +33,7 @@ initialise.gcproc <- function(data_list,
     main.index[[i]] <- rbind(data.frame(factor = index$code_indicator,update = as.integer(index$code_indicator %in% c(covariate$factor[i,]))))
 
 
-    initial.param <-initialise.parameters(x = as.matrix(data_list[[i]]), i_dim=config$i_dim,j_dim=config$j_dim,init=config$init,verbose=config$verbose)
+    initial.param <-initialise.parameters(x = as.matrix(data_list[[i]]),transfer = transfer, i_dim=config$i_dim,j_dim=config$j_dim,init=config$init,verbose=config$verbose)
 
     # Check anchoring parameters
     alpha <- initial.param$pivot_x.sample
@@ -41,13 +41,11 @@ initialise.gcproc <- function(data_list,
 
     if (is.null(transfer$code)){
       # Find intercept in endecoded space
-      X_encode <- (alpha%*%as.matrix(data_list[[i]])%*%(beta))
-      X_code <- (pinv(t(alpha))%*%(X_encode)%*%pinv((beta)))
-
-      code <- X_code
+      encode <- (alpha%*%as.matrix(data_list[[i]])%*%(beta))
+      code <- (pinv(t(alpha))%*%(encode)%*%pinv((beta)))
 
       code = list(
-        encode = X_encode,
+        encode = encode,
         code = code
       )
 
@@ -57,8 +55,8 @@ initialise.gcproc <- function(data_list,
 
     }
 
-    main.code$encode <- code$encode
     for (code.id in which(index$code_indicator %in% c(covariate$factor[i,]))){
+      main.code$encode[[code.id]] <- code$encode
       main.code$code[[code.id]] <- code$code
     }
 
@@ -82,7 +80,7 @@ initialise.gcproc <- function(data_list,
 
 
 #' @export
-initialise.parameters <- function(x,transfer=NULL,i_dim=70,j_dim=70,init="svd-quick",verbose=F){
+initialise.parameters <- function(x,transfer,i_dim,j_dim,init="svd",verbose=F){
 
   x <- Matrix::Matrix(x,sparse=T)
 
