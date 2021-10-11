@@ -55,8 +55,8 @@ initialise.gcproc <- function(data_list,
 
     }
 
+    main.code$encode <- code$encode
     for (code.id in which(index$code_indicator %in% c(covariate$factor[i,]))){
-      main.code$encode[[code.id]] <- code$encode
       main.code$code[[code.id]] <- code$code
     }
 
