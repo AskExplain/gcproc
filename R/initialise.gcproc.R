@@ -1,16 +1,33 @@
 #' @export
 initialise.gcproc <- function(data_list,
                               config,
+                              covariate,
                               transfer,
                               pivots){
+
+
+
+  index <- list()
+  if (is.null(covariate$factor)){
+
+    covariate$factor <- data.frame(rep("ALL",length(data_list)))
+
+  }
+
+  index$code_indicator <- do.call('c',lapply(c(1:dim(covariate$factor)[2]),function(X){c(unique(covariate$factor[,X]))}))
+
 
 
   if (config$verbose){
     print(paste("Initialising data with : ",config$init,sep=""))
   }
 
+  main.index <- list()
   main.parameters <- list()
   for (i in 1:length(data_list)){
+
+    main.index[[i]] <- rbind(data.frame(factor = index$code_indicator,update = as.integer(index$code_indicator %in% c(covariate$factor[i,]))))
+
 
     initial.param <-initialise.parameters(x = as.matrix(data_list[[i]]), i_dim=config$i_dim,j_dim=config$j_dim,init=config$init,verbose=config$verbose)
 
@@ -39,18 +56,26 @@ initialise.gcproc <- function(data_list,
 
     }
 
+
     main.parameters[[i]] = list(
       alpha = alpha,
       beta = beta
-    )
+      )
 
   }
+
+  main.code <- list(encode = code$encode, code = list())
+  for (code.id in c(1:length(index$code_indicator))){
+    main.code$code[[code.id]] <- code$code
+  }
+
 
 
   return(
     list(
       main.parameters = main.parameters,
-      code = code
+      main.code = main.code,
+      main.index = main.index
     )
   )
 
@@ -65,8 +90,8 @@ initialise.parameters <- function(x,transfer=NULL,i_dim=70,j_dim=70,init="svd-qu
   set.seed(1)
 
   if (init=="random"){
-    param.beta <- if(is.null(transfer$beta)){matrix(rnorm(j_dim),nrow=dim(x)[2],ncol=j_dim)}else{transfer$beta}
-    param.alpha = if(is.null(transfer$alpha)){matrix(rnorm(i_dim),nrow=i_dim,ncol=dim(x)[1])}else{transfer$alpha}
+    param.beta <- if(is.null(transfer$beta)){array(rnorm(config$j_dim),dim=c(dim(x)[2],config$j_dim))}else{transfer$beta}
+    param.alpha = if(is.null(transfer$alpha)){array(rnorm(config$i_dim),dim=c(config$i_dim,dim(x)[1]))}else{transfer$alpha}
   } else {
     cov_x <- corpcor::cov.shrink(x,verbose = F)
     cov_tx <- corpcor::cov.shrink(Matrix::t(x),verbose = F)

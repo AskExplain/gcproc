@@ -110,3 +110,24 @@ extract_join_framework <- function(verbose=T){
 
   return(join)
 }
+
+
+
+
+
+
+
+#' Extract covariate framework to put into gcproc
+#'
+#' Covariate data to improve modelling capacity for similar axes
+#' @param factors Table of factors to put into gcproc - for each factor, there is a unique code
+#' @export
+extract_covariate_framework <- function(verbose=T){
+   covariate <- list(factors=NULL)
+
+  if (verbose == T){
+    print(covariate)
+  }
+
+  return(covariate)
+}

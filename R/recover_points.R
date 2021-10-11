@@ -11,7 +11,7 @@
 #' @return  Recovered data from imputation or prediction, with the design matrices and any user input parameters and functions
 #' @export
 recover_points <- function(data_list,
-                           code,
+                           main.code,
                            main.parameters,
                            config,
                            recover){
@@ -34,7 +34,7 @@ recover_points <- function(data_list,
               row_with_missing_points <- which((rowSums(recover$design.list[[i]])>0)==T,arr.ind = T)
               column_with_missing_points <- which((colSums(recover$design.list[[i]])>0)==T,arr.ind = T)
 
-              pred <- t(main.parameters[[i]]$alpha)%*%code$code%*%t(main.parameters[[i]]$beta)
+              # pred <- t(main.parameters[[i]]$alpha)%*%main.code$code%*%t(main.parameters[[i]]$beta)
 
               x[row_with_missing_points,column_with_missing_points]  <- pred[row_with_missing_points,column_with_missing_points]
 
@@ -166,22 +166,11 @@ recover_points <- function(data_list,
 
         for (j in which(recover$design.list==0)){
 
-          if (is.null(recover$encoded_covariate)){
-            recover$encoded_covariate <- lapply(c(1:length(data_list)),function(X){
-              transformed.data <- as.matrix(data_list[[X]])%*%(main.parameters[[X]]$beta)
-              return(transformed.data)
-            })
-          }
-
-          label.decoded_covariate <- scale(Reduce('+',lapply(c(1:length(recover$encoded_covariate)),function(X){
-            t(main.parameters[[j]]$alpha)%*%recover$encoded_covariate[[X]]
-          })))
+          label.decoded_covariate <- t(main.parameters[[j]]$alpha)
 
           for (i in which(recover$design.list==1)){
 
-            unlabel.decoded_covariate <- scale(Reduce('+',lapply(c(1:length(recover$encoded_covariate))[-j],function(X){
-              t(main.parameters[[i]]$alpha)%*%recover$encoded_covariate[[X]]
-            })))
+            unlabel.decoded_covariate <- t(main.parameters[[i]]$alpha)
 
             labels <- recover$labels
 
