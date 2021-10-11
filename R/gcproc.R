@@ -491,8 +491,8 @@ run_gcproc_single_pass <- function(data_list,
                                   fix = fix)
 
 
-      main.parameters$alpha[[join$alpha[i]]] <- internal.param$alpha
-      main.parameters$beta[[join$beta[i]]] <- internal.param$beta
+      main.parameters$alpha[[join$alpha[i]]] <- return_update$alpha
+      main.parameters$beta[[join$beta[i]]] <- return_update$beta
 
       main.code <- return_update$main.code
 
