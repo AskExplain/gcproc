@@ -7,15 +7,6 @@ initialise.gcproc <- function(data_list,
                               pivots){
 
   index <- list()
-  if (is.null(covariate$factor)){
-
-    covariate$factor <- data.frame(rep("ALL",length(data_list)))
-
-  } else {
-
-    covariate$factor <- data.frame(cbind("ALL",covariate$factor))
-
-  }
 
   index$code_indicator <- do.call('c',lapply(c(1:dim(covariate$factor)[2]),function(X){c(unique(covariate$factor[,X]))}))
 
@@ -57,7 +48,7 @@ initialise.gcproc <- function(data_list,
 
     main.code$encode <- code$encode
     for (code.id in which(index$code_indicator %in% c(covariate$factor[i,]))){
-      main.code$code[[code.id]] <- code$code
+      main.code$code[[code.id]] <- code$code*rnorm(prod(dim(code$code)))
     }
 
     alpha[-pivots$alpha,] <- 0
@@ -67,6 +58,12 @@ initialise.gcproc <- function(data_list,
     main.parameters$beta[[join$beta[i]]] <- beta
 
   }
+
+
+  names(main.code$code) <- index$code_indicator
+  names(main.parameters$alpha) <- unique(join$alpha)
+  names(main.parameters$beta) <- unique(join$beta)
+
 
   return(
     list(

@@ -27,7 +27,20 @@ gcproc <- function(data_list,
 
   set.seed(config$config$seed)
 
-  initialise = TRUE
+
+
+
+  if (is.null(covariate$factor)){
+
+    covariate$factor <- data.frame(rep("ALL",length(data_list)))
+
+  } else {
+
+    covariate$factor <- data.frame(cbind("ALL",covariate$factor))
+
+  }
+
+
 
   # Prepare convergence checking parameters
   count = 0
@@ -72,6 +85,7 @@ gcproc <- function(data_list,
                                           main.parameters = main.parameters,
                                           main.code = main.code,
                                           config = config,
+                                          covariate = covariate,
                                           join = join,
                                           fix = transfer$fix,
                                           pivots = pivots,
@@ -91,7 +105,18 @@ gcproc <- function(data_list,
 
   while (T){
 
+
+
     prev_code = main.code
+
+
+
+
+    names(main.code$code) <- do.call('c',lapply(c(1:dim(covariate$factor)[2]),function(X){c(unique(covariate$factor[,X]))}))
+    names(main.parameters$alpha) <- unique(join$alpha)
+    names(main.parameters$beta) <- unique(join$beta)
+
+
 
     set.seed(main_sample_seed)
 
@@ -212,6 +237,9 @@ gcproc <- function(data_list,
       sample_x.dim_reduce.code = sample_x.dim_reduce.code
     ))
   })
+
+
+
 
   runtime.end <- Sys.time()
 
@@ -451,6 +479,7 @@ run_gcproc_single_pass <- function(data_list,
                                    main.parameters,
                                    main.code,
                                    config,
+                                   covariate,
                                    join,
                                    fix,
                                    pivots,
@@ -471,6 +500,12 @@ run_gcproc_single_pass <- function(data_list,
   sub.pivots <- pivots
 
   while (T){
+
+
+    names(main.code$code) <- do.call('c',lapply(c(1:dim(covariate$factor)[2]),function(X){c(unique(covariate$factor[,X]))}))
+    names(main.parameters$alpha) <- unique(join$alpha)
+    names(main.parameters$beta) <- unique(join$beta)
+
 
     prev_code <- main.code
 
@@ -567,6 +602,7 @@ run_gcproc_single_pass <- function(data_list,
     count = count + 1
 
   }
+
 
 
   return(list(main.parameters = main.parameters,
