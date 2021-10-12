@@ -76,7 +76,7 @@ gcproc <- function(data_list,
   main.code <- initialise.model$main.code
   main.index <- initialise.model$main.index
 
-  if (!is.null(transfer$code)){
+  if (is.null(transfer$code)){
     # Update full dimensions iteratively in one pass
     if (config$verbose){
       print(paste("Construct parameter approximation"))
