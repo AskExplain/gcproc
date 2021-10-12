@@ -76,24 +76,25 @@ gcproc <- function(data_list,
   main.code <- initialise.model$main.code
   main.index <- initialise.model$main.index
 
-  # Update full dimensions iteratively in one pass
-  if (config$verbose){
-    print(paste("Construct parameter approximation"))
+  if (!is.null(transfer$code)){
+    # Update full dimensions iteratively in one pass
+    if (config$verbose){
+      print(paste("Construct parameter approximation"))
+    }
+
+    gcproc.update <- run_gcproc_single_pass(data_list = data_list,
+                                            main.parameters = main.parameters,
+                                            main.code = main.code,
+                                            config = config,
+                                            covariate = covariate,
+                                            join = join,
+                                            fix = transfer$fix,
+                                            pivots = pivots,
+                                            main.index = main.index)
+
+    main.code <- gcproc.update$main.code
+    main.parameters <- gcproc.update$main.parameters
   }
-
-  gcproc.update <- run_gcproc_single_pass(data_list = data_list,
-                                          main.parameters = main.parameters,
-                                          main.code = main.code,
-                                          config = config,
-                                          covariate = covariate,
-                                          join = join,
-                                          fix = transfer$fix,
-                                          pivots = pivots,
-                                          main.index = main.index)
-
-  main.code <- gcproc.update$main.code
-  main.parameters <- gcproc.update$main.parameters
-
 
 
   if (config$verbose){
