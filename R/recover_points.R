@@ -175,7 +175,7 @@ recover_points <- function(data_list,
 
             labels <- recover$labels
 
-            recover$predict.list[[j]][[i]] <- apply(((unlabel.decoded_covariate))%*%t(label.decoded_covariate),1,function(X){names(sort(table(labels[order(X,decreasing = T)[1:1]]))[1])})
+            recover$predict.list[[j]][[i]] <- apply((unlabel.decoded_covariate)%*%t(label.decoded_covariate),1,function(X){names(sort(table(labels[order(X,decreasing = T)[1]]))[1])})
 
           }
 
@@ -190,48 +190,4 @@ recover_points <- function(data_list,
 
   return(list(recover=recover,
               data_list=data_list))
-}
-
-
-
-
-transform.data <- function(x,method="scale"){
-
-  if (method == "scale"){
-    center = T
-    scale = T
-
-    x <- as.matrix(x)
-    nc <- ncol(x)
-    if (is.logical(center)) {
-      if (center) {
-        center <- colMeans(x, na.rm=TRUE)
-        x <- sweep(x, 2L, center, check.margin=FALSE)
-      }
-    }
-    else if (is.numeric(center) && (length(center) == nc))
-      x <- sweep(x, 2L, center, check.margin=FALSE)
-    else
-      stop("length of 'center' must equal the number of columns of 'x'")
-    if (is.logical(scale)) {
-      if (scale) {
-        f <- function(v) {
-          v <- v[!is.na(v)]
-          sqrt(sum(v^2) / max(1, length(v) - 1L))
-        }
-        scale <- apply(x, 2L, f)
-        scale <- sapply(scale,function(scale){if(scale==0|is.na(scale)){1}else{scale}})
-        x <- sweep(x, 2L, scale, "/", check.margin=FALSE)
-      }
-    }
-    else if (is.numeric(scale) && length(scale) == nc)
-      x <- sweep(x, 2L, scale, "/", check.margin=FALSE)
-    else
-      stop("length of 'scale' must equal the number of columns of 'x'")
-    if(is.numeric(center)) attr(x, "scaled:center") <- center
-    if(is.numeric(scale)) attr(x, "scaled:scale") <- scale
-    x
-  }
-
-  return(x)
 }
