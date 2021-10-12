@@ -490,9 +490,8 @@ run_gcproc_single_pass <- function(data_list,
                                   pivots = sub.pivots,
                                   fix = fix)
 
-
-      main.parameters$alpha[[join$alpha[i]]] <- return_update$alpha
-      main.parameters$beta[[join$beta[i]]] <- return_update$beta
+      main.parameters$alpha[[join$alpha[i]]] <- return_update$main.parameters$alpha
+      main.parameters$beta[[join$beta[i]]] <- return_update$main.parameters$beta
 
       main.code <- return_update$main.code
 
