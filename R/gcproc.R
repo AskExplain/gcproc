@@ -286,8 +286,8 @@ update_set <- function(x,
                        pivots,
                        fix){
 
-  internal.code <- Reduce('+',lapply(c(1:length(main.code$code)),function(X){
-    index[X,2] * main.code$code[[X]]
+  internal.code <- Reduce('+',lapply(c(1:dim(index)[1]),function(X){
+    index[X,2] * main.code$code[[index[X,1]]]
   }))/sum(index[,2])
 
   main.parameters$alpha[pivots$alpha,] <- (t(x%*%t((internal.code[pivots$alpha,pivots$beta])%*%t(main.parameters$beta[,pivots$beta]))%*%pinv(t((internal.code[pivots$alpha,pivots$beta])%*%t(main.parameters$beta[,pivots$beta])))))
