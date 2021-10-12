@@ -123,7 +123,7 @@ extract_join_framework <- function(verbose=T){
 #' @param factors Table of factors to put into gcproc - for each factor, there is a unique code
 #' @export
 extract_covariate_framework <- function(verbose=T){
-  covariate <- list(factors=NULL)
+  covariate <- list(factor=NULL)
 
   if (verbose == T){
     print(covariate)

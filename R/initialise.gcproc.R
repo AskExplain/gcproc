@@ -46,11 +46,6 @@ initialise.gcproc <- function(data_list,
 
     }
 
-    main.code$encode <- code$encode
-    for (code.id in which(index$code_indicator %in% c(covariate$factor[i,]))){
-      main.code$code[[code.id]] <- code$code*rnorm(prod(dim(code$code)))
-    }
-
     alpha[-pivots$alpha,] <- 0
     beta[,-pivots$beta] <- 0
 
@@ -59,6 +54,11 @@ initialise.gcproc <- function(data_list,
 
   }
 
+
+  main.code$encode <- code$encode
+  for (code.id in 1:length(index$code_indicator)){
+    main.code$code[[code.id]] <- code$code*rnorm(prod(dim(code$code)))
+  }
 
   names(main.code$code) <- index$code_indicator
   names(main.parameters$alpha) <- unique(join$alpha)
