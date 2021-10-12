@@ -40,10 +40,6 @@ initialise.gcproc <- function(data_list,
         code = code
       )
 
-    } else {
-
-      code <- transfer$code
-
     }
 
     alpha[-pivots$alpha,] <- 0
@@ -61,6 +57,10 @@ initialise.gcproc <- function(data_list,
     }
 
     names(main.code$code) <- index$code_indicator
+  } else {
+
+    main.code <- transfer$code
+
   }
 
 
