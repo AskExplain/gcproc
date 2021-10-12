@@ -3,14 +3,12 @@ initialise.gcproc <- function(data_list,
                               config,
                               covariate,
                               transfer,
-                              join,
-                              pivots){
+                              join
+                              ){
 
   index <- list()
 
   index$code_indicator <- do.call('c',lapply(c(1:dim(covariate$factor)[2]),function(X){c(unique(covariate$factor[,X]))}))
-
-
 
   if (config$verbose){
     print(paste("Initialising data with : ",config$init,sep=""))
@@ -46,9 +44,6 @@ initialise.gcproc <- function(data_list,
 
     }
 
-    alpha[-pivots$alpha,] <- 0
-    beta[,-pivots$beta] <- 0
-
     main.parameters$alpha[[join$alpha[i]]] <- alpha
     main.parameters$beta[[join$beta[i]]] <- beta
 
@@ -57,7 +52,7 @@ initialise.gcproc <- function(data_list,
 
   main.code$encode <- code$encode
   for (code.id in 1:length(index$code_indicator)){
-    main.code$code[[code.id]] <- code$code*rnorm(prod(dim(code$code)))
+    main.code$code[[code.id]] <- code$code + rnorm(prod(dim(code$code)))
   }
 
   names(main.code$code) <- index$code_indicator
