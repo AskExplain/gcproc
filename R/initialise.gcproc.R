@@ -54,13 +54,16 @@ initialise.gcproc <- function(data_list,
 
   }
 
+  if (is.null(transfer$code)){
+    main.code$encode <- code$encode
+    for (code.id in 1:length(index$code_indicator)){
+      main.code$code[[code.id]] <- code$code*rnorm(prod(dim(code$code)))
+    }
 
-  main.code$encode <- code$encode
-  for (code.id in 1:length(index$code_indicator)){
-    main.code$code[[code.id]] <- code$code*rnorm(prod(dim(code$code)))
+    names(main.code$code) <- index$code_indicator
   }
 
-  names(main.code$code) <- index$code_indicator
+
   names(main.parameters$alpha) <- unique(join$alpha)
   names(main.parameters$beta) <- unique(join$beta)
 

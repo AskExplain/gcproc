@@ -113,7 +113,7 @@ gcproc <- function(data_list,
 
 
 
-    names(main.code$code) <- do.call('c',lapply(c(1:dim(covariate$factor)[2]),function(X){c(unique(covariate$factor[,X]))}))
+    names(main.code$code) <- if(is.null(transfer$code)){do.call('c',lapply(c(1:dim(covariate$factor)[2]),function(X){c(unique(covariate$factor[,X]))}))}else{names(main.code$code)}
     names(main.parameters$alpha) <- unique(join$alpha)
     names(main.parameters$beta) <- unique(join$beta)
 
@@ -503,7 +503,7 @@ run_gcproc_single_pass <- function(data_list,
   while (T){
 
 
-    names(main.code$code) <- do.call('c',lapply(c(1:dim(covariate$factor)[2]),function(X){c(unique(covariate$factor[,X]))}))
+    names(main.code$code) <- if(is.null(transfer$code)){do.call('c',lapply(c(1:dim(covariate$factor)[2]),function(X){c(unique(covariate$factor[,X]))}))}else{names(main.code$code)}
     names(main.parameters$alpha) <- unique(join$alpha)
     names(main.parameters$beta) <- unique(join$beta)
 
