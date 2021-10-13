@@ -30,15 +30,15 @@ gcproc <- function(data_list,
 
 
 
-  if (is.null(covariate$factor)){
-
-    covariate$factor <- data.frame(rep("ALL",length(data_list)))
-
-  } else {
-
-    covariate$factor <- data.frame(cbind("ALL",covariate$factor))
-
-  }
+  # if (is.null(covariate$factor)){
+  #
+  #   covariate$factor <- data.frame(rep("ALL",length(data_list)))
+  #
+  # } else {
+  #
+  #   covariate$factor <- data.frame(cbind("ALL",covariate$factor))
+  #
+  # }
 
 
 
@@ -288,7 +288,7 @@ update_set <- function(x,
 
   internal.code <- Reduce('+',lapply(c(1:dim(index)[1]),function(X){
     index[X,2] * main.code$code[[index[X,1]]]
-  }))
+  }))/sum(index[,2])
 
   main.parameters$alpha[pivots$alpha,] <- (t(x%*%t((internal.code[pivots$alpha,pivots$beta])%*%t(main.parameters$beta[,pivots$beta]))%*%pinv(t((internal.code[pivots$alpha,pivots$beta])%*%t(main.parameters$beta[,pivots$beta])))))
   main.parameters$beta[,pivots$beta] <- (t(pinv(((t(main.parameters$alpha[pivots$alpha,])%*%(internal.code[pivots$alpha,pivots$beta]))))%*%t(t(main.parameters$alpha[pivots$alpha,])%*%(internal.code[pivots$alpha,pivots$beta]))%*%x))
