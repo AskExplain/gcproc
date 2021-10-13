@@ -4,7 +4,15 @@
 \alias{recover_points}
 \title{Recover missing data points via imputation or prediction}
 \usage{
-recover_points(data_list, main.code, main.parameters, config, join, recover)
+recover_points(
+  data_list,
+  main.code,
+  main.parameters,
+  main.index,
+  config,
+  join,
+  recover
+)
 }
 \arguments{
 \item{data_list}{A list of datasets (matrix or tensor etc.)}

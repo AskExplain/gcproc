@@ -30,10 +30,10 @@ initialise.gcproc <- function(data_list,
     alpha <- initial.param$pivot_x.sample
     beta <- initial.param$pivot_x.feature
 
-    if (is.null(transfer$code)){
+    main.parameters$alpha[[join$alpha[i]]] <- alpha
+    main.parameters$beta[[join$beta[i]]] <- beta
 
-      alpha[-pivots$alpha,] <- 0
-      beta[,-pivots$beta] <- 0
+    if (is.null(transfer$code)){
 
       # Find intercept in endecoded space
       encode <- (alpha%*%as.matrix(data_list[[i]])%*%(beta))
@@ -45,9 +45,6 @@ initialise.gcproc <- function(data_list,
       )
 
     }
-
-    main.parameters$alpha[[join$alpha[i]]] <- alpha
-    main.parameters$beta[[join$beta[i]]] <- beta
 
   }
 

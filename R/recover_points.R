@@ -13,6 +13,7 @@
 recover_points <- function(data_list,
                            main.code,
                            main.parameters,
+                           main.index,
                            config,
                            join,
                            recover){
@@ -32,12 +33,16 @@ recover_points <- function(data_list,
 
               x <- as.matrix(data_list[[i]])
 
-              # row_with_missing_points <- which((rowSums(recover$design.list[[i]])>0)==T,arr.ind = T)
-              # column_with_missing_points <- which((colSums(recover$design.list[[i]])>0)==T,arr.ind = T)
-              #
-              # pred <- t(main.parameters[[i]]$alpha)%*%main.code$code%*%t(main.parameters[[i]]$beta)
-              #
-              # x[row_with_missing_points,column_with_missing_points]  <- pred[row_with_missing_points,column_with_missing_points]
+              row_with_missing_points <- which((rowSums(recover$design.list[[i]])>0)==T,arr.ind = T)
+              column_with_missing_points <- which((colSums(recover$design.list[[i]])>0)==T,arr.ind = T)
+
+              internal.code <- Reduce('+',lapply(c(1:length(main.index[[i]][,2])),function(X){
+                main.index[[i]][X,2]*main.code$code[[X]]
+              }))/sum(main.index[[i]][,2])
+
+              pred <- t(main.parameters$alpha[[join$alpha[i]]])%*%internal.code%*%t(main.parameters$beta[[join$beta[i]]])
+
+              x[row_with_missing_points,column_with_missing_points]  <- pred[row_with_missing_points,column_with_missing_points]
 
               data_list[[i]] <- recover$predict.list[[i]] <- x
 
@@ -190,4 +195,46 @@ recover_points <- function(data_list,
 
   return(list(recover=recover,
               data_list=data_list))
+}
+
+
+transform.data <- function(x,method="scale"){
+
+  if (method == "scale"){
+    center = T
+    scale = T
+
+    x <- as.matrix(x)
+    nc <- ncol(x)
+    if (is.logical(center)) {
+      if (center) {
+        center <- colMeans(x, na.rm=TRUE)
+        x <- sweep(x, 2L, center, check.margin=FALSE)
+      }
+    }
+    else if (is.numeric(center) && (length(center) == nc))
+      x <- sweep(x, 2L, center, check.margin=FALSE)
+    else
+      stop("length of 'center' must equal the number of columns of 'x'")
+    if (is.logical(scale)) {
+      if (scale) {
+        f <- function(v) {
+          v <- v[!is.na(v)]
+          sqrt(sum(v^2) / max(1, length(v) - 1L))
+        }
+        scale <- apply(x, 2L, f)
+        scale <- sapply(scale,function(scale){if(scale==0|is.na(scale)){1}else{scale}})
+        x <- sweep(x, 2L, scale, "/", check.margin=FALSE)
+      }
+    }
+    else if (is.numeric(scale) && length(scale) == nc)
+      x <- sweep(x, 2L, scale, "/", check.margin=FALSE)
+    else
+      stop("length of 'scale' must equal the number of columns of 'x'")
+    if(is.numeric(center)) attr(x, "scaled:center") <- center
+    if(is.numeric(scale)) attr(x, "scaled:scale") <- scale
+    x
+  }
+
+  return(x)
 }
