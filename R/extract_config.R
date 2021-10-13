@@ -75,13 +75,6 @@ extract_recovery_framework <- function(verbose=T){
     labels = NULL
   )
 
-  # recover <- list(
-  #   task = c("classification"),
-  #   method = c("label.projection"),
-  #   design.list = NULL,
-  #   labels = NULL
-  # )
-
   if (verbose == T){
     print(recover)
   }
