@@ -145,7 +145,7 @@ gcproc <- function(data_list,
                                            main.parameters = internal.param,
                                            main.code = main.code,
                                            config = config,
-                                           transfer = transfer,
+                                           fix = transfer$fix,
                                            join = join,
                                            pivots = pivots,
                                            index = index)
