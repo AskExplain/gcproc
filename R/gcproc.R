@@ -88,7 +88,7 @@ gcproc <- function(data_list,
                                             config = config,
                                             covariate = covariate,
                                             join = join,
-                                            fix = transfer$fix,
+                                            transfer = transfer,
                                             pivots = pivots,
                                             main.index = main.index)
 
@@ -145,7 +145,7 @@ gcproc <- function(data_list,
                                            main.parameters = internal.param,
                                            main.code = main.code,
                                            config = config,
-                                           fix = transfer$fix,
+                                           transfer = transfer,
                                            join = join,
                                            pivots = pivots,
                                            index = index)
@@ -482,7 +482,7 @@ run_gcproc_single_pass <- function(data_list,
                                    config,
                                    covariate,
                                    join,
-                                   fix,
+                                   transfer,
                                    pivots,
                                    main.index){
 
@@ -524,7 +524,7 @@ run_gcproc_single_pass <- function(data_list,
                                   main.code = main.code,
                                   index = index,
                                   pivots = sub.pivots,
-                                  fix = fix)
+                                  fix = transfer$fix)
 
       main.parameters$alpha[[join$alpha[i]]] <- return_update$main.parameters$alpha
       main.parameters$beta[[join$beta[i]]] <- return_update$main.parameters$beta
