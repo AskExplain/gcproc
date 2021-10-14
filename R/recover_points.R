@@ -56,7 +56,7 @@ recover_points <- function(data_list,
 
 
               if (is.null(recover$encoded_covariate)){
-                recover$encoded_covariate <- lapply(c(1:length(data_list)),function(X){
+                recover$encoded_covariate <- lapply(c(1:length(data_list))[-i],function(X){
                   transformed.data <- as.matrix(data_list[[X]])%*%(main.parameters$beta[[join$beta[X]]])
                   return(transformed.data)
                 })
@@ -85,7 +85,7 @@ recover_points <- function(data_list,
               x <- as.matrix(data_list[[i]])
 
               if (is.null(recover$encoded_covariate)){
-                recover$encoded_covariate <- lapply(c(1:length(data_list)),function(X){
+                recover$encoded_covariate <- lapply(c(1:length(data_list))[-i],function(X){
                   transformed.data <- as.matrix(data_list[[X]])%*%(main.parameters$beta[[join$beta[X]]])
                   return(transformed.data)
                 })
@@ -129,7 +129,7 @@ recover_points <- function(data_list,
               x <- as.matrix(data_list[[i]])
 
               if (is.null(recover$encoded_covariate)){
-                recover$encoded_covariate <- lapply(c(1:length(data_list)),function(X){
+                recover$encoded_covariate <- lapply(c(1:length(data_list))[-i],function(X){
                   transformed.data <- as.matrix(data_list[[X]])%*%(main.parameters$beta[[join$beta[X]]])
                   return(transformed.data)
                 })
@@ -172,11 +172,13 @@ recover_points <- function(data_list,
 
         for (j in which(recover$design.list==0)){
 
-          label.decoded_covariate <- t(main.parameters$alpha[[join$alpha[j]]])
+          label.decoded_covariate <- data_list[[j]]%*%main.parameters$beta[[join$beta[j]]]
+          # %*%MASS::ginv(t(main.parameters$beta[[join$beta[j]]])%*%main.parameters$beta[[join$beta[j]]])
 
           for (i in which(recover$design.list==1)){
 
-            unlabel.decoded_covariate <- t(main.parameters$alpha[[join$alpha[i]]])
+            unlabel.decoded_covariate <- data_list[[i]]%*%main.parameters$beta[[join$beta[i]]]
+            # %*%MASS::ginv(t(main.parameters$beta[[join$beta[i]]])%*%main.parameters$beta[[join$beta[i]]])
 
             labels <- recover$labels
 

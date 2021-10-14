@@ -25,7 +25,7 @@ gcproc <- function(data_list,
 
   runtime.start <- Sys.time()
 
-  set.seed(config$config$seed)
+  set.seed(config$seed)
 
   convergence.parameters <- list()
 
@@ -44,6 +44,7 @@ gcproc <- function(data_list,
     alpha=pivots$alpha[[1]],
     beta=pivots$beta[[1]]
   )
+
 
   initialise.model <- initialise.gcproc(data_list = data_list,
                                         config = config,
@@ -65,14 +66,14 @@ gcproc <- function(data_list,
     print(paste("Beginning gcproc learning with:    Sample dimension reduction (config$i_dim): ",config$i_dim, "    Feature dimension reduction (config$j_dim): ", config$j_dim,"    Tolerance Threshold: ", config$tol, "   Maximum number of iterations: ", config$max_iter, "   Verbose: ", config$verbose, sep=""))
   }
 
+    for (set.of.batch.id in c(0:(config$n_batch-1))){
 
-  for (set.of.batch.id in c(0:(config$n_batch-1))){
+      print(paste("Batching of index:   ",set.of.batch.id,sep=""))
 
-    print(paste("Batching of index:   ",set.of.batch.id,sep=""))
+      mini.batch_table <- batch_table[seq(c(1+config$n_batch*set.of.batch.id),(config$n_batch*(1+set.of.batch.id)),1),]
 
-    mini.batch_table <- batch_table[seq(c(1+config$n_batch*set.of.batch.id),(config$n_batch*(1+set.of.batch.id)),1),]
-
-    main_batches <-parallel::mclapply(X = c(1:dim(mini.batch_table)[1]),function(batch){
+      main_batches <-
+        parallel::mclapply(X = c(1:dim(mini.batch_table)[1]),function(batch){
         pivots <- list(alpha = pivots$alpha[[mini.batch_table[batch,1]]],
                        beta = pivots$beta[[mini.batch_table[batch,2]]])
 
@@ -108,27 +109,23 @@ gcproc <- function(data_list,
       },mc.cores = config$n_cores)
 
 
-    for (batch.id in 1:length(main_batches)){
+      for (batch.id in 1:length(main_batches)){
 
-      for (join.id in c(1:length(data_list))){
-        main.parameters$alpha[[join$alpha[join.id]]][main_batches[[batch.id]]$pivots$alpha,] <- main_batches[[batch.id]]$main.parameters$alpha[[join$alpha[join.id]]][main_batches[[batch.id]]$pivots$alpha,]
-        main.parameters$beta[[join$beta[join.id]]][,main_batches[[batch.id]]$pivots$beta] <- main_batches[[batch.id]]$main.parameters$beta[[join$beta[join.id]]][,main_batches[[batch.id]]$pivots$beta]
-      }
+        for (join.id in c(1:length(data_list))){
+          main.parameters$alpha[[join$alpha[join.id]]][main_batches[[batch.id]]$pivots$alpha,] <- main_batches[[batch.id]]$main.parameters$alpha[[join$alpha[join.id]]][main_batches[[batch.id]]$pivots$alpha,]
+          main.parameters$beta[[join$beta[join.id]]][,main_batches[[batch.id]]$pivots$beta] <- main_batches[[batch.id]]$main.parameters$beta[[join$beta[join.id]]][,main_batches[[batch.id]]$pivots$beta]
+        }
 
-      main.code$encode[main_batches[[batch.id]]$pivots$alpha,main_batches[[batch.id]]$pivots$beta] <- main_batches[[batch.id]]$main.code$encode[main_batches[[batch.id]]$pivots$alpha,main_batches[[batch.id]]$pivots$beta]
+        main.code$encode[main_batches[[batch.id]]$pivots$alpha,main_batches[[batch.id]]$pivots$beta] <- main_batches[[batch.id]]$main.code$encode[main_batches[[batch.id]]$pivots$alpha,main_batches[[batch.id]]$pivots$beta]
 
-      for (code.id in c(1:length(main.code$code))){
-        main.code$code[[code.id]][main_batches[[batch.id]]$pivots$alpha,main_batches[[batch.id]]$pivots$beta] <- main_batches[[batch.id]]$main.code$code[[code.id]][main_batches[[batch.id]]$pivots$alpha,main_batches[[batch.id]]$pivots$beta]
+        for (code.id in c(1:length(main.code$code))){
+          main.code$code[[code.id]][main_batches[[batch.id]]$pivots$alpha,main_batches[[batch.id]]$pivots$beta] <- main_batches[[batch.id]]$main.code$code[[code.id]][main_batches[[batch.id]]$pivots$alpha,main_batches[[batch.id]]$pivots$beta]
+        }
+
       }
 
     }
 
-  }
-
-
-  if (config$verbose){
-    print("Learning has converged for gcproc, beginning prediction (if requested) and dimension reduction")
-  }
 
   if (any(do.call('c',lapply(recover$design.list,function(X){!is.null(X)})))){
 
@@ -146,6 +143,13 @@ gcproc <- function(data_list,
     data_list <- recover_data$data_list
 
   }
+
+
+    if (config$verbose){
+      print("Learning has converged for gcproc, beginning prediction (if requested) and dimension reduction")
+    }
+
+
 
 
 
