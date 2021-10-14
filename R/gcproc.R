@@ -74,7 +74,8 @@ gcproc <- function(data_list,
     mini.batch_table <- batch_table[seq(c(1+config$n_batch*set.of.batch.id),(config$n_batch*(1+set.of.batch.id)),1),]
 
     main_batches <-
-    parallel::mclapply(X = c(1:dim(mini.batch_table)[1]),function(batch){
+      # parallel::mc
+      lapply(X = c(1:dim(mini.batch_table)[1]),function(batch){
         pivots <- list(alpha = pivots$alpha[[mini.batch_table[batch,1]]],
                        beta = pivots$beta[[mini.batch_table[batch,2]]])
 
@@ -110,7 +111,10 @@ gcproc <- function(data_list,
                     main.parameters = main.parameters,
                     main.proportion = main.proportion))
 
-      },,mc.cores = config$n_cores)
+      })
+    # ,mc.cores = config$n_cores)
+
+
 
 
     for (batch.id in 1:length(main_batches)){
@@ -224,9 +228,9 @@ update_set <- function(x,
                        pivots,
                        fix){
 
-  internal.code <- Reduce('+',lapply(c(1:dim(index)[1]),function(X){
-    index[X,2] * colMeans(main.proportion) * main.code$code[[index[X,1]]]
-  }))/sum(index[,2])
+  internal.code <- Reduce('+',lapply(c(1:length(main.code$code)),function(X){
+    colMeans(main.proportion)[X] * main.code$code[[index[X,1]]]
+  }))/length(main.code$code)
 
   main.parameters$alpha[pivots$alpha,] <- (t(x%*%t((internal.code[pivots$alpha,pivots$beta])%*%t(main.parameters$beta[,pivots$beta]))%*%pinv(t((internal.code[pivots$alpha,pivots$beta])%*%t(main.parameters$beta[,pivots$beta])))))
   main.parameters$beta[,pivots$beta] <- (t(pinv(((t(main.parameters$alpha[pivots$alpha,])%*%(internal.code[pivots$alpha,pivots$beta]))))%*%t(t(main.parameters$alpha[pivots$alpha,])%*%(internal.code[pivots$alpha,pivots$beta]))%*%x))
@@ -244,17 +248,10 @@ update_set <- function(x,
   }
 
 
-  for (sample.id in 1:dim(x)[1]){
-    for (code.id in 1:length(main.code$code)){
+  code_reshape <- do.call('cbind',lapply(main.code$code,function(X){c(X[pivots$alpha,pivots$beta])}))
+  current.code <- main.proportion%*%t(code_reshape)
 
-      current.code <- c(index[code.id,2])*main.code$code[[code.id]]*main.proportion[sample.id,code.id]
-
-      main.proportion[sample.id,code.id] <- c(full_code - (internal.code - current.code)[pivots$alpha,pivots$beta])%*%c(main.code$code[[code.id]][pivots$alpha,pivots$beta])%*%MASS::ginv(c(main.code$code[[code.id]][pivots$alpha,pivots$beta])%*%c(c(main.code$code[[code.id]][pivots$alpha,pivots$beta])))
-
-    }
-
-  }
-
+  main.proportion <- (current.code+c(full_code - (internal.code)[pivots$alpha,pivots$beta]))%*%(code_reshape)%*%MASS::ginv(t(code_reshape)%*%(code_reshape))
 
   return(list(main.parameters = main.parameters,
               main.code = main.code,
