@@ -9,6 +9,7 @@ recover_points(
   main.code,
   main.parameters,
   main.index,
+  main.proportion,
   config,
   join,
   recover

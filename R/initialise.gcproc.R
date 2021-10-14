@@ -18,11 +18,13 @@ initialise.gcproc <- function(data_list,
 
   main.code <- list(code=list(),encode=list())
   main.index <- list()
+  main.proportion <- list()
   main.parameters <- list(alpha = list(), beta = list())
   for (i in 1:length(data_list)){
 
     main.index[[i]] <- rbind(data.frame(factor = index$code_indicator,update = as.integer(index$code_indicator %in% c(covariate$factor[i,]))))
-
+    main.proportion[[i]] <- array(runif(dim(data_list[[i]])[1]*length(index$code_indicator)),dim=c(dim(data_list[[i]])[1],length(index$code_indicator)))
+    colnames(main.proportion[[i]]) <- index$code_indicator
 
     initial.param <-initialise.parameters(x = as.matrix(data_list[[i]]),transfer = transfer, i_dim=config$i_dim,j_dim=config$j_dim,init=config$init,verbose=config$verbose)
 
@@ -61,7 +63,6 @@ initialise.gcproc <- function(data_list,
 
   }
 
-
   names(main.parameters$alpha) <- unique(join$alpha)
   names(main.parameters$beta) <- unique(join$beta)
 
@@ -70,7 +71,8 @@ initialise.gcproc <- function(data_list,
     list(
       main.parameters = main.parameters,
       main.code = main.code,
-      main.index = main.index
+      main.index = main.index,
+      main.proportion = main.proportion
     )
   )
 

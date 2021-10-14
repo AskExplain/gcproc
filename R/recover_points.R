@@ -14,6 +14,7 @@ recover_points <- function(data_list,
                            main.code,
                            main.parameters,
                            main.index,
+                           main.proportion,
                            config,
                            join,
                            recover){
