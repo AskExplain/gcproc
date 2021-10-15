@@ -173,13 +173,17 @@ recover_points <- function(data_list,
 
         for (j in which(recover$design.list==0)){
 
-          label.decoded_covariate <- data_list[[j]]%*%main.parameters$beta[[join$beta[j]]]
-          # %*%MASS::ginv(t(main.parameters$beta[[join$beta[j]]])%*%main.parameters$beta[[join$beta[j]]])
+          label_code <- Reduce('+',lapply(c(covariate$factor[j,]),function(X){
+            main.code$code[[X]]
+          }))
+
+
 
           for (i in which(recover$design.list==1)){
 
-            unlabel.decoded_covariate <- data_list[[i]]%*%main.parameters$beta[[join$beta[i]]]
-            # %*%MASS::ginv(t(main.parameters$beta[[join$beta[i]]])%*%main.parameters$beta[[join$beta[i]]])
+            unlabel_code <- Reduce('+',lapply(c(covariate$factor[i,]),function(X){
+              main.code$code[[X]]
+            }))
 
             labels <- recover$labels
 

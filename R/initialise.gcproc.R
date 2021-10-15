@@ -7,8 +7,7 @@ initialise.gcproc <- function(data_list,
                               pivots){
 
   index <- list()
-
-  index$code_indicator <- do.call('c',lapply(c(1:dim(covariate$factor)[2]),function(X){c(unique(covariate$factor[,X]))}))
+  index$code_indicator <- unique(do.call('c',lapply(c(1:length(covariate$factor)),function(X){c(unique(colnames(covariate$factor[[X]])))})))
 
 
 
@@ -22,7 +21,7 @@ initialise.gcproc <- function(data_list,
   main.parameters <- list(alpha = list(), beta = list())
   for (i in 1:length(data_list)){
 
-    main.index[[i]] <- rbind(data.frame(factor = index$code_indicator,update = as.integer(index$code_indicator %in% c(covariate$factor[i,]))))
+    main.index[[i]] <- covariate$factor[[i]]
     main.proportion[[i]] <- array(runif(dim(data_list[[i]])[1]*length(index$code_indicator),0,1),dim=c(dim(data_list[[i]])[1],length(index$code_indicator)))
     colnames(main.proportion[[i]]) <- index$code_indicator
 
