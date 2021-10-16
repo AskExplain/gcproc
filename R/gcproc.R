@@ -72,17 +72,16 @@ gcproc <- function(data_list,
 
     print(paste("Batch number :   ",set.of.batch.id,sep=""))
 
-    for (iter.update in c(1:config$n_epochs)){
-      mini.batch_table <- batch_table[sample(seq(c(1+config$n_batch*set.of.batch.id),(config$n_batch*(1+set.of.batch.id)),1)),]
+    mini.batch_table <- batch_table[sample(seq(c(1+config$n_batch*set.of.batch.id),(config$n_batch*(1+set.of.batch.id)),1)),]
 
-      main_batches <-
-        # parallel::mc
-        lapply(X = c(1:dim(mini.batch_table)[1]),function(batch){
-          pivots <- list(alpha = pivots$alpha[[mini.batch_table[batch,1]]],
-                         beta = pivots$beta[[mini.batch_table[batch,2]]])
+    main_batches <-
+      parallel::mclapply(X = c(1:dim(mini.batch_table)[1]),function(batch){
+        pivots <- list(alpha = pivots$alpha[[mini.batch_table[batch,1]]],
+                       beta = pivots$beta[[mini.batch_table[batch,2]]])
 
-          for (j in 1:config$n_epochs){
-            for (i in sample(1:length(data_list))){
+        for (iter.update.outer in c(1:config$n_epochs)){
+          for (i in sample(1:length(data_list))){
+            for (iter.update.inner in c(1:config$n_epochs)){
 
               internal.param <- list(
                 alpha = main.parameters$alpha[[join$alpha[i]]],
@@ -109,55 +108,54 @@ gcproc <- function(data_list,
 
             }
           }
+        }
 
-          return(list(pivots = pivots,
-                      main.code = main.code,
-                      main.parameters = main.parameters,
-                      main.proportion = main.proportion,
-                      main.index = main.index
-          )
-          )
+        return(list(pivots = pivots,
+                    main.code = main.code,
+                    main.parameters = main.parameters,
+                    main.proportion = main.proportion,
+                    main.index = main.index
+        )
+        )
 
-        })
-      # ,mc.cores = config$n_cores)
+      },mc.cores = config$n_cores)
 
 
-      for (X in (1:length(data_list))){
-        for (Y in (1:length(main_batches))){
+    for (X in (1:length(data_list))){
+      for (Y in (1:length(main_batches))){
 
-          probability.observe <- Reduce('+',lapply(c(1:length(main_batches)),function(Y){
+        probability.observe <- Reduce('+',lapply(c(1:length(main_batches)),function(Y){
 
-            return(main_batches[[Y]]$main.proportion[[X]])
+          return(main_batches[[Y]]$main.proportion[[X]])
 
-          })) / length(main_batches)
+        })) / length(main_batches)
 
-          print(head(probability.observe))
 
-          main.proportion[[X]] <- probability.observe
-          if (!covariate$fix){
-            main.index[[X]] <- t(apply(probability.observe,1,function(X){X==max(X)}))
-          }
+        main.proportion[[X]] <- (colMeans(probability.observe)*probability.observe)/rowSums(colMeans(probability.observe)*probability.observe)
+        if (!covariate$fix){
+          main.index[[X]] <- t(apply(probability.observe,1,function(X){X==max(X)}))
         }
       }
+    }
 
-      for (batch.id in 1:length(main_batches)){
+    for (batch.id in 1:length(main_batches)){
 
-        for (join.id in c(1:length(data_list))){
-          main.parameters$alpha[[join$alpha[join.id]]][main_batches[[batch.id]]$pivots$alpha,] <- main_batches[[batch.id]]$main.parameters$alpha[[join$alpha[join.id]]][main_batches[[batch.id]]$pivots$alpha,]
-          main.parameters$beta[[join$beta[join.id]]][,main_batches[[batch.id]]$pivots$beta] <- main_batches[[batch.id]]$main.parameters$beta[[join$beta[join.id]]][,main_batches[[batch.id]]$pivots$beta]
-        }
-
-        main.code$encode[main_batches[[batch.id]]$pivots$alpha,main_batches[[batch.id]]$pivots$beta] <- main_batches[[batch.id]]$main.code$encode[main_batches[[batch.id]]$pivots$alpha,main_batches[[batch.id]]$pivots$beta]
-
-        for (code.id in c(1:length(main.code$code))){
-          main.code$code[[code.id]][main_batches[[batch.id]]$pivots$alpha,main_batches[[batch.id]]$pivots$beta] <- main_batches[[batch.id]]$main.code$code[[code.id]][main_batches[[batch.id]]$pivots$alpha,main_batches[[batch.id]]$pivots$beta]
-        }
-
-
+      for (join.id in c(1:length(data_list))){
+        main.parameters$alpha[[join$alpha[join.id]]][main_batches[[batch.id]]$pivots$alpha,] <- main_batches[[batch.id]]$main.parameters$alpha[[join$alpha[join.id]]][main_batches[[batch.id]]$pivots$alpha,]
+        main.parameters$beta[[join$beta[join.id]]][,main_batches[[batch.id]]$pivots$beta] <- main_batches[[batch.id]]$main.parameters$beta[[join$beta[join.id]]][,main_batches[[batch.id]]$pivots$beta]
       }
+
+      main.code$encode[main_batches[[batch.id]]$pivots$alpha,main_batches[[batch.id]]$pivots$beta] <- main_batches[[batch.id]]$main.code$encode[main_batches[[batch.id]]$pivots$alpha,main_batches[[batch.id]]$pivots$beta]
+
+      for (code.id in c(1:length(main.code$code))){
+        main.code$code[[code.id]][main_batches[[batch.id]]$pivots$alpha,main_batches[[batch.id]]$pivots$beta] <- main_batches[[batch.id]]$main.code$code[[code.id]][main_batches[[batch.id]]$pivots$alpha,main_batches[[batch.id]]$pivots$beta]
+      }
+
 
     }
+
   }
+
 
   if (any(do.call('c',lapply(recover$design.list,function(X){!is.null(X)})))){
 
