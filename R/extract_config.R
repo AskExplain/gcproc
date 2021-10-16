@@ -19,6 +19,7 @@ extract_config <- function(verbose=T){
     min_iter=2,
     max_iter=350,
     n_batch = 8,
+    n_epochs = 5,
     n_cores = 2,
     seed = 1,
     tol=1,
@@ -115,7 +116,7 @@ extract_join_framework <- function(verbose=T){
 #' @param factors Table of factors to put into gcproc - for each factor, there is a unique code
 #' @export
 extract_covariate_framework <- function(verbose=T){
-  covariate <- list(factor=NULL)
+  covariate <- list(factor=NULL,fix=T)
 
   if (verbose == T){
     print(covariate)

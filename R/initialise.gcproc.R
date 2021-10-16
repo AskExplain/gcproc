@@ -22,7 +22,8 @@ initialise.gcproc <- function(data_list,
   for (i in 1:length(data_list)){
 
     main.index[[i]] <- covariate$factor[[i]]
-    main.proportion[[i]] <- array(runif(dim(data_list[[i]])[1]*length(index$code_indicator),0,1),dim=c(dim(data_list[[i]])[1],length(index$code_indicator)))
+    main.proportion[[i]] <- array(runif(dim(data_list[[i]])[1]*length(index$code_indicator)),dim=c(dim(data_list[[i]])[1],length(index$code_indicator)))
+    main.proportion[[i]] <- main.proportion[[i]] / rowSums(main.proportion[[i]])
     colnames(main.proportion[[i]]) <- index$code_indicator
 
     initial.param <-initialise.parameters(x = as.matrix(data_list[[i]]),transfer = transfer, i_dim=config$i_dim,j_dim=config$j_dim,init=config$init,verbose=config$verbose)
