@@ -12,7 +12,6 @@
 #' @export
 extract_config <- function(verbose=T){
   config <- list(
-    extend_dim = 100,
     init="random",
     i_dim = 30,
     j_dim = 30,
