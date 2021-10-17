@@ -76,7 +76,7 @@ gcproc <- function(data_list,
 
     main_batches <-
       # parallel::mc
-    lapply(X = c(1:dim(mini.batch_table)[1]),function(batch){
+      lapply(X = c(1:dim(mini.batch_table)[1]),function(batch){
         pivots <- list(alpha = pivots$alpha[[mini.batch_table[batch,1]]],
                        beta = pivots$beta[[mini.batch_table[batch,2]]])
 
@@ -120,7 +120,7 @@ gcproc <- function(data_list,
         )
 
       })
-      # ,mc.cores = config$n_cores)
+    # ,mc.cores = config$n_cores)
 
 
     for (X in (1:length(data_list))){
@@ -128,7 +128,7 @@ gcproc <- function(data_list,
 
         main.proportion[[X]] <- main.proportion[[X]] + main_batches[[Y]]$main.proportion[[X]]
         if (!covariate$fix){
-          main.index[[X]] <- t(apply(main.proportion[[X]],1,function(X){X==max(X)}))
+          main.index[[X]] <- t(apply(main.proportion[[X]],1,function(X){X==min(X)}))
         }
       }
     }
@@ -194,7 +194,7 @@ gcproc <- function(data_list,
   })
 
   main.labels <- list(probabilties = main.proportion,
-                      labels = lapply(c(1:length(data_list)),function(X){apply(main.proportion[[X]],1,function(X){which(X==max(X))})})
+                      labels = lapply(c(1:length(data_list)),function(X){apply(main.proportion[[X]],1,function(X){which(X==min(X))})})
   )
 
   runtime.end <- Sys.time()
@@ -255,7 +255,7 @@ update_set <- function(x,
   main.parameters$beta[,pivots$beta] <- (t(pinv(((t(main.parameters$alpha[pivots$alpha,])%*%(internal.code))))%*%t(t(main.parameters$alpha[pivots$alpha,])%*%(internal.code))%*%(x)))
   main.code$encode[pivots$alpha,pivots$beta] <- (main.parameters$alpha[pivots$alpha,]%*%(x)%*%(main.parameters$beta[,pivots$beta]))
 
-  for (i in 1:dim(main.proportion)[2]){
+  for (X in 1:dim(main.proportion)[2]){
 
     internal_encode <- (main.parameters$alpha[pivots$alpha,which(main.index[,X]==1)]%*%(x[which(main.index[,X]==1),])%*%(main.parameters$beta[,pivots$beta]))
 
