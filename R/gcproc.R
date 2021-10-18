@@ -80,35 +80,31 @@ gcproc <- function(data_list,
         pivots <- list(alpha = pivots$alpha[[mini.batch_table[batch,1]]],
                        beta = pivots$beta[[mini.batch_table[batch,2]]])
 
-        for (iter.update.outer in c(1:config$n_epochs)){
-          for (i in sample(1:length(data_list))){
-            for (iter.update.inner in c(1:config$n_epochs)){
+        for (i in sample(1:length(data_list))){
 
-              internal.param <- list(
-                alpha = main.parameters$alpha[[join$alpha[i]]],
-                beta = main.parameters$beta[[join$beta[i]]]
-              )
+          internal.param <- list(
+            alpha = main.parameters$alpha[[join$alpha[i]]],
+            beta = main.parameters$beta[[join$beta[i]]]
+          )
 
-              return_update <- update_set(x = as.matrix(data_list[[i]]),
-                                          main.parameters = internal.param,
-                                          main.code = main.code,
-                                          main.proportion = main.proportion[[i]],
-                                          main.index = main.index[[i]],
-                                          pivots = pivots,
-                                          fix = transfer$fix)
+          return_update <- update_set(x = as.matrix(data_list[[i]]),
+                                      main.parameters = internal.param,
+                                      main.code = main.code,
+                                      main.proportion = main.proportion[[i]],
+                                      main.index = main.index[[i]],
+                                      pivots = pivots,
+                                      fix = transfer$fix)
 
-              main.parameters$alpha[[join$alpha[i]]] <- return_update$main.parameters$alpha
-              main.parameters$beta[[join$beta[i]]] <- return_update$main.parameters$beta
+          main.parameters$alpha[[join$alpha[i]]] <- return_update$main.parameters$alpha
+          main.parameters$beta[[join$beta[i]]] <- return_update$main.parameters$beta
 
-              main.code <- return_update$main.code
-              main.proportion[[i]] <- return_update$main.proportion
+          main.code <- return_update$main.code
+          main.proportion[[i]] <- return_update$main.proportion
 
-              if (!covariate$fix){
-                main.index[[i]] <- t(apply(return_update$main.proportion,1,function(X){X==min(X)}))
-              }
-
-            }
+          if (!covariate$fix){
+            main.index[[i]] <- t(apply(return_update$main.proportion,1,function(X){X==max(X)}))
           }
+
         }
 
         return(list(pivots = pivots,
@@ -126,9 +122,9 @@ gcproc <- function(data_list,
     for (X in (1:length(data_list))){
       for (Y in (1:length(main_batches))){
 
-        main.proportion[[X]] <- main.proportion[[X]] + main_batches[[Y]]$main.proportion[[X]]
+        main.proportion[[X]] <- main_batches[[Y]]$main.proportion[[X]]
         if (!covariate$fix){
-          main.index[[X]] <- t(apply(main.proportion[[X]],1,function(X){X==min(X)}))
+          main.index[[X]] <- t(apply(main.proportion[[X]],1,function(X){X==max(X)}))
         }
       }
     }
@@ -194,7 +190,7 @@ gcproc <- function(data_list,
   })
 
   main.labels <- list(probabilties = main.proportion,
-                      labels = lapply(c(1:length(data_list)),function(X){apply(main.proportion[[X]],1,function(X){which(X==min(X))})})
+                      labels = lapply(c(1:length(data_list)),function(X){apply(main.proportion[[X]],1,function(X){which(X==max(X))})})
   )
 
   runtime.end <- Sys.time()
@@ -247,30 +243,36 @@ update_set <- function(x,
   internal.code <- Reduce('+',lapply(main.code$code,function(X){X[pivots$alpha,pivots$beta]}))
 
   for (X in sample(c(1:dim(main.proportion)[2]))){
-    main.parameters$alpha[pivots$alpha,which((main.index[,X]==1))] <- (t((x[which((main.index[,X]==1)),])%*%t((internal.code)%*%t(main.parameters$beta[,pivots$beta]))%*%pinv(t((internal.code)%*%t(main.parameters$beta[,pivots$beta])))))
-    main.parameters$beta[,pivots$beta] <- (t(pinv(((t(main.parameters$alpha[pivots$alpha,which((main.index[,X]==1))])%*%(internal.code))))%*%t(t(main.parameters$alpha[pivots$alpha,which((main.index[,X]==1))])%*%(internal.code))%*%(x[which((main.index[,X]==1)),])))
+    main.parameters$alpha[pivots$alpha,] <- (t((x*main.proportion[,X])%*%t((internal.code)%*%t(main.parameters$beta[,pivots$beta]))%*%pinv(t((internal.code)%*%t(main.parameters$beta[,pivots$beta])))))
+    main.parameters$beta[,pivots$beta] <- (t(pinv(((t(main.parameters$alpha[pivots$alpha,])%*%(internal.code))))%*%t(t(main.parameters$alpha[pivots$alpha,])%*%(internal.code))%*%(x*main.proportion[,X])))
   }
 
 
 
   for (X in 1:dim(main.proportion)[2]){
 
-    main.code$encode[pivots$alpha,pivots$beta] <- (main.parameters$alpha[pivots$alpha,which((main.index[,X]==1))]%*%(x[which((main.index[,X]==1)),])%*%(main.parameters$beta[,pivots$beta]))
+    main.code$encode[pivots$alpha,pivots$beta] <- (main.parameters$alpha[pivots$alpha,]%*%(x*main.proportion[,X])%*%(main.parameters$beta[,pivots$beta]))
 
     if(!fix){
-      main.code$code[[X]][pivots$alpha,pivots$beta] <- pinv(t(main.parameters$alpha[pivots$alpha,which(main.index[,X]==1)]))%*%(main.code$encode[pivots$alpha,pivots$beta])%*%pinv(main.parameters$beta[,pivots$beta])
+      main.code$code[[X]][pivots$alpha,pivots$beta] <- pinv(t(main.parameters$alpha[pivots$alpha,]))%*%(main.code$encode[pivots$alpha,pivots$beta])%*%pinv(main.parameters$beta[,pivots$beta])
     }
 
   }
 
-
+  pys <- main.proportion
   for (X in c(1:dim(main.proportion)[2])){
     x.alpha.code <- x%*%(main.parameters$beta[,pivots$beta])%*%MASS::ginv(t(main.parameters$beta[,pivots$beta])%*%(main.parameters$beta[,pivots$beta]))
     alpha.code <- t(main.parameters$alpha[pivots$alpha,])%*%main.code$code[[X]][pivots$alpha,pivots$beta]
     project.x <- MASS::ginv(t(alpha.code)%*%alpha.code)%*%t(alpha.code)%*%x.alpha.code
 
-    main.proportion[,X] <- rowMeans(abs(x.alpha.code - alpha.code))
+    pys[,X] <- log(mean(pys[,X])) + mclust::dmvnorm(x.alpha.code - alpha.code,sigma = t(x.alpha.code - alpha.code)%*%(x.alpha.code - alpha.code)/dim(x)[1],log = T)
   }
+
+  pys_max <- apply(pys, 1, max)
+  pys <- sweep(pys, 1, pys_max, '-')
+  pys <- exp(pys)
+  main.proportion <- sweep(pys, 1, rowSums(pys), '/')
+
 
   return(list(main.parameters = main.parameters,
               main.code = main.code,
