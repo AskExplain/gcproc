@@ -244,33 +244,32 @@ update_set <- function(x,
                        pivots,
                        fix){
 
+  internal.code <- Reduce('+',lapply(main.code$code,function(X){X[pivots$alpha,pivots$beta]}))
 
   for (X in sample(c(1:dim(main.proportion)[2]))){
-    internal.code <- main.code$code[[X]][pivots$alpha,pivots$beta]
-
-    main.parameters$alpha[pivots$alpha,which(main.index[,X]==X)] <- (t((x[which(main.index[,X]==X),])%*%t((internal.code)%*%t(main.parameters$beta[,pivots$beta]))%*%pinv(t((internal.code)%*%t(main.parameters$beta[,pivots$beta])))))
-
+    main.parameters$alpha[pivots$alpha,which((main.index[,X]==1))] <- (t((x[which((main.index[,X]==1)),])%*%t((internal.code)%*%t(main.parameters$beta[,pivots$beta]))%*%pinv(t((internal.code)%*%t(main.parameters$beta[,pivots$beta])))))
+    main.parameters$beta[,pivots$beta] <- (t(pinv(((t(main.parameters$alpha[pivots$alpha,which((main.index[,X]==1))])%*%(internal.code))))%*%t(t(main.parameters$alpha[pivots$alpha,which((main.index[,X]==1))])%*%(internal.code))%*%(x[which((main.index[,X]==1)),])))
   }
 
-  main.parameters$beta[,pivots$beta] <- (t(pinv(((t(main.parameters$alpha[pivots$alpha,])%*%(internal.code))))%*%t(t(main.parameters$alpha[pivots$alpha,])%*%(internal.code))%*%(x)))
-  main.code$encode[pivots$alpha,pivots$beta] <- (main.parameters$alpha[pivots$alpha,]%*%(x)%*%(main.parameters$beta[,pivots$beta]))
+
 
   for (X in 1:dim(main.proportion)[2]){
 
-    internal_encode <- (main.parameters$alpha[pivots$alpha,which(main.index[,X]==1)]%*%(x[which(main.index[,X]==1),])%*%(main.parameters$beta[,pivots$beta]))
+    main.code$encode[pivots$alpha,pivots$beta] <- (main.parameters$alpha[pivots$alpha,which((main.index[,X]==1))]%*%(x[which((main.index[,X]==1)),])%*%(main.parameters$beta[,pivots$beta]))
 
     if(!fix){
-      main.code$code[[X]][pivots$alpha,pivots$beta] <- pinv(t(main.parameters$alpha[pivots$alpha,which(main.index[,X]==1)]))%*%(internal_encode)%*%pinv(main.parameters$beta[,pivots$beta])
+      main.code$code[[X]][pivots$alpha,pivots$beta] <- pinv(t(main.parameters$alpha[pivots$alpha,which(main.index[,X]==1)]))%*%(main.code$encode[pivots$alpha,pivots$beta])%*%pinv(main.parameters$beta[,pivots$beta])
     }
 
   }
+
 
   for (X in c(1:dim(main.proportion)[2])){
     x.alpha.code <- x%*%(main.parameters$beta[,pivots$beta])%*%MASS::ginv(t(main.parameters$beta[,pivots$beta])%*%(main.parameters$beta[,pivots$beta]))
     alpha.code <- t(main.parameters$alpha[pivots$alpha,])%*%main.code$code[[X]][pivots$alpha,pivots$beta]
     project.x <- MASS::ginv(t(alpha.code)%*%alpha.code)%*%t(alpha.code)%*%x.alpha.code
 
-    main.proportion[,X] <- rowMeans(abs(x.alpha.code - alpha.code%*%project.x))
+    main.proportion[,X] <- rowMeans(abs(x.alpha.code - alpha.code))
   }
 
   return(list(main.parameters = main.parameters,
