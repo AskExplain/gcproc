@@ -20,51 +20,47 @@ initialise.gcproc <- function(data_list,
   main.proportion <- list()
   main.parameters <- list(alpha = list(), beta = list())
   for (i in 1:length(data_list)){
+    alpha.list <- list()
+    beta.list <- list()
 
-    main.index[[i]] <- covariate$factor[[i]]
-    main.proportion[[i]] <- array(runif(dim(data_list[[i]])[1]*length(index$code_indicator)),dim=c(dim(data_list[[i]])[1],length(index$code_indicator)))
-    main.proportion[[i]] <- main.proportion[[i]] / rowSums(main.proportion[[i]])
-    colnames(main.proportion[[i]]) <- index$code_indicator
+    for (j in c(1:length(index$code_indicator))){
 
-    initial.param <-initialise.parameters(x = as.matrix(data_list[[i]]),transfer = transfer, i_dim=config$i_dim,j_dim=config$j_dim,init=config$init,verbose=config$verbose)
 
-    # Check anchoring parameters
-    alpha <- initial.param$pivot_x.sample
-    beta <- initial.param$pivot_x.feature
+      main.index[[i]] <- covariate$factor[[i]]
+      main.proportion[[i]] <- array(runif(dim(data_list[[i]])[1]*length(index$code_indicator)),dim=c(dim(data_list[[i]])[1],length(index$code_indicator)))
+      main.proportion[[i]] <- main.proportion[[i]] / rowSums(main.proportion[[i]])
+      colnames(main.proportion[[i]]) <- index$code_indicator
 
-    main.parameters$alpha[[join$alpha[i]]] <- alpha
-    main.parameters$beta[[join$beta[i]]] <- beta
+      initial.param <-initialise.parameters(x = as.matrix(data_list[[i]]),transfer = transfer, i_dim=config$i_dim,j_dim=config$j_dim,init=config$init,verbose=config$verbose)
 
-    if (is.null(transfer$code)){
+      # Check anchoring parameters
+      alpha <- initial.param$pivot_x.sample
+      beta <- initial.param$pivot_x.feature
 
-      # Find intercept in endecoded space
-      encode <- (alpha%*%as.matrix(data_list[[i]])%*%(beta))
-      code <- (pinv(t(alpha))%*%(encode)%*%pinv((beta)))
+      if (is.null(transfer$code)){
 
-      code = list(
-        encode = encode,
-        code = code
-      )
+        # Find intercept in endecoded space
+        encode <- (alpha%*%as.matrix(data_list[[i]])%*%(beta))
+        code <- (pinv(t(alpha))%*%(encode)%*%pinv((beta)))
+
+        code = list(
+          encode = encode,
+          code = code
+        )
+
+      }
+
+
+      main.code$encode <- code$encode
+      main.code$code[[j]] <- code$code*rnorm(prod(dim(code$code)))
+      alpha.list <- c(alpha.list,list(alpha*rnorm(prod(dim(alpha)))))
+      beta.list <- c(beta.list,list(beta*rnorm(prod(dim(beta)))))
 
     }
 
+    main.parameters$alpha[[i]] <- alpha.list
+    main.parameters$beta[[i]] <- beta.list
   }
-
-  if (is.null(transfer$code)){
-    main.code$encode <- code$encode
-    for (code.id in 1:length(index$code_indicator)){
-      main.code$code[[code.id]] <- code$code*rnorm(prod(dim(code$code)))
-    }
-
-    names(main.code$code) <- index$code_indicator
-  } else {
-
-    main.code <- transfer$code
-
-  }
-
-  names(main.parameters$alpha) <- unique(join$alpha)
-  names(main.parameters$beta) <- unique(join$beta)
 
 
   return(
