@@ -89,21 +89,25 @@ gcproc <- function(data_list,
                                   pivots = pivots,
                                   fix = transfer$fix)
 
+
       main.parameters$alpha[[join$alpha[i]]] <- return_update$main.parameters$alpha
       main.parameters$beta[[join$beta[i]]] <- return_update$main.parameters$beta
 
       main.code <- return_update$main.code
-      main.proportion[[i]] <- return_update$main.proportion
 
       if (!covariate$fix){
+        main.proportion[[i]] <- return_update$main.proportion
         main.index[[i]] <- t(apply(return_update$main.proportion,1,function(X){X==max(X)}))
+        print(head(main.proportion[[i]]))
+
       }
+
 
     }
 
 
 
-    matrix.residuals <- Reduce('+',main.code$encode)- Reduce('+',prev.code$encode)
+    matrix.residuals <- main.code$encode - prev.code$encode
 
     total.mse <- mean(abs(matrix.residuals))
 
@@ -161,11 +165,11 @@ gcproc <- function(data_list,
 
     x <- as.matrix(data_list[[Y]])
 
-    feature_x.dim_reduce.encode <- Reduce('+',lapply(c(1:dim(main.proportion[[Y]])[2]),function(X){t(main.parameters$alpha[[join$alpha[Y]]][[X]]%*%x)}))
-    sample_x.dim_reduce.encode <- Reduce('+',lapply(c(1:dim(main.proportion[[Y]])[2]),function(X){x%*%main.parameters$beta[[join$beta[Y]]][[X]]}))
+    feature_x.dim_reduce.encode <- Reduce('+',lapply(c(1:dim(main.proportion[[Y]])[2]),function(X){t(main.parameters$alpha[[join$alpha[Y]]][[X]]%*%((x*main.proportion[[Y]][,X])))/sum(main.proportion[[Y]][,X])}))
+    sample_x.dim_reduce.encode <- Reduce('+',lapply(c(1:dim(main.proportion[[Y]])[2]),function(X){((x*main.proportion[[Y]][,X]))%*%main.parameters$beta[[join$beta[Y]]][[X]]/sum(main.proportion[[Y]][,X])}))
 
-    feature_x.dim_reduce.code <- Reduce('+',lapply(c(1:dim(main.proportion[[Y]])[2]),function(X){t(pinv(t(main.parameters$alpha[[join$alpha[Y]]][[X]]))%*%main.parameters$alpha[[join$alpha[Y]]][[X]]%*%x)}))
-    sample_x.dim_reduce.code <- Reduce('+',lapply(c(1:dim(main.proportion[[Y]])[2]),function(X){x%*%main.parameters$beta[[join$beta[Y]]][[X]]%*%pinv((main.parameters$beta[[join$beta[Y]]][[X]]))}))
+    feature_x.dim_reduce.code <- Reduce('+',lapply(c(1:dim(main.proportion[[Y]])[2]),function(X){t(pinv(t(main.parameters$alpha[[join$alpha[Y]]][[X]]))%*%main.parameters$alpha[[join$alpha[Y]]][[X]]%*%((x*main.proportion[[Y]][,X])))/sum(main.proportion[[Y]][,X])}))
+    sample_x.dim_reduce.code <- Reduce('+',lapply(c(1:dim(main.proportion[[Y]])[2]),function(X){((x*main.proportion[[Y]][,X]))%*%main.parameters$beta[[join$beta[Y]]][[X]]%*%pinv((main.parameters$beta[[join$beta[Y]]][[X]]))/sum(main.proportion[[Y]][,X])}))
 
     return(list(
       feature_x.dim_reduce.encode = feature_x.dim_reduce.encode,
@@ -230,18 +234,18 @@ update_set <- function(x,
 
   encode.p <- 0
   for (X in sample(c(1:dim(main.proportion)[2]))){
+    internal.code <- main.code$code[[X]]
     main.parameters$alpha[[X]] <- (t((x*main.proportion[,X])%*%t((internal.code)%*%t(main.parameters$beta[[X]]))%*%pinv(t((internal.code)%*%t(main.parameters$beta[[X]]))))) / sum(main.proportion[,X])
     main.parameters$beta[[X]] <- (t(pinv(((t(main.parameters$alpha[[X]])%*%(internal.code))))%*%t(t(main.parameters$alpha[[X]])%*%(internal.code))%*%(x*main.proportion[,X]))) / sum(main.proportion[,X])
-    encode.p <- encode.p + (main.parameters$alpha[[X]]%*%(x*main.proportion[,X])%*%(main.parameters$beta[[X]])) / sum(main.proportion)
+    encode.p <- encode.p + (main.parameters$alpha[[X]]%*%(x*main.proportion[,X])%*%(main.parameters$beta[[X]]))
   }
 
-  main.code$encode <- encode.p
+  main.code$encode <- encode.p / sum(main.proportion)
 
   for (X in 1:dim(main.proportion)[2]){
 
-
     if(!fix){
-      main.code$code[[X]] <- pinv(t(main.parameters$alpha[[X]]))%*%(main.code$encode)%*%pinv(main.parameters$beta[[X]])
+      main.code$code[[X]] <- pinv(t(main.parameters$alpha[[X]]))%*%((main.parameters$alpha[[X]]%*%(x*main.proportion[,X])%*%(main.parameters$beta[[X]])))%*%pinv(main.parameters$beta[[X]]) / sum(main.proportion[,X])
     }
 
   }
@@ -254,7 +258,7 @@ update_set <- function(x,
     x.beta <- x%*%(main.parameters$beta[[X]])
     x.decode.beta <- t(main.parameters$alpha[[X]])%*%main.code$code[[X]]%*%t(main.parameters$beta[[X]])%*%(main.parameters$beta[[X]])
 
-    pys[,X] <- log(mean(pys[,X])) + mclust::dmvnorm(x.beta - x.decode.beta,sigma = diag(diag(t(x.beta - x.decode.beta)%*%(x.beta - x.decode.beta)/dim(x)[1])),log = T)
+    pys[,X] <- log(mean(pys[,X])) + mclust::dmvnorm(x.beta - x.decode.beta,sigma = t(x.beta - x.decode.beta)%*%(x.beta - x.decode.beta)/dim(x)[1],log = T)
   }
 
   pys_max <- apply(pys, 1, max)

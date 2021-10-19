@@ -22,12 +22,16 @@ initialise.gcproc <- function(data_list,
   for (i in 1:length(data_list)){
     alpha.list <- list()
     beta.list <- list()
+    code.list <- list()
+    encode.d <- 0
 
     for (j in c(1:length(index$code_indicator))){
 
-
-      main.index[[i]] <- covariate$factor[[i]]
-      main.proportion[[i]] <- array(runif(dim(data_list[[i]])[1]*length(index$code_indicator)),dim=c(dim(data_list[[i]])[1],length(index$code_indicator)))
+      if (covariate$fix){
+        main.proportion[[i]] <- covariate$factor[[i]]
+      } else {
+        main.proportion[[i]] <- array(runif(dim(data_list[[i]])[1]*length(index$code_indicator)),dim=c(dim(data_list[[i]])[1],length(index$code_indicator)))
+      }
       main.proportion[[i]] <- main.proportion[[i]] / rowSums(main.proportion[[i]])
       colnames(main.proportion[[i]]) <- index$code_indicator
 
@@ -37,24 +41,26 @@ initialise.gcproc <- function(data_list,
       alpha <- initial.param$pivot_x.sample
       beta <- initial.param$pivot_x.feature
 
-      if (is.null(transfer$code)){
 
-        # Find intercept in endecoded space
-        encode <- (alpha%*%as.matrix(data_list[[i]])%*%(beta))
-        code <- (pinv(t(alpha))%*%(encode)%*%pinv((beta)))
-
-        code = list(
-          encode = encode,
-          code = code
-        )
-
-      }
-
-
-      main.code$encode <- code$encode
-      main.code$code[[j]] <- code$code*rnorm(prod(dim(code$code)))
       alpha.list <- c(alpha.list,list(alpha*rnorm(prod(dim(alpha)))))
       beta.list <- c(beta.list,list(beta*rnorm(prod(dim(beta)))))
+
+      encode.d <- encode.d + (alpha%*%as.matrix(data_list[[i]])%*%(beta))/length(index$code_indicator)
+      code.list <- c(code.list,list((pinv(t(alpha))%*%(encode.d)%*%pinv((beta)))*rnorm(prod(dim(encode.d)))))
+
+    }
+
+
+    if (is.null(transfer$code)){
+
+      main.code = list(
+        encode = encode.d,
+        code = code.list
+      )
+
+    } else {
+
+      main.code <- transfer$code
 
     }
 
