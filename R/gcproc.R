@@ -27,7 +27,9 @@ gcproc <- function(data_list,
 
   set.seed(config$seed)
 
-  convergence.parameters <- list()
+  convergence.parameters <- list(count = 0)
+  accept_score <- 1
+  score_lag <- 2
 
   recover$predict.list <- lapply(c(1:length(data_list)),function(X){NULL})
 
@@ -68,89 +70,69 @@ gcproc <- function(data_list,
   }
 
 
-  for (epoch.id in c(1:config$n_epochs)){
-    for (set.of.batch.id in c(0:(config$n_batch-1))){
+  while (T){
 
-      print(paste("Batch number :   ",set.of.batch.id,sep=""))
+    prev.code <- main.code
 
-      mini.batch_table <- batch_table[sample(seq(c(1+config$n_batch*set.of.batch.id),(config$n_batch*(1+set.of.batch.id)),1)),]
+    for (i in sample(1:length(data_list))){
 
-      main_batches <-
-        # parallel::mc
-        lapply(X = c(1:dim(mini.batch_table)[1]),function(batch){
-          pivots <- list(alpha = pivots$alpha[[mini.batch_table[batch,1]]],
-                         beta = pivots$beta[[mini.batch_table[batch,2]]])
+      internal.param <- list(
+        alpha = main.parameters$alpha[[join$alpha[i]]],
+        beta = main.parameters$beta[[join$beta[i]]]
+      )
 
-          for (i in sample(1:length(data_list))){
+      return_update <- update_set(x = as.matrix(data_list[[i]]),
+                                  main.parameters = internal.param,
+                                  main.code = main.code,
+                                  main.proportion = main.proportion[[i]],
+                                  main.index = main.index[[i]],
+                                  pivots = pivots,
+                                  fix = transfer$fix)
 
-            internal.param <- list(
-              alpha = main.parameters$alpha[[join$alpha[i]]],
-              beta = main.parameters$beta[[join$beta[i]]]
-            )
+      main.parameters$alpha[[join$alpha[i]]] <- return_update$main.parameters$alpha
+      main.parameters$beta[[join$beta[i]]] <- return_update$main.parameters$beta
 
-            return_update <- update_set(x = as.matrix(data_list[[i]]),
-                                        main.parameters = internal.param,
-                                        main.code = main.code,
-                                        main.proportion = main.proportion[[i]],
-                                        main.index = main.index[[i]],
-                                        pivots = pivots,
-                                        fix = transfer$fix)
+      main.code <- return_update$main.code
+      main.proportion[[i]] <- return_update$main.proportion
 
-            main.parameters$alpha[[join$alpha[i]]] <- return_update$main.parameters$alpha
-            main.parameters$beta[[join$beta[i]]] <- return_update$main.parameters$beta
-
-            main.code <- return_update$main.code
-            main.proportion[[i]] <- return_update$main.proportion
-
-            if (!covariate$fix){
-              main.index[[i]] <- t(apply(return_update$main.proportion,1,function(X){X==max(X)}))
-            }
-
-          }
-
-          return(list(pivots = pivots,
-                      main.code = main.code,
-                      main.parameters = main.parameters,
-                      main.proportion = main.proportion,
-                      main.index = main.index
-          )
-          )
-
-        })
-      # ,mc.cores = config$n_cores)
-
-      for (X in (1:length(data_list))){
-        for (Y in (1:length(main_batches))){
-
-          main.proportion[[X]] <- main.proportion[[X]] + main_batches[[Y]]$main.proportion[[X]] / length(main_batches)
-          if (!covariate$fix){
-            main.index[[X]] <- t(apply(main.proportion[[X]],1,function(X){X==max(X)}))
-          }
-        }
+      if (!covariate$fix){
+        main.index[[i]] <- t(apply(return_update$main.proportion,1,function(X){X==max(X)}))
       }
-
-
-      for (batch.id in 1:length(main_batches)){
-
-        for (code.id in c(1:length(main.code$code))){
-
-          for (join.id in c(1:length(data_list))){
-            main.parameters$alpha[[join$alpha[join.id]]][[code.id]][main_batches[[batch.id]]$pivots$alpha,] <- main_batches[[batch.id]]$main.parameters$alpha[[join$alpha[join.id]]][[code.id]][main_batches[[batch.id]]$pivots$alpha,]
-            main.parameters$beta[[join$beta[join.id]]][[code.id]][,main_batches[[batch.id]]$pivots$beta] <- main_batches[[batch.id]]$main.parameters$beta[[join$beta[join.id]]][[code.id]][,main_batches[[batch.id]]$pivots$beta]
-          }
-
-          main.code$encode[main_batches[[batch.id]]$pivots$alpha,main_batches[[batch.id]]$pivots$beta] <- main_batches[[batch.id]]$main.code$encode[main_batches[[batch.id]]$pivots$alpha,main_batches[[batch.id]]$pivots$beta]
-
-
-          main.code$code[[code.id]][main_batches[[batch.id]]$pivots$alpha,main_batches[[batch.id]]$pivots$beta] <- main_batches[[batch.id]]$main.code$code[[code.id]][main_batches[[batch.id]]$pivots$alpha,main_batches[[batch.id]]$pivots$beta]
-        }
-
-
-      }
-
 
     }
+
+
+
+    matrix.residuals <- Reduce('+',main.code$encode)- Reduce('+',prev.code$encode)
+
+    total.mse <- mean(abs(matrix.residuals))
+
+    # Check convergence
+    convergence.parameters$score.vec <- c(convergence.parameters$score.vec, total.mse)
+    MSE <- mean(tail(convergence.parameters$score.vec,accept_score))
+    prev.MSE <- mean(tail(convergence.parameters$score.vec,score_lag)[1:accept_score])
+
+    if ( convergence.parameters$count > ( score_lag ) ){
+      if (config$verbose == T){
+        print(paste("Iteration: ",convergence.parameters$count," with Tolerance of: ", abs(prev.MSE - MSE),sep=""))
+      }
+    } else {
+      if (config$verbose){
+        print(paste("Iteration: ",convergence.parameters$count," ... initialising ... ",sep=""))
+      }
+    }
+
+    if (convergence.parameters$count > config$min_iter){
+      if ((convergence.parameters$count > config$max_iter ) | abs(prev.MSE - MSE) < config$tol){
+        break
+      }
+    }
+
+    convergence.parameters$count = convergence.parameters$count + 1
+
   }
+
+
 
   if (any(do.call('c',lapply(recover$design.list,function(X){!is.null(X)})))){
 
@@ -244,22 +226,22 @@ update_set <- function(x,
                        pivots,
                        fix){
 
-  internal.code <- Reduce('+',lapply(main.code$code,function(X){X[pivots$alpha,pivots$beta]}))
+  internal.code <- Reduce('+',lapply(main.code$code,function(X){X}))
 
   encode.p <- 0
   for (X in sample(c(1:dim(main.proportion)[2]))){
-    main.parameters$alpha[[X]][pivots$alpha,] <- (t((x*main.proportion[,X])%*%t((internal.code)%*%t(main.parameters$beta[[X]][,pivots$beta]))%*%pinv(t((internal.code)%*%t(main.parameters$beta[[X]][,pivots$beta]))))) / sum(main.proportion[,X])
-    main.parameters$beta[[X]][,pivots$beta] <- (t(pinv(((t(main.parameters$alpha[[X]][pivots$alpha,])%*%(internal.code))))%*%t(t(main.parameters$alpha[[X]][pivots$alpha,])%*%(internal.code))%*%(x*main.proportion[,X]))) / sum(main.proportion[,X])
-    encode.p <- encode.p + (main.parameters$alpha[[X]][pivots$alpha,]%*%(x*main.proportion[,X])%*%(main.parameters$beta[[X]][,pivots$beta])) / sum(main.proportion)
+    main.parameters$alpha[[X]] <- (t((x*main.proportion[,X])%*%t((internal.code)%*%t(main.parameters$beta[[X]]))%*%pinv(t((internal.code)%*%t(main.parameters$beta[[X]]))))) / sum(main.proportion[,X])
+    main.parameters$beta[[X]] <- (t(pinv(((t(main.parameters$alpha[[X]])%*%(internal.code))))%*%t(t(main.parameters$alpha[[X]])%*%(internal.code))%*%(x*main.proportion[,X]))) / sum(main.proportion[,X])
+    encode.p <- encode.p + (main.parameters$alpha[[X]]%*%(x*main.proportion[,X])%*%(main.parameters$beta[[X]])) / sum(main.proportion)
   }
 
-  main.code$encode[pivots$alpha,pivots$beta] <- encode.p
+  main.code$encode <- encode.p
 
   for (X in 1:dim(main.proportion)[2]){
 
 
     if(!fix){
-      main.code$code[[X]][pivots$alpha,pivots$beta] <- pinv(t(main.parameters$alpha[[X]][pivots$alpha,]))%*%(main.code$encode[pivots$alpha,pivots$beta])%*%pinv(main.parameters$beta[[X]][,pivots$beta])
+      main.code$code[[X]] <- pinv(t(main.parameters$alpha[[X]]))%*%(main.code$encode)%*%pinv(main.parameters$beta[[X]])
     }
 
   }
