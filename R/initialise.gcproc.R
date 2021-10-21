@@ -6,56 +6,56 @@ initialise.gcproc <- function(data_list,
                               join,
                               pivots){
 
+  index <- list()
+  index$code_indicator <- unique(do.call('c',lapply(c(1:length(covariate$factor)),function(X){c(unique(colnames(covariate$factor[[X]])))})))
+
 
 
   if (config$verbose){
     print(paste("Initialising data with : ",config$init,sep=""))
   }
 
-
-
   main.code <- list(code=list(),encode=list())
   main.index <- list()
-  main.parameters <- list(alpha = list(), beta = list())
   main.proportion <- list()
-
-  index <- list()
-
+  main.parameters <- list(alpha = list(), beta = list())
   for (i in 1:length(data_list)){
-
-    if (covariate$fix){
-      main.proportion[[i]] <- cbind(covariate$factor[[i]])
-    } else {
-      main.proportion[[i]] <- cbind(covariate$factor[[i]]+array(prod(dim(rnorm(covariate$factor[[i]]))),dim=c(dim(covariate$factor[[i]]))))
-    }
-    # main.proportion[[i]] <- main.proportion[[i]] / rowSums(main.proportion[[i]])
-    index$code_indicator <- colnames(covariate$factor[[i]])
-
-
-    initial.param <-initialise.parameters(x = as.matrix(data_list[[i]]),transfer = transfer, i_dim=config$i_dim,j_dim=config$j_dim,init=config$init,verbose=config$verbose)
-
-    alpha <- initial.param$pivot_x.sample
-    beta <- initial.param$pivot_x.feature
-    main.code$encode <- (alpha%*%as.matrix(data_list[[i]])%*%(beta))/length(index$code_indicator)
-
     alpha.list <- list()
     beta.list <- list()
-    code.list <- list()
 
+    encode.d <- 0
+    code.d <- 0
     for (j in c(1:length(index$code_indicator))){
-      alpha.list <- c(alpha.list,list(alpha*rnorm(prod(dim(alpha)))))
-      beta.list <- c(beta.list,list(beta*rnorm(prod(dim(beta)))))
 
-      code.list <- c(code.list,list((pinv(t(alpha))%*%(main.code$encode)%*%pinv((beta)))*rnorm(prod(dim(main.code$encode)))))
+      if (covariate$fix){
+        main.proportion[[i]] <- covariate$factor[[i]]
+      } else {
+        main.proportion[[i]] <- array(runif(dim(data_list[[i]])[1]*length(index$code_indicator)),dim=c(dim(data_list[[i]])[1],length(index$code_indicator)))
+      }
+      main.proportion[[i]] <- main.proportion[[i]] / rowSums(main.proportion[[i]])
+      colnames(main.proportion[[i]]) <- index$code_indicator
+
+      initial.param <-initialise.parameters(x = as.matrix(data_list[[i]]),transfer = transfer, i_dim=config$i_dim,j_dim=config$j_dim,init=config$init,verbose=config$verbose)
+
+      # Check anchoring parameters
+      alpha <- initial.param$pivot_x.sample*rnorm(prod(dim(initial.param$pivot_x.sample)))
+      beta <- initial.param$pivot_x.feature*rnorm(prod(dim(initial.param$pivot_x.feature)))
+
+      alpha.list <- c(alpha.list,list(alpha))
+      beta.list <- c(beta.list,list(beta))
+
+      encode.d <- encode.d + (alpha%*%as.matrix(data_list[[i]] * main.proportion[[i]][,j])%*%(beta))
+      code.d <- code.d + ((pinv(t(alpha))%*%(encode.d)%*%pinv((beta))))
+
+
     }
-
-
-    main.parameters$alpha[[i]] <- alpha.list
-    main.parameters$beta[[i]] <- beta.list
 
     if (is.null(transfer$code)){
 
-      main.code$code <- code.list
+      main.code = list(
+        encode = encode.d,
+        code = code.d
+      )
 
     } else {
 
@@ -63,10 +63,9 @@ initialise.gcproc <- function(data_list,
 
     }
 
-    names(main.code$code) <- index$code_indicator
-
+    main.parameters$alpha[[i]] <- alpha.list
+    main.parameters$beta[[i]] <- beta.list
   }
-
 
 
   return(
