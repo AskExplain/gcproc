@@ -19,12 +19,14 @@ initialise.gcproc <- function(data_list,
   main.index <- list()
   main.proportion <- list()
   main.parameters <- list(alpha = list(), beta = list())
+
   for (i in 1:length(data_list)){
     alpha.list <- list()
     beta.list <- list()
 
-    encode.d <- 0
-    code.d <- 0
+    encode.list <- list()
+    code.list <- list()
+
     for (j in c(1:length(index$code_indicator))){
 
       if (covariate$fix){
@@ -33,38 +35,82 @@ initialise.gcproc <- function(data_list,
         main.proportion[[i]] <- array(runif(dim(data_list[[i]])[1]*length(index$code_indicator)),dim=c(dim(data_list[[i]])[1],length(index$code_indicator)))
       }
       main.proportion[[i]] <- main.proportion[[i]] / rowSums(main.proportion[[i]])
-      colnames(main.proportion[[i]]) <- index$code_indicator
+
 
       initial.param <-initialise.parameters(x = as.matrix(data_list[[i]]),transfer = transfer, i_dim=config$i_dim,j_dim=config$j_dim,init=config$init,verbose=config$verbose)
 
       # Check anchoring parameters
-      alpha <- initial.param$pivot_x.sample*rnorm(prod(dim(initial.param$pivot_x.sample)))
-      beta <- initial.param$pivot_x.feature*rnorm(prod(dim(initial.param$pivot_x.feature)))
+      alpha <- initial.param$pivot_x.sample
+      beta <- initial.param$pivot_x.feature
+
+
+      if (transfer$fix){
+        encode.d <- transfer$code$encode
+        code.d <- transfer$code$code
+      } else {
+
+        encode.d <- (alpha%*%as.matrix(data_list[[i]])%*%(beta))
+        code.d <- ((pinv(t(alpha))%*%(encode.d)%*%pinv((beta))))
+
+      }
+
+      # for (init_run in c(1:3)){
+      #
+      #   beta.encode_projection <- (beta%*%t(encode.d))
+      #   beta.code_projection <- code.d%*%t(beta)
+      #   beta.decode_projection <- beta.code_projection%*%beta.encode_projection
+      #
+      #   alpha <- (t(((as.matrix(data_list[[i]]))%*%beta.encode_projection%*%t(beta.decode_projection)%*%pinv(t(beta.decode_projection)))))
+      #
+      #   alpha.encode_projection <- (t(encode.d)%*%alpha)
+      #   alpha.code_projection <- t(alpha)%*%code.d
+      #   alpha.decode_projection <- alpha.encode_projection%*%alpha.code_projection
+      #
+      #   beta <- (t(pinv((alpha.decode_projection))%*%t(alpha.decode_projection)%*%(alpha.encode_projection)%*%(as.matrix(data_list[[i]]))))
+      #
+      #
+      #   encode.d <- (alpha%*%as.matrix(data_list[[i]])%*%(beta))
+      #   code.d <- ((pinv(t(alpha))%*%(encode.d)%*%pinv((beta))))
+      #
+      #
+      #   if (!covariate$fix){
+      #     pys <- main.proportion[[i]]
+      #     for (X in c(1:dim(main.proportion[[i]])[2])){
+      #       x.beta <- (as.matrix(data_list[[i]]))%*%(beta)
+      #       x.decode <- t(alpha)%*%code.d%*%t(beta)%*%(beta)
+      #
+      #       pys[,X] <- log((pys[,X])) + mclust::dmvnorm(data = (x.beta - x.decode),sigma = diag(diag(t(x.decode)%*%(x.decode)/dim(x.decode)[1])) ,log = T)
+      #     }
+      #
+      #     pys_max <- apply(pys, 1, max)
+      #     pys <- sweep(pys, 1, pys_max, '-')
+      #     pys <- exp(pys)
+      #     main.proportion[[i]] <- sweep(pys, 1, rowSums(pys), '/')
+      #     colnames(main.proportion[[i]]) <- index$code_indicator
+      #
+      #   }
+      #
+      # }
+
 
       alpha.list <- c(alpha.list,list(alpha))
       beta.list <- c(beta.list,list(beta))
-
-      encode.d <- encode.d + (alpha%*%as.matrix(data_list[[i]] * main.proportion[[i]][,j])%*%(beta))
-      code.d <- code.d + ((pinv(t(alpha))%*%(encode.d)%*%pinv((beta))))
-
+      code.list <- c(code.list,list(code.d))
+      encode.list <- c(encode.list,list(encode.d))
 
     }
 
-    if (is.null(transfer$code)){
 
-      main.code = list(
-        encode = encode.d,
-        code = code.d
-      )
+    main.code = list(
+      encode = encode.d,
+      code = code.list
+    )
 
-    } else {
-
-      main.code <- transfer$code
-
-    }
 
     main.parameters$alpha[[i]] <- alpha.list
     main.parameters$beta[[i]] <- beta.list
+
+
   }
 
 
