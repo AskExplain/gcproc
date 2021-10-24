@@ -168,9 +168,6 @@ gcproc <- function(data_list,
     feature_x.dim_reduce.encode <- t(main.parameters[[Y]]$alpha%*%x)
     sample_x.dim_reduce.encode <- x%*%main.parameters[[Y]]$beta
 
-    feature_x.dim_reduce.code <- t(MASS::ginv((main.parameters[[Y]]$alpha)%*%t(main.parameters[[Y]]$alpha))%*%main.parameters[[Y]]$alpha%*%x)
-    sample_x.dim_reduce.code <- x%*%main.parameters[[Y]]$beta%*%MASS::ginv(t(main.parameters[[Y]]$beta)%*%(main.parameters[[Y]]$beta))
-
     return(list(
       feature_x.dim_reduce.encode = feature_x.dim_reduce.encode,
       sample_x.dim_reduce.encode = sample_x.dim_reduce.encode,
