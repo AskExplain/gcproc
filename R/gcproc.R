@@ -97,6 +97,7 @@ gcproc <- function(data_list,
                     main.parameters = main.parameters
           )
         )
+<<<<<<< Updated upstream
 
       })
       # ,mc.cores = config$n_cores)
@@ -104,6 +105,15 @@ gcproc <- function(data_list,
 
     for (batch.id in 1:length(main_batches)){
 
+=======
+
+      })
+      # ,mc.cores = config$n_cores)
+
+
+    for (batch.id in 1:length(main_batches)){
+
+>>>>>>> Stashed changes
       for (join.id in c(1:length(data_list))){
         main.parameters$alpha[[join$alpha[join.id]]][main_batches[[batch.id]]$pivots$alpha,] <- main_batches[[batch.id]]$main.parameters$alpha[[join$alpha[join.id]]][main_batches[[batch.id]]$pivots$alpha,]
         main.parameters$beta[[join$beta[join.id]]][,main_batches[[batch.id]]$pivots$beta] <- main_batches[[batch.id]]$main.parameters$beta[[join$beta[join.id]]][,main_batches[[batch.id]]$pivots$beta]
@@ -146,9 +156,12 @@ gcproc <- function(data_list,
 
     feature_x.dim_reduce.encode <- t(main.parameters$alpha[[join$alpha[Y]]]%*%x)
     sample_x.dim_reduce.encode <- x%*%main.parameters$beta[[join$beta[Y]]]
+<<<<<<< Updated upstream
 
     feature_x.dim_reduce.code <- t(pinv(t(main.parameters$alpha[[join$alpha[Y]]]))%*%main.parameters$alpha[[join$alpha[Y]]]%*%x)
     sample_x.dim_reduce.code <- x%*%main.parameters$beta[[join$beta[Y]]]%*%pinv((main.parameters$beta[[join$beta[Y]]]))
+=======
+>>>>>>> Stashed changes
 
     return(list(
       feature_x.dim_reduce.encode = feature_x.dim_reduce.encode,
