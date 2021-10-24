@@ -1,72 +1,68 @@
 #' @export
 initialise.gcproc <- function(data_list,
                               config,
-                              covariate,
-                              transfer,
-                              join,
-                              pivots){
+                              transfer){
+
 
   if (config$verbose){
     print(paste("Initialising data with : ",config$init,sep=""))
   }
 
-  alpha.list <- list()
-  beta.list <- list()
-
-  main.code <- list(code=list(),encode=list())
-  main.parameters <- list(alpha = list(), beta = list())
+  main.parameters <- list()
   for (i in 1:length(data_list)){
 
-    initial.param <-initialise.parameters(x = as.matrix(data_list[[i]]),transfer = transfer, i_dim=config$i_dim,j_dim=config$j_dim,init=config$init,verbose=config$verbose)
+    initial.param <-initialise.parameters(x = as.matrix(data_list[[i]]), i_dim=config$i_dim,j_dim=config$j_dim,init=config$init,verbose=config$verbose)
 
+    # Check anchoring parameters
     alpha <- initial.param$pivot_x.sample
     beta <- initial.param$pivot_x.feature
 
-    encode.d <- (alpha%*%as.matrix(data_list[[i]])%*%(beta))
-    code.d <- (pinv(t(alpha))%*%(encode.d)%*%pinv((beta)))
-
     if (is.null(transfer$code)){
+      # Find intercept in endecoded space
+      X_encode <- (alpha%*%as.matrix(data_list[[i]])%*%(beta))
+      X_code <- (MASS::ginv((alpha)%*%t(alpha))%*%(X_encode)%*%MASS::ginv(t(beta)%*%(beta)))
 
-      main.code = list(
-        encode = encode.d,
-        code = code.d
+      code <- X_code
+
+      code = list(
+        encode = X_encode,
+        code = code
       )
 
     } else {
 
-      main.code <- transfer$code
+      code <- transfer$code
 
     }
 
-    alpha.list <- c(alpha.list,list(alpha))
-    beta.list <- c(beta.list,list(beta))
+    main.parameters[[i]] = list(
+      alpha = alpha,
+      beta = beta
+    )
 
   }
-
-  main.parameters$alpha <- alpha.list
-  main.parameters$beta <- beta.list
 
 
   return(
     list(
       main.parameters = main.parameters,
-      main.code = main.code
-      )
+      code = code
+    )
   )
 
 }
 
 
 #' @export
-initialise.parameters <- function(x,transfer,i_dim,j_dim,init="svd",verbose=F){
+initialise.parameters <- function(x,transfer=NULL,i_dim=70,j_dim=70,init="svd-quick",verbose=F){
 
   x <- Matrix::Matrix(x,sparse=T)
 
   set.seed(1)
 
   if (init=="random"){
-    param.beta <- if(is.null(transfer$beta)){array(rnorm(config$j_dim),dim=c(dim(x)[2],config$j_dim))}else{transfer$beta}
-    param.alpha = if(is.null(transfer$alpha)){array(rnorm(config$i_dim),dim=c(config$i_dim,dim(x)[1]))}else{transfer$alpha}
+    param.beta <- if(is.null(transfer$beta)){matrix(rnorm(dim(x)[2]*j_dim),nrow=dim(x)[2],ncol=j_dim)}else{transfer$beta}
+    param.alpha = if(is.null(transfer$alpha)){matrix(rnorm(dim(x)[1]*i_dim),nrow=i_dim,ncol=dim(x)[1])}else{transfer$alpha}
   } else {
     cov_x <- corpcor::cov.shrink(x,verbose = F)
     cov_tx <- corpcor::cov.shrink(Matrix::t(x),verbose = F)

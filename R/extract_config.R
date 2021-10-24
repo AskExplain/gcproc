@@ -16,14 +16,10 @@ extract_config <- function(verbose=T){
     i_dim = 30,
     j_dim = 30,
     min_iter=2,
-    max_iter=350,
-    n_batch = 8,
-    n_epochs = 5,
-    n_cores = 2,
+    max_iter=150,
     seed = 1,
     tol=1,
-    verbose = T
-  )
+    verbose=T)
 
   if (verbose == T){
     print(config)
@@ -37,15 +33,12 @@ extract_config <- function(verbose=T){
 #' Transfers learned parameters from a pre-trained model.
 #' NOTE: This is an empty framework that the user must fill in.
 #'
-#' @param code Transfer the code
-#' @param fix Fix anchors the code parameters, otherwise it will be updated
-
+#' @param code Anchor the code
 #' @return  Anchor framework for gcproc
 #' @export
 extract_transfer_framework <- function(verbose=T){
   transfer <- list(
-    code = NULL,
-    fix = F
+    code = NULL
   )
 
   if (verbose == T){
@@ -74,6 +67,13 @@ extract_recovery_framework <- function(verbose=T){
     labels = NULL
   )
 
+  # recover <- list(
+  #   task = c("classification"),
+  #   method = c("label.projection"),
+  #   design.list = NULL,
+  #   labels = NULL
+  # )
+
   if (verbose == T){
     print(recover)
   }
@@ -94,32 +94,11 @@ extract_recovery_framework <- function(verbose=T){
 #' @export
 extract_join_framework <- function(verbose=T){
   join <- list(alpha=NULL,
-               beta=NULL)
+                beta=NULL)
 
   if (verbose == T){
     print(join)
   }
 
   return(join)
-}
-
-
-
-
-
-
-
-#' Extract covariate framework to put into gcproc
-#'
-#' Covariate data to improve modelling capacity for similar axes
-#' @param factors Table of factors to put into gcproc - for each factor, there is a unique code
-#' @export
-extract_covariate_framework <- function(verbose=T){
-  covariate <- list(factor=NULL,fix=T)
-
-  if (verbose == T){
-    print(covariate)
-  }
-
-  return(covariate)
 }

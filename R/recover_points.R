@@ -11,12 +11,9 @@
 #' @return  Recovered data from imputation or prediction, with the design matrices and any user input parameters and functions
 #' @export
 recover_points <- function(data_list,
-                           main.code,
+                           code,
                            main.parameters,
-                           main.index,
-                           main.proportion,
                            config,
-                           join,
                            recover){
 
   for (task in recover$task){
@@ -32,20 +29,15 @@ recover_points <- function(data_list,
 
             if ("decode" %in% method){
 
+
               x <- as.matrix(data_list[[i]])
 
-              row_with_missing_points <- which((rowSums(recover$design.list[[i]])>0)==T,arr.ind = T)
-              column_with_missing_points <- which((colSums(recover$design.list[[i]])>0)==T,arr.ind = T)
+              pred <- t(main.parameters[[i]]$alpha)%*%code$code%*%t(main.parameters[[i]]$beta)
 
-              internal.code <- Reduce('+',lapply(c(1:length(main.index[[i]][,2])),function(X){
-                main.index[[i]][X,2]*main.code$code[[X]]
-              }))/sum(main.index[[i]][,2])
+              elements_with_missing_points <- which((recover$design.list[[i]]>0)==T,arr.ind = T)
+              x[elements_with_missing_points]  <- (pred)[elements_with_missing_points]
 
-              pred <- t(main.parameters$alpha[[join$alpha[i]]])%*%internal.code%*%t(main.parameters$beta[[join$beta[i]]])
-
-              x[row_with_missing_points,column_with_missing_points]  <- pred[row_with_missing_points,column_with_missing_points]
-
-              data_list[[i]] <- recover$predict.list[[i]] <- x
+              data_list[[i]] <- recover$predict.list[[i]] <- as.matrix(x)
 
 
             }
@@ -53,21 +45,21 @@ recover_points <- function(data_list,
 
             if ("matrix.projection" %in% method){
 
+
+
               x <- as.matrix(data_list[[i]])
 
 
               if (is.null(recover$encoded_covariate)){
-                recover$encoded_covariate <- lapply(c(1:length(data_list))[-i],function(X){
-                  transformed.data <- as.matrix(data_list[[X]])%*%(main.parameters$beta[[join$beta[X]]])
-                  return(transformed.data)
+                recover$encoded_covariate <- lapply(c(1:length(data_list)),function(X){
+                  # Predict using encode space
+                  transformed.data <- as.matrix(MASS::ginv((main.parameters[[X]]$alpha)%*%t(main.parameters[[X]]$alpha))%*%(main.parameters[[X]]$alpha)%*%as.matrix(data_list[[X]])%*%(main.parameters[[X]]$beta)%*%MASS::ginv(t(main.parameters[[X]]$beta)%*%(main.parameters[[X]]$beta)))
                 })
               }
 
-
-              decoded_covariate <- cbind(1,
-                                         transform.data(Reduce('+',lapply(c(1:length(recover$encoded_covariate)),function(X){
-                                           recover$encoded_covariate[[X]]
-                                         })))              )
+              decoded_covariate <- cbind(1,scale(Reduce('+',lapply(c(1:length(recover$encoded_covariate))[-i],function(X){
+                t(main.parameters[[i]]$alpha)%*%recover$encoded_covariate[[X]]
+              }))))
 
               samples_with_missing_points <- which((rowSums(recover$design.list[[i]])>0)==T)
               covariate_predictors <-  decoded_covariate[-samples_with_missing_points,]
@@ -76,7 +68,7 @@ recover_points <- function(data_list,
               elements_with_missing_points <- which((recover$design.list[[i]]>0)[samples_with_missing_points,]==T,arr.ind = T)
               x[samples_with_missing_points,][elements_with_missing_points]  <- (((test_predictors)%*%(MASS::ginv(t(covariate_predictors)%*%(covariate_predictors))%*%t(covariate_predictors)%*%(x[-samples_with_missing_points,]))))[elements_with_missing_points]
 
-              data_list[[i]] <- recover$predict.list[[i]] <- x
+              data_list[[i]] <- recover$predict.list[[i]] <- as.matrix(x)
             }
 
 
@@ -85,19 +77,17 @@ recover_points <- function(data_list,
 
               x <- as.matrix(data_list[[i]])
 
+
               if (is.null(recover$encoded_covariate)){
-                recover$encoded_covariate <- lapply(c(1:length(data_list))[-i],function(X){
-                  transformed.data <- as.matrix(data_list[[X]])%*%(main.parameters$beta[[join$beta[X]]])
-                  return(transformed.data)
+                recover$encoded_covariate <- lapply(c(1:length(data_list)),function(X){
+                  # Predict using encode space
+                  transformed.data <- as.matrix(MASS::ginv((main.parameters[[X]]$alpha)%*%t(main.parameters[[X]]$alpha))%*%(main.parameters[[X]]$alpha)%*%as.matrix(data_list[[X]])%*%(main.parameters[[X]]$beta)%*%MASS::ginv(t(main.parameters[[X]]$beta)%*%(main.parameters[[X]]$beta)))
                 })
               }
 
-
-              decoded_covariate <- cbind(1,
-                                         transform.data(Reduce('+',lapply(c(1:length(recover$encoded_covariate)),function(X){
-                                           recover$encoded_covariate[[X]]
-                                         })))              )
-
+              decoded_covariate <- cbind(1,scale(Reduce('+',lapply(c(1:length(recover$encoded_covariate))[-i],function(X){
+                t(main.parameters[[i]]$alpha)%*%recover$encoded_covariate[[X]]
+              }))))
 
               samples_with_missing_points <- which((rowSums(recover$design.list[[i]])>0)==T)
               covariate_predictors <-  decoded_covariate[-samples_with_missing_points,]
@@ -120,7 +110,7 @@ recover_points <- function(data_list,
               elements_with_missing_points <- which((recover$design.list[[i]]>0)[samples_with_missing_points,]==T,arr.ind = T)
               x[samples_with_missing_points,][elements_with_missing_points]  <- (pred)[elements_with_missing_points]
 
-              data_list[[i]] <- recover$predict.list[[i]] <- x
+              data_list[[i]] <- recover$predict.list[[i]] <- as.matrix(x)
 
             }
 
@@ -130,17 +120,15 @@ recover_points <- function(data_list,
               x <- as.matrix(data_list[[i]])
 
               if (is.null(recover$encoded_covariate)){
-                recover$encoded_covariate <- lapply(c(1:length(data_list))[-i],function(X){
-                  transformed.data <- as.matrix(data_list[[X]])%*%(main.parameters$beta[[join$beta[X]]])
-                  return(transformed.data)
+                recover$encoded_covariate <- lapply(c(1:length(data_list)),function(X){
+                  # Predict using encode space
+                  transformed.data <- as.matrix(MASS::ginv((main.parameters[[X]]$alpha)%*%t(main.parameters[[X]]$alpha))%*%(main.parameters[[X]]$alpha)%*%as.matrix(data_list[[X]])%*%(main.parameters[[X]]$beta)%*%MASS::ginv(t(main.parameters[[X]]$beta)%*%(main.parameters[[X]]$beta)))
                 })
               }
 
-
-              decoded_covariate <- cbind(1,
-                                         transform.data(Reduce('+',lapply(c(1:length(recover$encoded_covariate)),function(X){
-                                           recover$encoded_covariate[[X]]
-                                         })))              )
+              decoded_covariate <- cbind(1,scale(Reduce('+',lapply(c(1:length(recover$encoded_covariate))[-i],function(X){
+                t(main.parameters[[i]]$alpha)%*%recover$encoded_covariate[[X]]
+              }))))
 
 
               samples_with_missing_points <- which((rowSums(recover$design.list[[i]])>0)==T)
@@ -152,7 +140,7 @@ recover_points <- function(data_list,
               elements_with_missing_points <- which((recover$design.list[[i]]>0)[samples_with_missing_points,]==T,arr.ind = T)
               x[samples_with_missing_points,][elements_with_missing_points]  <- (pred)[elements_with_missing_points]
 
-              data_list[[i]] <- recover$predict.list[[i]] <- x
+              data_list[[i]] <- recover$predict.list[[i]] <- as.matrix(x)
             }
 
 
@@ -173,15 +161,20 @@ recover_points <- function(data_list,
 
         for (j in which(recover$design.list==0)){
 
-          label_code <- Reduce('+',lapply(c(covariate$factor[j,]),function(X){
-            main.parameters$alpha[[X]]
-          }))
+          recover$encoded_covariate <- lapply(c(1:length(data_list)),function(X){
+            # Predict using encode space
+            transformed.data <- as.matrix(MASS::ginv((main.parameters[[X]]$alpha)%*%t(main.parameters[[X]]$alpha))%*%(main.parameters[[X]]$alpha)%*%as.matrix(data_list[[X]])%*%(main.parameters[[X]]$beta)%*%MASS::ginv(t(main.parameters[[X]]$beta)%*%(main.parameters[[X]]$beta)))
+          })
+
+          label.decoded_covariate <- scale(Reduce('+',lapply(c(1:length(recover$encoded_covariate))[-i],function(X){
+            t(main.parameters[[j]]$alpha)%*%recover$encoded_covariate[[X]]
+          })))
 
           for (i in which(recover$design.list==1)){
 
-            unlabel_code <- Reduce('+',lapply(c(covariate$factor[i,]),function(X){
-              main.parameters$alpha[[X]]
-            }))
+            unlabel.decoded_covariate <- scale(Reduce('+',lapply(c(1:length(recover$encoded_covariate))[-j],function(X){
+              t(main.parameters[[i]]$alpha)%*%recover$encoded_covariate[[X]]
+            })))
 
             labels <- recover$labels
 
@@ -203,43 +196,3 @@ recover_points <- function(data_list,
 }
 
 
-transform.data <- function(x,method="scale"){
-
-  if (method == "scale"){
-    center = T
-    scale = T
-
-    x <- as.matrix(x)
-    nc <- ncol(x)
-    if (is.logical(center)) {
-      if (center) {
-        center <- colMeans(x, na.rm=TRUE)
-        x <- sweep(x, 2L, center, check.margin=FALSE)
-      }
-    }
-    else if (is.numeric(center) && (length(center) == nc))
-      x <- sweep(x, 2L, center, check.margin=FALSE)
-    else
-      stop("length of 'center' must equal the number of columns of 'x'")
-    if (is.logical(scale)) {
-      if (scale) {
-        f <- function(v) {
-          v <- v[!is.na(v)]
-          sqrt(sum(v^2) / max(1, length(v) - 1L))
-        }
-        scale <- apply(x, 2L, f)
-        scale <- sapply(scale,function(scale){if(scale==0|is.na(scale)){1}else{scale}})
-        x <- sweep(x, 2L, scale, "/", check.margin=FALSE)
-      }
-    }
-    else if (is.numeric(scale) && length(scale) == nc)
-      x <- sweep(x, 2L, scale, "/", check.margin=FALSE)
-    else
-      stop("length of 'scale' must equal the number of columns of 'x'")
-    if(is.numeric(center)) attr(x, "scaled:center") <- center
-    if(is.numeric(scale)) attr(x, "scaled:scale") <- scale
-    x
-  }
-
-  return(x)
-}
