@@ -61,6 +61,7 @@ gcproc <- function(data_list,
 
 
   for (set.of.batch.id in c(0:(config$n_batch-1))){
+<<<<<<< Updated upstream
 
     print(paste("Batch number :   ",set.of.batch.id,sep=""))
 
@@ -90,6 +91,36 @@ gcproc <- function(data_list,
           
           main.code <- return_update$main.code
 
+=======
+
+    print(paste("Batch number :   ",set.of.batch.id,sep=""))
+
+    mini.batch_table <- batch_table[sample(seq(c(1+config$n_batch*set.of.batch.id),(config$n_batch*(1+set.of.batch.id)),1)),]
+
+    main_batches <- 
+      parallel::mclapply(X = c(1:dim(mini.batch_table)[1]),function(batch){
+        pivots <- list(alpha = pivots$alpha[[mini.batch_table[batch,1]]],
+                       beta = pivots$beta[[mini.batch_table[batch,2]]])
+
+        for (i in sample(1:length(data_list))){
+          
+          internal.param <- list(
+            alpha = main.parameters$alpha[[join$alpha[i]]],
+            beta = main.parameters$beta[[join$beta[i]]]
+          )
+          
+          return_update <- update_set(x = as.matrix(data_list[[i]]),
+                                      main.parameters = internal.param,
+                                      main.code = main.code,
+                                      pivots = pivots,
+                                      fix = transfer$fix)
+          
+          main.parameters$alpha[[join$alpha[i]]] <- return_update$main.parameters$alpha
+          main.parameters$beta[[join$beta[i]]] <- return_update$main.parameters$beta
+          
+          main.code <- return_update$main.code
+
+>>>>>>> Stashed changes
         }
         
         return(list(pivots = pivots,
@@ -97,6 +128,7 @@ gcproc <- function(data_list,
                     main.parameters = main.parameters
           )
         )
+<<<<<<< Updated upstream
 <<<<<<< Updated upstream
 
       })
@@ -109,6 +141,14 @@ gcproc <- function(data_list,
 
       })
       # ,mc.cores = config$n_cores)
+
+
+    for (batch.id in 1:length(main_batches)){
+
+>>>>>>> Stashed changes
+=======
+
+      },mc.cores = config$n_cores)
 
 
     for (batch.id in 1:length(main_batches)){
@@ -157,18 +197,19 @@ gcproc <- function(data_list,
     feature_x.dim_reduce.encode <- t(main.parameters$alpha[[join$alpha[Y]]]%*%x)
     sample_x.dim_reduce.encode <- x%*%main.parameters$beta[[join$beta[Y]]]
 <<<<<<< Updated upstream
+<<<<<<< Updated upstream
 
     feature_x.dim_reduce.code <- t(pinv(t(main.parameters$alpha[[join$alpha[Y]]]))%*%main.parameters$alpha[[join$alpha[Y]]]%*%x)
     sample_x.dim_reduce.code <- x%*%main.parameters$beta[[join$beta[Y]]]%*%pinv((main.parameters$beta[[join$beta[Y]]]))
 =======
 >>>>>>> Stashed changes
+=======
+>>>>>>> Stashed changes
 
     return(list(
       feature_x.dim_reduce.encode = feature_x.dim_reduce.encode,
-      sample_x.dim_reduce.encode = sample_x.dim_reduce.encode,
-      feature_x.dim_reduce.code = feature_x.dim_reduce.code,
-      sample_x.dim_reduce.code = sample_x.dim_reduce.code
-    ))
+      sample_x.dim_reduce.encode = sample_x.dim_reduce.encode
+      ))
   })
 
   runtime.end <- Sys.time()
