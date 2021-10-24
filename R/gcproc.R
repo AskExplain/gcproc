@@ -170,9 +170,7 @@ gcproc <- function(data_list,
 
     return(list(
       feature_x.dim_reduce.encode = feature_x.dim_reduce.encode,
-      sample_x.dim_reduce.encode = sample_x.dim_reduce.encode,
-      feature_x.dim_reduce.code = feature_x.dim_reduce.code,
-      sample_x.dim_reduce.code = sample_x.dim_reduce.code
+      sample_x.dim_reduce.encode = sample_x.dim_reduce.encode
     ))
   })
 
