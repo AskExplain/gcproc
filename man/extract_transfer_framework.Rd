@@ -7,9 +7,7 @@
 extract_transfer_framework(verbose = T)
 }
 \arguments{
-\item{code}{Transfer the code}
-
-\item{fix}{Fix anchors the code parameters, otherwise it will be updated}
+\item{code}{Anchor the code}
 }
 \value{
 Anchor framework for gcproc
