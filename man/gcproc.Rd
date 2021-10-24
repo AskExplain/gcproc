@@ -7,7 +7,6 @@
 gcproc(
   data_list,
   config = gcproc::extract_config(verbose = F),
-  covariate = gcproc::extract_covariate_framework(verbose = F),
   transfer = gcproc::extract_transfer_framework(verbose = F),
   recover = gcproc::extract_recovery_framework(verbose = F),
   join = gcproc::extract_join_framework(verbose = F)
