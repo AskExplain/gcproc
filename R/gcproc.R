@@ -30,27 +30,10 @@ gcproc <- function(data_list,
 
   recover$predict.list <- lapply(c(1:length(data_list)),function(X){NULL})
 
-  pivots <- list(
-    alpha = chunk(sample(c(1:config$i_dim)),config$n_batch),
-    beta = chunk(sample(c(1:config$j_dim)),config$n_batch)
-  )
-
-  batch_table <- cbind(rep(1:length(pivots$alpha),each=length(pivots$beta)),
-                       rep(1:length(pivots$beta),times=length(pivots$alpha))
-  )
-
-  internal_pivots <- list(
-    alpha=pivots$alpha[[1]],
-    beta=pivots$beta[[1]]
-  )
-
-
   initialise.model <- initialise.gcproc(data_list = data_list,
                                         config = config,
                                         transfer = transfer,
-                                        join = join,
-                                        pivots = internal_pivots)
-
+                                        join = join)
 
   main.parameters <- initialise.model$main.parameters
   main.code <- initialise.model$main.code
