@@ -27,8 +27,8 @@ initialise.gcproc <- function(data_list,
     if (is.null(transfer$code)){
       
       # Find intercept in endecoded space
-      encode <- (alpha%*%as.matrix(data_list[[i]])%*%(beta))
-      code <- (pinv(t(alpha))%*%(encode)%*%pinv((beta)))
+      encode <- (alpha%*%as.matrix(data_list[[i]])%*%(beta))+rnorm(prod(c(config$i_dim,config$j_dim)))
+      code <- (pinv(t(alpha))%*%(encode)%*%pinv((beta)))+rnorm(prod(c(config$i_dim,config$j_dim)))
       
       main.code = list(
         encode = encode,
@@ -59,8 +59,8 @@ initialise.parameters <- function(x,transfer,i_dim,j_dim,init="svd",verbose=F){
   set.seed(1)
   
   if (init=="random"){
-    param.beta <- if(is.null(transfer$beta)){array(rnorm(config$j_dim),dim=c(dim(x)[2],config$j_dim))}else{transfer$beta}
-    param.alpha = if(is.null(transfer$alpha)){array(rnorm(config$i_dim),dim=c(config$i_dim,dim(x)[1]))}else{transfer$alpha}
+    param.beta <- array(rnorm(dim(x)[2]*config$j_dim),dim=c(dim(x)[2],config$j_dim))
+    param.alpha = array(rnorm(config$i_dim*dim(x)[1]),dim=c(config$i_dim,dim(x)[1]))
   } else {
     cov_x <- corpcor::cov.shrink(x,verbose = F)
     cov_tx <- corpcor::cov.shrink(Matrix::t(x),verbose = F)
