@@ -13,8 +13,6 @@
 recover_points <- function(data_list,
                            main.code,
                            main.parameters,
-                           main.index,
-                           main.proportion,
                            config,
                            join,
                            recover){
@@ -174,13 +172,15 @@ recover_points <- function(data_list,
         for (j in which(recover$design.list==0)){
 
           label_code <- Reduce('+',lapply(c(covariate$factor[j,]),function(X){
-            main.parameters$alpha[[X]]
+            main.code$code[[X]]
           }))
+
+
 
           for (i in which(recover$design.list==1)){
 
             unlabel_code <- Reduce('+',lapply(c(covariate$factor[i,]),function(X){
-              main.parameters$alpha[[X]]
+              main.code$code[[X]]
             }))
 
             labels <- recover$labels

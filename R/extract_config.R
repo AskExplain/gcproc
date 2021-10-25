@@ -17,9 +17,6 @@ extract_config <- function(verbose=T){
     j_dim = 30,
     min_iter=2,
     max_iter=350,
-    n_batch = 8,
-    n_epochs = 5,
-    n_cores = 2,
     seed = 1,
     tol=1,
     verbose = T
@@ -103,23 +100,3 @@ extract_join_framework <- function(verbose=T){
   return(join)
 }
 
-
-
-
-
-
-
-#' Extract covariate framework to put into gcproc
-#'
-#' Covariate data to improve modelling capacity for similar axes
-#' @param factors Table of factors to put into gcproc - for each factor, there is a unique code
-#' @export
-extract_covariate_framework <- function(verbose=T){
-  covariate <- list(factor=NULL,fix=T)
-
-  if (verbose == T){
-    print(covariate)
-  }
-
-  return(covariate)
-}
