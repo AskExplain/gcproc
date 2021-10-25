@@ -60,58 +60,62 @@ gcproc <- function(data_list,
   }
 
 
-  for (set.of.batch.id in c(0:(config$n_batch-1))){
-
-    print(paste("Batch number :   ",set.of.batch.id,sep=""))
-
-    mini.batch_table <- batch_table[sample(seq(c(1+config$n_batch*set.of.batch.id),(config$n_batch*(1+set.of.batch.id)),1)),]
-
-    main_batches <- 
-      parallel::mclapply(X = c(1:dim(mini.batch_table)[1]),function(batch){
-        pivots <- list(alpha = pivots$alpha[[mini.batch_table[batch,1]]],
-                       beta = pivots$beta[[mini.batch_table[batch,2]]])
-
-        for (i in sample(1:length(data_list))){
+  for (epoch in c(1:config$n_epochs)){
+    set.seed(epoch)
+    
+    for (set.of.batch.id in c(0:(config$n_batch-1))){
+      
+      print(paste("Batch number :   ",set.of.batch.id,sep=""))
+      
+      mini.batch_table <- batch_table[sample(seq(c(1+config$n_batch*set.of.batch.id),(config$n_batch*(1+set.of.batch.id)),1)),,drop=F]
+      
+      main_batches <- 
+        parallel::mclapply(X = c(1:dim(mini.batch_table)[1]),function(batch){
+          pivots <- list(alpha = pivots$alpha[[mini.batch_table[batch,1]]],
+                         beta = pivots$beta[[mini.batch_table[batch,2]]])
           
-          internal.param <- list(
-            alpha = main.parameters$alpha[[join$alpha[i]]],
-            beta = main.parameters$beta[[join$beta[i]]]
+          for (i in sample(1:length(data_list))){
+            
+            internal.param <- list(
+              alpha = main.parameters$alpha[[join$alpha[i]]],
+              beta = main.parameters$beta[[join$beta[i]]]
+            )
+            
+            return_update <- update_set(x = as.matrix(data_list[[i]]),
+                                        main.parameters = internal.param,
+                                        main.code = main.code,
+                                        pivots = pivots,
+                                        fix = transfer$fix)
+            
+            main.parameters$alpha[[join$alpha[i]]] <- return_update$main.parameters$alpha
+            main.parameters$beta[[join$beta[i]]] <- return_update$main.parameters$beta
+            
+            main.code <- return_update$main.code
+            
+          }
+          
+          return(list(pivots = pivots,
+                      main.code = main.code,
+                      main.parameters = main.parameters
+          )
           )
           
-          return_update <- update_set(x = as.matrix(data_list[[i]]),
-                                      main.parameters = internal.param,
-                                      main.code = main.code,
-                                      pivots = pivots,
-                                      fix = transfer$fix)
-          
-          main.parameters$alpha[[join$alpha[i]]] <- return_update$main.parameters$alpha
-          main.parameters$beta[[join$beta[i]]] <- return_update$main.parameters$beta
-          
-          main.code <- return_update$main.code
-
+        },mc.cores = config$n_cores)
+      
+      
+      for (batch.id in 1:length(main_batches)){
+        
+        for (join.id in c(1:length(data_list))){
+          main.parameters$alpha[[join$alpha[join.id]]][main_batches[[batch.id]]$pivots$alpha,] <- main_batches[[batch.id]]$main.parameters$alpha[[join$alpha[join.id]]][main_batches[[batch.id]]$pivots$alpha,]
+          main.parameters$beta[[join$beta[join.id]]][,main_batches[[batch.id]]$pivots$beta] <- main_batches[[batch.id]]$main.parameters$beta[[join$beta[join.id]]][,main_batches[[batch.id]]$pivots$beta]
         }
         
-        return(list(pivots = pivots,
-                    main.code = main.code,
-                    main.parameters = main.parameters
-          )
-        )
-
-      },mc.cores = config$n_cores)
-
-
-    for (batch.id in 1:length(main_batches)){
-
-      for (join.id in c(1:length(data_list))){
-        main.parameters$alpha[[join$alpha[join.id]]][main_batches[[batch.id]]$pivots$alpha,] <- main_batches[[batch.id]]$main.parameters$alpha[[join$alpha[join.id]]][main_batches[[batch.id]]$pivots$alpha,]
-        main.parameters$beta[[join$beta[join.id]]][,main_batches[[batch.id]]$pivots$beta] <- main_batches[[batch.id]]$main.parameters$beta[[join$beta[join.id]]][,main_batches[[batch.id]]$pivots$beta]
+        main.code$encode[main_batches[[batch.id]]$pivots$alpha,main_batches[[batch.id]]$pivots$beta] <- main_batches[[batch.id]]$main.code$encode[main_batches[[batch.id]]$pivots$alpha,main_batches[[batch.id]]$pivots$beta]
+        main.code$code[main_batches[[batch.id]]$pivots$alpha,main_batches[[batch.id]]$pivots$beta] <- main_batches[[batch.id]]$main.code$code[main_batches[[batch.id]]$pivots$alpha,main_batches[[batch.id]]$pivots$beta]
+        
       }
-
-      main.code$encode[main_batches[[batch.id]]$pivots$alpha,main_batches[[batch.id]]$pivots$beta] <- main_batches[[batch.id]]$main.code$encode[main_batches[[batch.id]]$pivots$alpha,main_batches[[batch.id]]$pivots$beta]
-      main.code$code[main_batches[[batch.id]]$pivots$alpha,main_batches[[batch.id]]$pivots$beta] <- main_batches[[batch.id]]$main.code$code[main_batches[[batch.id]]$pivots$alpha,main_batches[[batch.id]]$pivots$beta]
       
     }
-
   }
 
 
