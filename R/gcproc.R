@@ -26,132 +26,109 @@ gcproc <- function(data_list,
 
   set.seed(config$seed)
 
-  initialise = TRUE
-
-  # Prepare convergence checking parameters
-  count = 1
-  score.vec <- c()
-  score_lag <- 2 # How many previous scores kept track of
-  accept_score <- 1 # How many scores used to calculate previous and current "mean score"
+  convergence.parameters <- list(count=0,score.vec=c())
 
   recover$predict.list <- lapply(c(1:length(data_list)),function(X){NULL})
 
+  pivots <- list(
+    alpha = chunk(sample(c(1:config$i_dim)),config$n_batch),
+    beta = chunk(sample(c(1:config$j_dim)),config$n_batch)
+  )
+
+  batch_table <- cbind(rep(1:length(pivots$alpha),each=length(pivots$beta)),
+                       rep(1:length(pivots$beta),times=length(pivots$alpha))
+  )
+
+  internal_pivots <- list(
+    alpha=pivots$alpha[[1]],
+    beta=pivots$beta[[1]]
+  )
+
+
   initialise.model <- initialise.gcproc(data_list = data_list,
                                         config = config,
-                                        transfer = transfer)
+                                        transfer = transfer,
+                                        join = join,
+                                        pivots = internal_pivots)
+
 
   main.parameters <- initialise.model$main.parameters
-  code <- initialise.model$code
+  main.code <- initialise.model$main.code
 
   if (config$verbose){
     print(paste("Beginning gcproc learning with:    Sample dimension reduction (config$i_dim): ",config$i_dim, "    Feature dimension reduction (config$j_dim): ", config$j_dim,"    Tolerance Threshold: ", config$tol, "   Maximum number of iterations: ", config$max_iter, "   Verbose: ", config$verbose, sep=""))
   }
 
+
   while (T){
-
-
-
-    if ("decode"%in%recover$method){
-
-      recover_data <- recover_points(
-        data_list,
-        code = code,
-        main.parameters = main.parameters,
-        config = config,
-        recover = recover
-      )
-
-      recover <- recover_data$recover
-      data_list <- recover_data$data_list
-
-    }
-
-
-
-
-    prev_code <- code
-
+    
+    prev_code <- main.code
+    
     for (i in 1:length(data_list)){
-
-
+      
+      internal.parameters <- list(alpha=main.parameters$alpha[[join$alpha[i]]],
+                              beta=main.parameters$beta[[join$beta[i]]])
+      
       return_update <- update_set(x = as.matrix(data_list[[i]]),
-                                  main.parameters = main.parameters[[i]],
-                                  code = code,
-                                  transfer = transfer
+                                  main.parameters = internal.parameters,
+                                  main.code = main.code,
+                                  fix = transfer$fix
       )
-
-      main.parameters[[i]] <- return_update$main.parameters
-      code <- return_update$code
-
-      if (!is.null(join$alpha)){
-
-        a_id <- which(join$alpha == join$alpha[i])
-        main.alpha <- main.parameters[[i]]$alpha
-
-        for (a in a_id){
-          main.parameters[[a]]$alpha <- main.alpha
-        }
-      }
-
-      if (!is.null(join$beta)){
-
-        b_id <- which(join$beta == unique(join$beta)[i])
-        main.beta <- main.parameters[[b_id[1]]]$beta
-
-        for (b in b_id){
-          main.parameters[[b]]$beta <- main.beta
-        }
-      }
-
+      
+      main.parameters$alpha[[join$alpha[i]]] <- return_update$main.parameters$alpha
+      main.parameters$beta[[join$beta[i]]] <- return_update$main.parameters$beta
+      
+      main.code <- return_update$main.code
+      
     }
-
-
-
-    matrix.residuals <- code$encode - prev_code$encode
-
+    
+    
+    
+    matrix.residuals <- main.code$encode - prev_code$encode
+    
     total.mse <- mean(abs(matrix.residuals))
-
+    
     # Check convergence
-    score.vec <- c(score.vec, total.mse)
-    MSE <- mean(tail(score.vec,accept_score))
-    prev.MSE <- mean(tail(score.vec,score_lag)[1:accept_score])
-
-    if ( count > ( score_lag ) ){
+    convergence.parameters$score.vec <- c(convergence.parameters$score.vec, total.mse)
+    MSE <- mean(tail(convergence.parameters$score.vec,2))
+    prev.MSE <- mean(tail(convergence.parameters$score.vec,3)[1:2])
+    
+    if ( convergence.parameters$count > ( 3 ) ){
       if (config$verbose == T){
-        print(paste("Iteration: ",count," with Tolerance of: ", abs(prev.MSE - MSE),sep=""))
+        print(paste("Iteration: ",convergence.parameters$count," with Tolerance of: ", abs(prev.MSE - MSE),sep=""))
       }
     } else {
       if (config$verbose){
-        print(paste("Iteration: ",count," ... initialising ... ",sep=""))
+        print(paste("Iteration: ",convergence.parameters$count," ... initialising ... ",sep=""))
       }
     }
-
-    if (count > config$min_iter){
-      if ((count > config$max_iter ) | abs(prev.MSE - MSE) < config$tol){
+    
+    if (convergence.parameters$count > config$min_iter){
+      if ((convergence.parameters$count > config$max_iter ) | abs(prev.MSE - MSE) < config$tol){
         break
       }
     }
-
-    count = count + 1
-
+    
+    convergence.parameters$count = convergence.parameters$count + 1
+    
   }
+  
 
   if (any(do.call('c',lapply(recover$design.list,function(X){!is.null(X)})))){
 
     recover_data <- recover_points(
       data_list,
-      code = code,
+      main.code = main.code,
       main.parameters = main.parameters,
       config = config,
-      recover = recover
+      recover = recover,
+      join = join
     )
 
     recover <- recover_data$recover
     data_list <- recover_data$data_list
+
   }
-
-
-
 
 
   if (config$verbose){
@@ -160,18 +137,17 @@ gcproc <- function(data_list,
 
 
 
-
   dimension_reduction <- lapply(c(1:length(data_list)),function(Y){
 
     x <- as.matrix(data_list[[Y]])
 
-    feature_x.dim_reduce.encode <- t(main.parameters[[Y]]$alpha%*%x)
-    sample_x.dim_reduce.encode <- x%*%main.parameters[[Y]]$beta
+    feature_x.dim_reduce.encode <- t(main.parameters$alpha[[join$alpha[Y]]]%*%x)
+    sample_x.dim_reduce.encode <- x%*%main.parameters$beta[[join$beta[Y]]]
 
     return(list(
       feature_x.dim_reduce.encode = feature_x.dim_reduce.encode,
       sample_x.dim_reduce.encode = sample_x.dim_reduce.encode
-    ))
+      ))
   })
 
   runtime.end <- Sys.time()
@@ -185,7 +161,7 @@ gcproc <- function(data_list,
 
     main.parameters = main.parameters,
 
-    code = code,
+    main.code = main.code,
 
     recover =  recover,
 
@@ -201,33 +177,42 @@ gcproc <- function(data_list,
       )
     ),
 
-    convergence.parameters = list(
-      iterations = count,
-      score.vec = score.vec
-    )
+    convergence.parameters = convergence.parameters
+
 
   ))
 
+}
+
+
+update_set <- function(x,
+                       main.parameters,
+                       main.code,
+                       fix){
+
+  main.parameters$alpha <- (t((x)%*%t((main.code$code)%*%t(main.parameters$beta))%*%pinv(t((main.code$code)%*%t(main.parameters$beta)))))
+  main.parameters$beta <- (t(pinv(((t(main.parameters$alpha)%*%(main.code$code))))%*%t(t(main.parameters$alpha)%*%(main.code$code))%*%(x)))
+  main.code$encode <- (main.parameters$alpha%*%(x)%*%(main.parameters$beta))
+  main.code$code <- pinv(t(main.parameters$alpha))%*%(main.code$encode)%*%pinv(main.parameters$beta)
+  
+  return(list(main.parameters = main.parameters,
+              main.code = main.code
+              ))
 
 }
 
 
 
+pinv <- function(X){
+  MASS::ginv(t(X)%*%X)
+}
 
-update_set <- function(x,
-                       main.parameters,
-                       code,
-                       transfer = NULL
-){
 
-  main.parameters$alpha <- t(x%*%t((code$code)%*%t(main.parameters$beta))%*%MASS::ginv(((code$code)%*%t(main.parameters$beta))%*%t((code$code)%*%t(main.parameters$beta))))
-  main.parameters$beta <- t(MASS::ginv(t((t(main.parameters$alpha)%*%(code$code)))%*%((t(main.parameters$alpha)%*%(code$code))))%*%t(t(main.parameters$alpha)%*%(code$code))%*%x)
-
-  code$encode <- (main.parameters$alpha%*%( x )%*%(main.parameters$beta))
-  code$code <- MASS::ginv((main.parameters$alpha)%*%t(main.parameters$alpha))%*%code$encode%*%MASS::ginv(t(main.parameters$beta)%*%(main.parameters$beta))
-
-  return(list(main.parameters = main.parameters,
-              code = code
-  ))
-
+chunk <- function(x,n){
+  if (n==1){
+    list(x)
+  }
+  else{
+    split(x, cut(seq_along(x), n, labels = FALSE))
+  }
 }
