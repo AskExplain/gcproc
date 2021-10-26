@@ -52,7 +52,7 @@ initialise.gcproc <- function(data_list,
 
 
 #' @export
-initialise.parameters <- function(x,transfer,i_dim,j_dim,init="svd",verbose=F){
+initialise.parameters <- function(x,transfer,i_dim,j_dim,init="random",verbose=F){
   
   x <- Matrix::Matrix(x,sparse=T)
   
@@ -60,25 +60,28 @@ initialise.parameters <- function(x,transfer,i_dim,j_dim,init="svd",verbose=F){
   
   if (init=="random"){
     param.beta <- array(rnorm(dim(x)[2]*config$j_dim),dim=c(dim(x)[2],config$j_dim))
-    param.alpha <- array(rnorm(config$i_dim*dim(x)[1]),dim=c(config$i_dim,dim(x)[1]))
-  }
+    param.alpha = array(rnorm(config$i_dim*dim(x)[1]),dim=c(config$i_dim,dim(x)[1]))
+  } 
   
-  if (init=="svd"){
+  if (init=="irlba"){
     param.beta.svd <- irlba::irlba(
-      cov_x,j_dim,verbose = F)
-    rm(cov_x)
+      x,j_dim)
+    param.beta <- param.beta.svd$v
     
-    param.beta <- if(is.null(transfer$beta)){param.beta.svd$v}else{transfer$beta}
-    
-    
-    param.alpha.J.svd <- irlba::irlba(
-      cov_tx,i_dim,verbose = F)
-    rm(cov_tx)
-    
-    param.alpha = if(is.null(transfer$alpha)){t(param.alpha.J.svd$u)}else{transfer$alpha}
-    
+    param.alpha.svd <- irlba::irlba(
+      x,i_dim)
+    param.alpha = t(param.alpha.svd$u)
   }
-  
+  if (init=="svdr"){
+    param.beta.svd <- irlba::svdr(
+      x,j_dim)
+    param.beta <- param.beta.svd$v
+    
+    param.alpha.svd <- irlba::svdr(
+      x,i_dim)
+    param.alpha = t(param.alpha.svd$u)
+  }
+
   pivots <- list(
     pivot_x.sample = as.matrix(param.alpha),
     pivot_x.feature = as.matrix(param.beta)  )
