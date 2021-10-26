@@ -64,21 +64,21 @@ initialise.parameters <- function(x,transfer,i_dim,j_dim,init="svd",verbose=F){
   } 
   if (init=="irlba"){
     param.beta.svd <- irlba::irlba(
-      x,j_dim,verbose = F)
-    param.beta <- if(is.null(transfer$beta)){param.beta.svd$v}else{transfer$beta}
+      x,j_dim)
+    param.beta <- param.beta.svd$v
     
     param.alpha.svd <- irlba::irlba(
-      x,i_dim,verbose = F)
-    param.alpha = if(is.null(transfer$alpha)){t(param.alpha.svd$u)}else{transfer$alpha}
+      x,i_dim)
+    param.alpha = t(param.alpha.svd$u)
   }
   if (init=="svdr"){
     param.beta.svd <- irlba::svdr(
-      x,j_dim,verbose = F)
-    param.beta <- if(is.null(transfer$beta)){param.beta.svd$v}else{transfer$beta}
+      x,j_dim)
+    param.beta <- param.beta.svd$v
     
     param.alpha.svd <- irlba::svdr(
-      x,i_dim,verbose = F)
-    param.alpha = if(is.null(transfer$alpha)){t(param.alpha.svd$u)}else{transfer$alpha}
+      x,i_dim)
+    param.alpha = t(param.alpha.svd$u)
   }
   
   pivots <- list(
