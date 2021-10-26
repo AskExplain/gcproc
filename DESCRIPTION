@@ -5,7 +5,7 @@ Authors@R:
     person(given = "David",
            family = "Banh",
            role = c("aut", "cre"),
-           email = "david.b@askexplain.com",
+           email = "david.b@askexplain.com")
 Description: Encodes multiple datasets via dimension reduction into an aligned subspace.
 License: `use_mit_license()`
 Encoding: UTF-8
