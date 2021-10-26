@@ -65,8 +65,7 @@ initialise.parameters <- function(x,transfer,i_dim,j_dim,init="svd",verbose=F){
     cov_x <- corpcor::cov.shrink(x,verbose = F)
     cov_tx <- corpcor::cov.shrink(Matrix::t(x),verbose = F)
   }
-  
-  if (init=="svd"){
+  if (init=="irlba"){
     param.beta.svd <- irlba::irlba(
       cov_x,j_dim,verbose = F)
     rm(cov_x)
@@ -81,6 +80,23 @@ initialise.parameters <- function(x,transfer,i_dim,j_dim,init="svd",verbose=F){
     param.alpha = if(is.null(transfer$alpha)){t(param.alpha.J.svd$u)}else{transfer$alpha}
     
   }
+  if (init=="svdr"){
+    param.beta.svd <- irlba::svdr(
+      cov_x,j_dim,verbose = F)
+    rm(cov_x)
+    
+    param.beta <- if(is.null(transfer$beta)){param.beta.svd$v}else{transfer$beta}
+    
+    
+    param.alpha.J.svd <- irlba::svdr(
+      cov_tx,i_dim,verbose = F)
+    rm(cov_tx)
+    
+    param.alpha = if(is.null(transfer$alpha)){t(param.alpha.J.svd$u)}else{transfer$alpha}
+    
+  }
+  
+  
   
   pivots <- list(
     pivot_x.sample = as.matrix(param.alpha),
