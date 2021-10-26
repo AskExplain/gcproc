@@ -1,15 +1,13 @@
 Package: gcproc
-Title: Encodes datasets for prediction and dimension reduction
-Version: 0.0.0.9000
+Title: Generalised Canonical Procrustes
+Version: 0.0.0.1
 Authors@R: 
-    person(given = "First",
-           family = "Last",
+    person(given = "David",
+           family = "Banh",
            role = c("aut", "cre"),
-           email = "first.last@example.com",
-           comment = c(ORCID = "YOUR-ORCID-ID"))
-Description: What the package does (one paragraph).
-License: `use_mit_license()`, `use_gpl3_license()` or friends to pick a
-    license
+           email = "david.b@askexplain.com",
+Description: Encodes multiple datasets via dimension reduction into an aligned subspace.
+License: `use_mit_license()`
 Encoding: UTF-8
 LazyData: true
 Roxygen: list(markdown = TRUE)
