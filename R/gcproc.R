@@ -176,7 +176,10 @@ update_set <- function(x,
   main.parameters$alpha <- (t((x)%*%t((main.code$code)%*%t(main.parameters$beta))%*%pinv(t((main.code$code)%*%t(main.parameters$beta)))))
   main.parameters$beta <- (t(pinv(((t(main.parameters$alpha)%*%(main.code$code))))%*%t(t(main.parameters$alpha)%*%(main.code$code))%*%(x)))
   main.code$encode <- (main.parameters$alpha%*%(x)%*%(main.parameters$beta))
-  main.code$code <- pinv(t(main.parameters$alpha))%*%(main.code$encode)%*%pinv(main.parameters$beta)
+  
+  if (!fix){
+    main.code$code <- pinv(t(main.parameters$alpha))%*%(main.code$encode)%*%pinv(main.parameters$beta)
+  }
   
   return(list(main.parameters = main.parameters,
               main.code = main.code
