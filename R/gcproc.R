@@ -113,9 +113,24 @@ gcproc <- function(data_list,
         main.code$code[main_batches[[batch.id]]$pivots$alpha,main_batches[[batch.id]]$pivots$beta] <- main_batches[[batch.id]]$main.code$code[main_batches[[batch.id]]$pivots$alpha,main_batches[[batch.id]]$pivots$beta]
         
       }
-    
+      
     }
     
+    if (any(do.call('c',lapply(recover$design.list,function(X){!is.null(X)})))){
+      
+      recover_data <- recover_points(
+        data_list,
+        main.code = main.code,
+        main.parameters = main.parameters,
+        config = config,
+        recover = recover,
+        join = join
+      )
+      
+      recover <- recover_data$recover
+      data_list <- recover_data$data_list
+      
+    }
     
   }
 
@@ -125,21 +140,6 @@ gcproc <- function(data_list,
   }
   
   
-  if (any(do.call('c',lapply(recover$design.list,function(X){!is.null(X)})))){
-    
-    recover_data <- recover_points(
-      data_list,
-      main.code = main.code,
-      main.parameters = main.parameters,
-      config = config,
-      recover = recover,
-      join = join
-    )
-    
-    recover <- recover_data$recover
-    data_list <- recover_data$data_list
-    
-  }
   
   
 
@@ -200,8 +200,8 @@ update_set <- function(x,
                        fix){
 
 
-  main.parameters$alpha[pivots$alpha,] <- soft_regularise(S.z = t((x)%*%t((main.code$code[pivots$alpha,pivots$beta])%*%t(main.parameters$beta[,pivots$beta]))%*%pinv(t((main.code$code[pivots$alpha,pivots$beta])%*%t(main.parameters$beta[,pivots$beta])))))
-  main.parameters$beta[,pivots$beta] <- soft_regularise(S.z = t(pinv(((t(main.parameters$alpha[pivots$alpha,])%*%(main.code$code[pivots$alpha,pivots$beta]))))%*%t(t(main.parameters$alpha[pivots$alpha,])%*%(main.code$code[pivots$alpha,pivots$beta]))%*%(x)))
+  main.parameters$alpha[pivots$alpha,] <- (t((x)%*%t((main.code$code[pivots$alpha,pivots$beta])%*%t(main.parameters$beta[,pivots$beta]))%*%pinv(t((main.code$code[pivots$alpha,pivots$beta])%*%t(main.parameters$beta[,pivots$beta])))))
+  main.parameters$beta[,pivots$beta] <- (t(pinv(((t(main.parameters$alpha[pivots$alpha,])%*%(main.code$code[pivots$alpha,pivots$beta]))))%*%t(t(main.parameters$alpha[pivots$alpha,])%*%(main.code$code[pivots$alpha,pivots$beta]))%*%(x)))
   main.code$encode[pivots$alpha,pivots$beta] <- (main.parameters$alpha[pivots$alpha,]%*%(x)%*%(main.parameters$beta[,pivots$beta]))
   
   if (!fix){
@@ -231,25 +231,4 @@ chunk <- function(x,n){
 }
 
 
-
-
-soft_regularise <- function(S.z){
-  
-  to_return <- 0
-  for (alpha in seq(0,100,50)/100){
-    for (lambda in seq(0,100,50)/100){
-      
-      S.g <- alpha*lambda
-      S.d <- 1 + lambda*(1 - alpha)
-      
-      to_return <- to_return + (
-        (S.z - S.g) * ((S.z > 0) * (S.g < abs(S.z))) +
-          (S.z + S.g) * ((S.z < 0) * (S.g < abs(S.z)))
-      )/S.d
-      
-    }
-  }
-  
-  return(to_return/9)
-}
 
