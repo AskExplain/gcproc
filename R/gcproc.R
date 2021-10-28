@@ -198,8 +198,8 @@ update_set <- function(x,
                        fix){
 
 
-  main.parameters$alpha[pivots$alpha,] <- (t((x)%*%t((main.code$code[pivots$alpha,pivots$beta])%*%t(main.parameters$beta[,pivots$beta]))%*%pinv(t((main.code$code[pivots$alpha,pivots$beta])%*%t(main.parameters$beta[,pivots$beta])))))
-  main.parameters$beta[,pivots$beta] <- (t(pinv(((t(main.parameters$alpha[pivots$alpha,])%*%(main.code$code[pivots$alpha,pivots$beta]))))%*%t(t(main.parameters$alpha[pivots$alpha,])%*%(main.code$code[pivots$alpha,pivots$beta]))%*%(x)))
+  main.parameters$alpha[pivots$alpha,] <- soft_regularise(S.z = t((x)%*%t((main.code$code[pivots$alpha,pivots$beta])%*%t(main.parameters$beta[,pivots$beta]))%*%pinv(t((main.code$code[pivots$alpha,pivots$beta])%*%t(main.parameters$beta[,pivots$beta])))))
+  main.parameters$beta[,pivots$beta] <- soft_regularise(S.z = t(pinv(((t(main.parameters$alpha[pivots$alpha,])%*%(main.code$code[pivots$alpha,pivots$beta]))))%*%t(t(main.parameters$alpha[pivots$alpha,])%*%(main.code$code[pivots$alpha,pivots$beta]))%*%(x)))
   main.code$encode[pivots$alpha,pivots$beta] <- (main.parameters$alpha[pivots$alpha,]%*%(x)%*%(main.parameters$beta[,pivots$beta]))
   
   if (!fix){
@@ -227,3 +227,27 @@ chunk <- function(x,n){
     split(x, cut(seq_along(x), n, labels = FALSE))
   }
 }
+
+
+
+
+soft_regularise <- function(S.z){
+  
+  to_return <- 0
+  for (alpha in seq(0,100,25)/100){
+    for (lambda in seq(0,100,25)/100){
+      
+      S.g <- alpha*lambda
+      S.d <- 1 + lambda*(1 - alpha)
+      
+      to_return <- to_return + (
+        (S.z - S.g) * ((S.z > 0) * (S.g < abs(S.z))) +
+          (S.z + S.g) * ((S.z < 0) * (S.g < abs(S.z)))
+      )/S.d
+      
+    }
+  }
+  
+  return(to_return/25)
+}
+
