@@ -211,8 +211,8 @@ chunk <- function(x,n){
 soft_regularise <- function(S.z){
   
   to_return <- 0
-  for (alpha in seq(0,100,25)/100){
-    for (lambda in seq(0,100,25)/100){
+  for (alpha in seq(0,100,50)/100){
+    for (lambda in seq(0,100,50)/100){
 
       S.g <- alpha*lambda
       S.d <- 1 + lambda*(1 - alpha)
@@ -225,6 +225,6 @@ soft_regularise <- function(S.z){
     }
   }
 
-  return(to_return/25)
+  return(to_return/9)
 }
 
