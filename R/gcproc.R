@@ -175,8 +175,8 @@ update_set <- function(x,
                        main.code,
                        fix){
 
-  main.parameters$alpha <- soft_regularise(S.z = t((x)%*%t((main.code$code)%*%t(main.parameters$beta))%*%pinv(t((main.code$code)%*%t(main.parameters$beta)))))
-  main.parameters$beta <- soft_regularise(S.z = t(pinv(((t(main.parameters$alpha)%*%(main.code$code))))%*%t(t(main.parameters$alpha)%*%(main.code$code))%*%(x)))
+  main.parameters$alpha <- (S.z = t((x)%*%t((main.code$code)%*%t(main.parameters$beta))%*%pinv(t((main.code$code)%*%t(main.parameters$beta)))))
+  main.parameters$beta <- (S.z = t(pinv(((t(main.parameters$alpha)%*%(main.code$code))))%*%t(t(main.parameters$alpha)%*%(main.code$code))%*%(x)))
   main.code$encode <- (main.parameters$alpha%*%(x)%*%(main.parameters$beta))
   
   if (!fix){
@@ -203,28 +203,5 @@ chunk <- function(x,n){
   else{
     split(x, cut(seq_along(x), n, labels = FALSE))
   }
-}
-
-
-
-
-soft_regularise <- function(S.z){
-  
-  to_return <- 0
-  for (alpha in c(0.25,0.5,0.75)){
-    for (lambda in c(1e-1,0.2,0.3,0.4,0.5)){
-      
-      S.g <- alpha*lambda
-      S.d <- 1 + lambda*(1 - alpha)
-      
-      to_return <- to_return + (
-        (S.z - S.g) * ((S.z > 0) * (S.g < abs(S.z))) +
-          (S.z + S.g) * ((S.z < 0) * (S.g < abs(S.z)))
-      )/S.d
-      
-    }
-  }
-  
-  return(to_return/15)
 }
 
