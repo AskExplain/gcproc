@@ -17,6 +17,7 @@ extract_config <- function(verbose=T){
     j_dim = 30,
     min_iter=2,
     max_iter=350,
+    n_decode = 30,
     seed = 1,
     tol=1,
     verbose = T
@@ -67,14 +68,15 @@ extract_recovery_framework <- function(verbose=T){
   recover <- list(
     task = c("regression"),
     method = c("matrix.projection"),
+    link_function = c("identity","identity"),
     design.list = NULL,
     labels = NULL
   )
-
+  
   if (verbose == T){
     print(recover)
   }
-
+  
   return(recover)
 }
 
