@@ -36,13 +36,13 @@ recover_points <- function(data_list,
             for (decode.id in 1:config$n_decode){
               
               set.seed(decode.id)
-              batch.ids <- sample(c(1:dim(x)[1]),size = max(25,dim(x)[1]/100))
+              batch.ids <- sample(c(1:dim(x)[1]),size = max(50,dim(x)[1]/100))
               
               pred.encode.sample <- pred.encode[batch.ids,]
-              projection.beta <- MASS::ginv(t(pred.encode.sample)%*%pred.encode.sample)%*%t(pred.encode.sample)%*%x[batch.ids,]%*%(main.parameters$beta[[join$beta[i]]])%*%MASS::ginv(t((main.parameters$beta[[join$beta[i]]]))%*%(main.parameters$beta[[join$beta[i]]]))%*%t(main.parameters$beta[[join$beta[internal.i]]])%*%(main.parameters$beta[[join$beta[internal.i]]])
+              projection.beta <- soft_regularise(MASS::ginv(t(pred.encode.sample)%*%pred.encode.sample)%*%t(pred.encode.sample)%*%x[batch.ids,]%*%(main.parameters$beta[[join$beta[i]]])%*%MASS::ginv(t((main.parameters$beta[[join$beta[i]]]))%*%(main.parameters$beta[[join$beta[i]]]))%*%t(main.parameters$beta[[join$beta[internal.i]]])%*%(main.parameters$beta[[join$beta[internal.i]]]))
               pred.encode <- cbind(1,pred.encode%*%projection.beta)
               
-              pred <- pred.encode%*%MASS::ginv(t(pred.encode)%*%pred.encode)%*%t(pred.encode)%*%x
+              pred <- pred.encode%*%(MASS::ginv(t(pred.encode)%*%pred.encode)%*%t(pred.encode)%*%x)
               x[row_with_missing_points,column_with_missing_points]  <- (pred)[row_with_missing_points,column_with_missing_points]
               
             }
@@ -128,12 +128,6 @@ transform.data <- function(x,method="scale"){
     if(is.numeric(center)) attr(x, "scaled:center") <- center
     if(is.numeric(scale)) attr(x, "scaled:scale") <- scale
     x
-  }
-  if (method == "logistic"){
-    x <- plogis(x)
-  }
-  if (method == "logit"){
-    x <- qlogis(x)
   }
   if (method == "log"){
     x <- log(x+0.1)
