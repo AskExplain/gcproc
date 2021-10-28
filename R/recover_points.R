@@ -35,22 +35,32 @@ recover_points <- function(data_list,
               
               x <- transform.data(as.matrix(data_list[[i]]), method = recover$link_function[1])
               
-              alpha.code <-  cbind(1,t(main.parameters$alpha[[join$alpha[i]]]))
-              beta.code <- main.code$code%*%t(main.parameters$beta[[join$beta[i]]])
-              d <- MASS::ginv(t(alpha.code)%*%(alpha.code))%*%t(alpha.code)%*%x%*%t(beta.code)%*%MASS::ginv(beta.code%*%t(beta.code))
+              horizontal <- T
+              if (horizontal == T){
+                for (internal.i in 1:length(data_list)){
+                  pred.encode <- cbind(1,t(main.parameters$alpha[[join$alpha[i]]])%*%main.code$code%*%t(main.parameters$beta[[join$beta[i]]])%*%(main.parameters$beta[[join$beta[i]]]))
+                  
+                  for (decode.id in 1:config$n_decode){
+                    
+                    set.seed(decode.id)
+                    batch.ids <- sample(c(1:dim(x)[1]),size = max(25,dim(x)[1]/100))
+                    
+                    pred.encode.sample <- pred.encode[batch.ids,]
+                    projection.beta <- MASS::ginv(t(pred.encode.sample)%*%pred.encode.sample)%*%t(pred.encode.sample)%*%x[batch.ids,]%*%(main.parameters$beta[[join$beta[i]]])%*%MASS::ginv(t((main.parameters$beta[[join$beta[i]]]))%*%(main.parameters$beta[[join$beta[i]]]))%*%t(main.parameters$beta[[join$beta[internal.i]]])%*%(main.parameters$beta[[join$beta[internal.i]]])
+                    pred.encode <- cbind(1,pred.encode%*%projection.beta)
+                    
+                    pred <- pred.encode%*%MASS::ginv(t(pred.encode)%*%pred.encode)%*%t(pred.encode)%*%x
+                    x[row_with_missing_points,column_with_missing_points]  <- (pred)[row_with_missing_points,column_with_missing_points]
+                    
+                  }
+                  
+                }
+              }
               
-              alpha.code <-  cbind(1,t(main.parameters$alpha[[join$alpha[i]]]))%*%d%*%main.code$code
-              beta.code <- t(main.parameters$beta[[join$beta[i]]])
-              e <- MASS::ginv(t(alpha.code)%*%(alpha.code))%*%t(alpha.code)%*%x%*%t(beta.code)%*%MASS::ginv(beta.code%*%t(beta.code))
-              
-              alpha.code <- cbind(1,t(main.parameters$alpha[[join$alpha[i]]]))%*%d%*%main.code$code%*%e%*%t(main.parameters$beta[[join$beta[i]]])%*%(main.parameters$beta[[join$beta[i]]])
-              f <- MASS::ginv(t(alpha.code)%*%(alpha.code))%*%t(alpha.code)%*%x
-              
-              pred <- cbind(1,t(main.parameters$alpha[[join$alpha[i]]]))%*%d%*%main.code$code%*%e%*%t(main.parameters$beta[[join$beta[i]]])%*%(main.parameters$beta[[join$beta[i]]])%*%f
-              
-              x[row_with_missing_points,column_with_missing_points]  <- pred[row_with_missing_points,column_with_missing_points]
+
               
               data_list[[i]] <- recover$predict.list[[i]] <- transform.data(x, method= recover$link_function[2])
+              
               
             }
             if ("matrix.projection" %in% method){
@@ -73,10 +83,15 @@ recover_points <- function(data_list,
               
               samples_with_missing_points <- which((rowSums(recover$design.list[[i]])>0)==T)
               covariate_predictors <-  decoded_covariate[-samples_with_missing_points,]
-              test_predictors <- decoded_covariate[samples_with_missing_points,]
+              test_predictors <-  decoded_covariate[samples_with_missing_points,]
+              
+              # for (iter in 1:config$n_decode){
+              #   covariate_predictors <- cbind(1,(((covariate_predictors)%*%(MASS::ginv(t(covariate_predictors)%*%(covariate_predictors))%*%t(covariate_predictors)%*%(x[-samples_with_missing_points,]%*%(main.parameters$beta[[join$beta[i]]]))))))
+              # }
               
               elements_with_missing_points <- which((recover$design.list[[i]]>0)[samples_with_missing_points,]==T,arr.ind = T)
               x[samples_with_missing_points,][elements_with_missing_points]  <- (((test_predictors)%*%(MASS::ginv(t(covariate_predictors)%*%(covariate_predictors))%*%t(covariate_predictors)%*%(x[-samples_with_missing_points,]))))[elements_with_missing_points]
+              
               
               data_list[[i]] <- recover$predict.list[[i]] <- transform.data(x, method = recover$link_function[2])
             }
@@ -245,10 +260,10 @@ transform.data <- function(x,method="scale"){
     x
   }
   if (method == "logistic"){
-    x <- log((1e-9+x)/((1+1e-9+1e-10)-(1e-9+x)))
+    x <- log((0.1+x)/((1+0.1+1e-10)-(0.1+x)))
   }
   if (method == "logit"){
-    x <- (exp(x)/(1+exp(x))) - 1e-9
+    x <- (exp(x)/(1+exp(x))) - 0.1
   }
   if (method == "log"){
     x <- log(x+0.1)

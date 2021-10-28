@@ -61,13 +61,12 @@ gcproc <- function(data_list,
 
 
   for (epoch in c(1:config$n_epochs)){
-    set.seed(epoch)
-    
+
     for (set.of.batch.id in c(0:(config$n_batch-1))){
       
       print(paste("Batch number :   ",set.of.batch.id,sep=""))
       
-      mini.batch_table <- batch_table[sample(seq(c(1+config$n_batch*set.of.batch.id),(config$n_batch*(1+set.of.batch.id)),1)),,drop=F]
+      mini.batch_table <- batch_table[(seq(c(1+config$n_batch*set.of.batch.id),(config$n_batch*(1+set.of.batch.id)),1)),,drop=F]
       
       main_batches <- 
         parallel::mclapply(X = c(1:dim(mini.batch_table)[1]),function(batch){
@@ -114,13 +113,14 @@ gcproc <- function(data_list,
         main.code$code[main_batches[[batch.id]]$pivots$alpha,main_batches[[batch.id]]$pivots$beta] <- main_batches[[batch.id]]$main.code$code[main_batches[[batch.id]]$pivots$alpha,main_batches[[batch.id]]$pivots$beta]
         
       }
-      
+    
     }
+    
+    
   }
 
-
   if (any(do.call('c',lapply(recover$design.list,function(X){!is.null(X)})))){
-
+    
     recover_data <- recover_points(
       data_list,
       main.code = main.code,
@@ -129,12 +129,13 @@ gcproc <- function(data_list,
       recover = recover,
       join = join
     )
-
+    
     recover <- recover_data$recover
     data_list <- recover_data$data_list
-
+    
   }
-
+  
+  
 
   if (config$verbose){
     print("Learning has converged for gcproc, beginning prediction (if requested) and dimension reduction")

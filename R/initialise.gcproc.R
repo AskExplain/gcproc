@@ -59,8 +59,8 @@ initialise.parameters <- function(x,transfer,i_dim,j_dim,init="random",verbose=F
   set.seed(1)
   
   if (init=="random"){
-    param.beta <- array(rnorm(dim(x)[2]*config$j_dim),dim=c(dim(x)[2],config$j_dim))
-    param.alpha = array(rnorm(config$i_dim*dim(x)[1]),dim=c(config$i_dim,dim(x)[1]))
+    param.beta <- array(rnorm(dim(x)[2]*j_dim),dim=c(dim(x)[2],j_dim))
+    param.alpha = array(rnorm(i_dim*dim(x)[1]),dim=c(i_dim,dim(x)[1]))
   } 
   
   if (init=="irlba"){
