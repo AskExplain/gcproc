@@ -175,8 +175,8 @@ update_set <- function(x,
                        main.code,
                        fix){
 
-  main.parameters$alpha <- (S.z = t((x)%*%t((main.code$code)%*%t(main.parameters$beta))%*%pinv(t((main.code$code)%*%t(main.parameters$beta)))))
-  main.parameters$beta <- (S.z = t(pinv(((t(main.parameters$alpha)%*%(main.code$code))))%*%t(t(main.parameters$alpha)%*%(main.code$code))%*%(x)))
+  main.parameters$alpha <- (t((x)%*%t((main.code$code)%*%t(main.parameters$beta))%*%pinv(t((main.code$code)%*%t(main.parameters$beta)))))
+  main.parameters$beta <- (t(pinv(((t(main.parameters$alpha)%*%(main.code$code))))%*%t(t(main.parameters$alpha)%*%(main.code$code))%*%(x)))
   main.code$encode <- (main.parameters$alpha%*%(x)%*%(main.parameters$beta))
   
   if (!fix){
