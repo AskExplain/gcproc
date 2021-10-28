@@ -119,6 +119,12 @@ gcproc <- function(data_list,
     
   }
 
+  
+  if (config$verbose){
+    print("Learning has converged for gcproc, beginning prediction (if requested) and dimension reduction")
+  }
+  
+  
   if (any(do.call('c',lapply(recover$design.list,function(X){!is.null(X)})))){
     
     recover_data <- recover_points(
@@ -136,10 +142,6 @@ gcproc <- function(data_list,
   }
   
   
-
-  if (config$verbose){
-    print("Learning has converged for gcproc, beginning prediction (if requested) and dimension reduction")
-  }
 
 
 
@@ -234,8 +236,8 @@ chunk <- function(x,n){
 soft_regularise <- function(S.z){
   
   to_return <- 0
-  for (alpha in seq(0,100,25)/100){
-    for (lambda in seq(0,100,25)/100){
+  for (alpha in seq(0,100,50)/100){
+    for (lambda in seq(0,100,50)/100){
       
       S.g <- alpha*lambda
       S.d <- 1 + lambda*(1 - alpha)
@@ -248,6 +250,6 @@ soft_regularise <- function(S.z){
     }
   }
   
-  return(to_return/25)
+  return(to_return/9)
 }
 
