@@ -183,9 +183,6 @@ update_set <- function(x,
     main.code$code <- pinv(t(main.parameters$alpha))%*%(main.code$encode)%*%pinv(main.parameters$beta)
   }
   
-  main.parameters$alpha[abs(main.parameters$alpha)<quantile(abs(main.parameters$alpha),0.01)] <- 0
-  main.parameters$beta[abs(main.parameters$beta)<quantile(abs(main.parameters$beta),0.01)] <- 0
-  
   return(list(main.parameters = main.parameters,
               main.code = main.code
               ))
