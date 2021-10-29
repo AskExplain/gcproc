@@ -31,20 +31,23 @@ recover_points <- function(data_list,
           x <- transform.data(as.matrix(data_list[[i]]), method = recover$link_function[1])
           
           for (decode.id in 1:config$n_decode){
+            projection.beta <- 0
             
             for (beta.id in 1:length(main.parameters$beta)){
-              pred.encode <- as.matrix(cbind(1,t(main.parameters$alpha[[join$alpha[i]]])%*%main.code$code%*%t(main.parameters$beta[[join$beta[beta.id]]])%*%(main.parameters$beta[[join$beta[beta.id]]])))
+              pred.encode <- as.matrix(cbind(1,transform.data(data_list[[beta.id]]%*%(main.parameters$beta[[join$beta[beta.id]]]),method = "scale")))
               
-              projection.beta <- (MASS::ginv(t(pred.encode)%*%pred.encode)%*%t(pred.encode)%*%t((main.parameters$alpha[[join$alpha[i]]]))%*%MASS::ginv(((main.parameters$alpha[[join$alpha[beta.id]]]))%*%t(main.parameters$alpha[[join$alpha[beta.id]]]))%*%(main.parameters$alpha[[join$alpha[beta.id]]])%*%transform.data(data_list[[beta.id]],method = "scale")%*%(main.parameters$beta[[join$beta[beta.id]]]))
-              pred.encode <- cbind(1,pred.encode%*%projection.beta)
+              projection.beta <- projection.beta + (MASS::ginv(t(pred.encode)%*%pred.encode)%*%t(pred.encode)%*%t((main.parameters$alpha[[join$alpha[beta.id]]]))%*%MASS::ginv(((main.parameters$alpha[[join$alpha[i]]]))%*%t(main.parameters$alpha[[join$alpha[i]]]))%*%(main.parameters$alpha[[join$alpha[i]]])%*%transform.data(x,method = "scale")%*%(main.parameters$beta[[join$beta[i]]]))
+              
+              pred.encode <- cbind(1,transform.data(pred.encode%*%projection.beta,"scale"))
+              pred <- pred.encode%*%(MASS::ginv(t(pred.encode)%*%pred.encode)%*%t(pred.encode)%*%x)
+              x[row_with_missing_points,column_with_missing_points]  <- (pred)[row_with_missing_points,column_with_missing_points]
               
             }
             
+            
           }
           
-          pred <- pred.encode%*%(MASS::ginv(t(pred.encode)%*%pred.encode)%*%t(pred.encode)%*%x)
-          x[row_with_missing_points,column_with_missing_points]  <- (pred)[row_with_missing_points,column_with_missing_points]
-              
+          
           data_list[[i]] <- recover$predict.list[[i]] <- transform.data(x, method= recover$link_function[2])
           
         }
