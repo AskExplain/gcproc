@@ -175,13 +175,16 @@ update_set <- function(x,
                        main.code,
                        fix){
 
-  main.parameters$alpha <- soft_regularise(t((x)%*%t((main.code$code)%*%t(main.parameters$beta))%*%pinv(t((main.code$code)%*%t(main.parameters$beta)))))
-  main.parameters$beta <- soft_regularise(t(pinv(((t(main.parameters$alpha)%*%(main.code$code))))%*%t(t(main.parameters$alpha)%*%(main.code$code))%*%(x)))
+  main.parameters$alpha <- (t((x)%*%t((main.code$code)%*%t(main.parameters$beta))%*%pinv(t((main.code$code)%*%t(main.parameters$beta)))))
+  main.parameters$beta <- (t(pinv(((t(main.parameters$alpha)%*%(main.code$code))))%*%t(t(main.parameters$alpha)%*%(main.code$code))%*%(x)))
   main.code$encode <- (main.parameters$alpha%*%(x)%*%(main.parameters$beta))
   
   if (!fix){
-    main.code$code <- (pinv(t(main.parameters$alpha))%*%(main.code$encode)%*%pinv(main.parameters$beta))
+    main.code$code <- pinv(t(main.parameters$alpha))%*%(main.code$encode)%*%pinv(main.parameters$beta)
   }
+  
+  main.parameters$alpha[abs(main.parameters$alpha)<quantile(abs(main.parameters$alpha),0.01)] <- 0
+  main.parameters$beta[abs(main.parameters$beta)<quantile(abs(main.parameters$beta),0.01)] <- 0
   
   return(list(main.parameters = main.parameters,
               main.code = main.code
@@ -203,32 +206,5 @@ chunk <- function(x,n){
   else{
     split(x, cut(seq_along(x), n, labels = FALSE))
   }
-}
-
-
-
-
-
-
-
-
-soft_regularise <- function(S.z){
-  
-  to_return <- 0
-  for (alpha in seq(0,100,25)/100){
-    for (lambda in seq(0,100,25)/100){
-      
-      S.g <- alpha*lambda
-      S.d <- 1 + lambda*(1 - alpha)
-      
-      to_return <- to_return + (
-        (S.z - S.g) * ((S.z > 0) * (S.g < abs(S.z))) +
-          (S.z + S.g) * ((S.z < 0) * (S.g < abs(S.z)))
-      )/S.d
-      
-    }
-  }
-  
-  return(to_return/25)
 }
 
