@@ -32,18 +32,16 @@ recover_points <- function(data_list,
           
           for (decode.id in 1:config$n_decode){
             projection.beta <- 0
-            
             for (beta.id in 1:length(main.parameters$beta)){
-              pred.encode <- as.matrix(cbind(1,transform.data(data_list[[beta.id]]%*%(main.parameters$beta[[join$beta[beta.id]]]),method = "scale")))
+              pred.encode <- as.matrix(cbind(1,as.matrix(main.parameters$alpha[[join$alpha[beta.id]]]%*%as.matrix(data_list[[beta.id]])%*%main.parameters$beta[[beta.id]])))
               
-              projection.beta <- projection.beta + (MASS::ginv(t(pred.encode)%*%pred.encode)%*%t(pred.encode)%*%t((main.parameters$alpha[[join$alpha[beta.id]]]))%*%MASS::ginv(((main.parameters$alpha[[join$alpha[i]]]))%*%t(main.parameters$alpha[[join$alpha[i]]]))%*%(main.parameters$alpha[[join$alpha[i]]])%*%transform.data(x,method = "scale")%*%(main.parameters$beta[[join$beta[i]]]))
-              
-              pred.encode <- cbind(1,transform.data(pred.encode%*%projection.beta,"scale"))
-              pred <- pred.encode%*%(MASS::ginv(t(pred.encode)%*%pred.encode)%*%t(pred.encode)%*%x)
-              x[row_with_missing_points,column_with_missing_points]  <- (pred)[row_with_missing_points,column_with_missing_points]
+              projection.beta <- projection.beta + (MASS::ginv(t(pred.encode)%*%pred.encode)%*%t(pred.encode)%*%main.parameters$alpha[[join$alpha[i]]]%*%as.matrix(x)%*%main.parameters$beta[[i]])
               
             }
             
+            pred.encode <- cbind(1,cbind(1,x%*%main.parameters$beta[[i]])%*%projection.beta)
+            pred <- (pred.encode)%*%MASS::ginv(t(pred.encode)%*%(pred.encode))%*%t(pred.encode)%*%x
+            x[row_with_missing_points,column_with_missing_points]  <- (pred)[row_with_missing_points,column_with_missing_points]
             
           }
           
