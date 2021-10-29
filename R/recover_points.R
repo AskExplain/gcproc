@@ -30,16 +30,12 @@ recover_points <- function(data_list,
           
           x <- transform.data(as.matrix(data_list[[i]]), method = recover$link_function[1])
           
-          for (internal.i in 1:length(data_list)){
-            pred.encode <- cbind(1,t(main.parameters$alpha[[join$alpha[i]]])%*%main.code$code%*%t(main.parameters$beta[[join$beta[i]]])%*%(main.parameters$beta[[join$beta[i]]]))
+          for (beta.id in 1:length(main.parameters$beta)){
+            pred.encode <- cbind(1,t(main.parameters$alpha[[join$alpha[i]]])%*%main.code$code%*%t(main.parameters$beta[[join$beta[beta.id]]]))
             
             for (decode.id in 1:config$n_decode){
               
-              set.seed(decode.id)
-              batch.ids <- sample(c(1:dim(x)[1]),size = max(50,dim(x)[1]/100))
-              
-              pred.encode.sample <- pred.encode[batch.ids,]
-              projection.beta <- (MASS::ginv(t(pred.encode.sample)%*%pred.encode.sample)%*%t(pred.encode.sample)%*%x[batch.ids,]%*%(main.parameters$beta[[join$beta[i]]])%*%MASS::ginv(t((main.parameters$beta[[join$beta[i]]]))%*%(main.parameters$beta[[join$beta[i]]]))%*%t(main.parameters$beta[[join$beta[internal.i]]])%*%(main.parameters$beta[[join$beta[internal.i]]]))
+              projection.beta <- (MASS::ginv(t(pred.encode)%*%pred.encode)%*%t(pred.encode)%*%t((main.parameters$alpha[[join$alpha[i]]]))%*%MASS::ginv(((main.parameters$alpha[[join$alpha[beta.id]]]))%*%t(main.parameters$alpha[[join$alpha[beta.id]]]))%*%(main.parameters$alpha[[join$alpha[beta.id]]])%*%data_list[[beta.id]]%*%(main.parameters$beta[[join$beta[beta.id]]]))
               pred.encode <- cbind(1,pred.encode%*%projection.beta)
               
               pred <- pred.encode%*%(MASS::ginv(t(pred.encode)%*%pred.encode)%*%t(pred.encode)%*%x)
