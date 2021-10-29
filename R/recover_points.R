@@ -31,6 +31,7 @@ recover_points <- function(data_list,
           x <- transform.data(as.matrix(data_list[[i]]), method = recover$link_function[1])
           
           for (beta.id in 1:length(main.parameters$beta)){
+            print(beta.id)
             pred.encode <- cbind(1,t(main.parameters$alpha[[join$alpha[i]]])%*%main.code$code%*%t(main.parameters$beta[[join$beta[beta.id]]]))
             
             for (decode.id in 1:config$n_decode){
