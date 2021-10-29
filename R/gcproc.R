@@ -52,10 +52,15 @@ gcproc <- function(data_list,
       internal.parameters <- list(alpha=main.parameters$alpha[[join$alpha[i]]],
                               beta=main.parameters$beta[[join$beta[i]]])
       
+      recovery <- list(recovery = !is.null(recover$design.list[[i]]), 
+                       link_function = recover$link_function,
+                       design.list = recover$design.list[[i]])
+      
       return_update <- update_set(x = as.matrix(data_list[[i]]),
                                   main.parameters = internal.parameters,
                                   main.code = main.code,
-                                  fix = transfer$fix
+                                  fix = transfer$fix,
+                                  recovery = recovery
       )
       
       main.parameters$alpha[[join$alpha[i]]] <- return_update$main.parameters$alpha
@@ -63,6 +68,7 @@ gcproc <- function(data_list,
       
       main.code <- return_update$main.code
       
+      recover$predict.list[[i]] <- data_list[[i]] <- if(convergence.parameters$count > 3){return_update$x}else{data_list[[i]]}
     }
     
     
@@ -95,31 +101,14 @@ gcproc <- function(data_list,
     convergence.parameters$count = convergence.parameters$count + 1
     
     
+
     
   }
   
   
   if (config$verbose){
-    print("Learning has converged for gcproc, beginning prediction (if requested) and dimension reduction")
+    print("Learning has converged for gcproc, beginning (if requested) dimension reduction")
   }
-  
-  if (any(do.call('c',lapply(recover$design.list,function(X){!is.null(X)})))){
-    
-    recover_data <- recover_points(
-      data_list,
-      main.code = main.code,
-      main.parameters = main.parameters,
-      config = config,
-      recover = recover,
-      join = join
-    )
-    
-    recover <- recover_data$recover
-    data_list <- recover_data$data_list
-    
-  }
-  
-
 
 
   dimension_reduction <- lapply(c(1:length(data_list)),function(Y){
@@ -173,18 +162,35 @@ gcproc <- function(data_list,
 update_set <- function(x,
                        main.parameters,
                        main.code,
-                       fix){
-
-  main.parameters$alpha <- (t((x)%*%t((main.code$code)%*%t(main.parameters$beta))%*%pinv(t((main.code$code)%*%t(main.parameters$beta)))))
-  main.parameters$beta <- (t(pinv(((t(main.parameters$alpha)%*%(main.code$code))))%*%t(t(main.parameters$alpha)%*%(main.code$code))%*%(x)))
-  main.code$encode <- (main.parameters$alpha%*%(x)%*%(main.parameters$beta))
+                       fix,
+                       recovery){
+  x.recover <- transform.data(as.matrix(x), method = recovery$link_function[1])
   
-  if (!fix){
-    main.code$code <- pinv(t(main.parameters$alpha))%*%(main.code$encode)%*%pinv(main.parameters$beta)
+  for (i in 1:3){
+    
+    main.parameters$alpha <- (t((x)%*%t((main.code$code)%*%t(main.parameters$beta))%*%pinv(t((main.code$code)%*%t(main.parameters$beta)))))
+    main.parameters$beta <- (t(pinv(((t(main.parameters$alpha)%*%(main.code$code))))%*%t(t(main.parameters$alpha)%*%(main.code$code))%*%(x)))
+    main.code$encode <- (main.parameters$alpha%*%(x)%*%(main.parameters$beta))
+    
+    if (!fix){
+      main.code$code <- pinv(t(main.parameters$alpha))%*%(main.code$encode)%*%pinv(main.parameters$beta)
+    }
+    
+    if (any(recovery$recovery)){
+      pred.encode <- x.recover%*%(main.parameters$beta)%*%main.code$code
+      pred <- pred.encode%*%(MASS::ginv(t(pred.encode)%*%pred.encode)%*%t(pred.encode)%*%x.recover)
+      x.recover  <- pred*recovery$design.list+x.recover*(1-recovery$design.list)
+      x <- transform.data((x.recover),recovery$link_function[2]) 
+    }
+    
+    
   }
   
+  
+  
   return(list(main.parameters = main.parameters,
-              main.code = main.code
+              main.code = main.code,
+              x = x
               ))
 
 }
@@ -204,4 +210,3 @@ chunk <- function(x,n){
     split(x, cut(seq_along(x), n, labels = FALSE))
   }
 }
-
