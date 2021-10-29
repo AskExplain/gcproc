@@ -30,20 +30,21 @@ recover_points <- function(data_list,
           
           x <- transform.data(as.matrix(data_list[[i]]), method = recover$link_function[1])
           
-          for (beta.id in 1:length(main.parameters$beta)){
-            pred.encode <- cbind(1,t(main.parameters$alpha[[join$alpha[i]]])%*%main.code$code%*%t(main.parameters$beta[[join$beta[beta.id]]]))
-            
-            for (decode.id in 1:config$n_decode){
+          for (decode.id in 1:config$n_decode){
+            projection.beta <- 0
+            for (beta.id in 1:length(main.parameters$beta)){
+              pred.encode <- as.matrix(cbind(1,as.matrix(main.parameters$alpha[[join$alpha[beta.id]]]%*%as.matrix(data_list[[beta.id]])%*%main.parameters$beta[[beta.id]])))
               
-              projection.beta <- (MASS::ginv(t(pred.encode)%*%pred.encode)%*%t(pred.encode)%*%t((main.parameters$alpha[[join$alpha[i]]]))%*%MASS::ginv(((main.parameters$alpha[[join$alpha[beta.id]]]))%*%t(main.parameters$alpha[[join$alpha[beta.id]]]))%*%(main.parameters$alpha[[join$alpha[beta.id]]])%*%as.matrix(data_list[[beta.id]])%*%(main.parameters$beta[[join$beta[beta.id]]]))
-              pred.encode <- cbind(1,pred.encode%*%projection.beta)
-              
-              pred <- pred.encode%*%(MASS::ginv(t(pred.encode)%*%pred.encode)%*%t(pred.encode)%*%x)
-              x[row_with_missing_points,column_with_missing_points]  <- (pred)[row_with_missing_points,column_with_missing_points]
+              projection.beta <- projection.beta + (MASS::ginv(t(pred.encode)%*%pred.encode)%*%t(pred.encode)%*%main.parameters$alpha[[join$alpha[i]]]%*%as.matrix(x)%*%main.parameters$beta[[i]])
               
             }
             
+            pred.encode <- cbind(1,cbind(1,x%*%main.parameters$beta[[i]])%*%projection.beta)
+            pred <- (pred.encode)%*%MASS::ginv(t(pred.encode)%*%(pred.encode))%*%t(pred.encode)%*%x
+            x[row_with_missing_points,column_with_missing_points]  <- (pred)[row_with_missing_points,column_with_missing_points]
+            
           }
+          
           
           data_list[[i]] <- recover$predict.list[[i]] <- transform.data(x, method= recover$link_function[2])
           
