@@ -30,24 +30,27 @@ recover_points <- function(data_list,
           
           x <- transform.data(as.matrix(data_list[[i]]), method = recover$link_function[1])
           
-          for (internal.i in 1:length(data_list)){
-            pred.encode <- cbind(1,t(main.parameters$alpha[[join$alpha[i]]])%*%main.code$code%*%t(main.parameters$beta[[join$beta[i]]])%*%(main.parameters$beta[[join$beta[i]]]))
+          pred.encode <- cbind(1,t(main.parameters$alpha[[join$alpha[i]]])%*%main.code$code%*%t(main.parameters$beta[[join$beta[i]]])%*%(main.parameters$beta[[join$beta[i]]]))
+          samples_with_missing_points <- which((rowSums(recover$design.list[[i]])>0)==T)
+          
+          pred.encode.train <- pred.encode[-samples_with_missing_points,]
+          pred.encode.test <- pred.encode[samples_with_missing_points,]
+          
+          for (decode.id in 1:config$n_decode){
             
-            for (decode.id in 1:config$n_decode){
-              
-              set.seed(decode.id)
-              batch.ids <- sample(c(1:dim(x)[1]),size = max(50,dim(x)[1]/100))
-              
-              pred.encode.sample <- pred.encode[batch.ids,]
-              projection.beta <- (MASS::ginv(t(pred.encode.sample)%*%pred.encode.sample)%*%t(pred.encode.sample)%*%x[batch.ids,]%*%(main.parameters$beta[[join$beta[i]]])%*%MASS::ginv(t((main.parameters$beta[[join$beta[i]]]))%*%(main.parameters$beta[[join$beta[i]]]))%*%t(main.parameters$beta[[join$beta[internal.i]]])%*%(main.parameters$beta[[join$beta[internal.i]]]))
-              pred.encode <- cbind(1,pred.encode%*%projection.beta)
-              
-              pred <- pred.encode%*%(MASS::ginv(t(pred.encode)%*%pred.encode)%*%t(pred.encode)%*%x)
-              x[row_with_missing_points,column_with_missing_points]  <- (pred)[row_with_missing_points,column_with_missing_points]
-              
-            }
+            set.seed(decode.id)
+            batch.ids <- sample(c(1:dim(pred.encode.train)[1]),size = max(50,dim(x)[1]/100))
+            
+            pred.encode.sample <- pred.encode.train[batch.ids,]
+            projection.beta <- (MASS::ginv(t(pred.encode.sample)%*%pred.encode.sample)%*%t(pred.encode.sample)%*%x[batch.ids,]%*%(main.parameters$beta[[join$beta[i]]]))
+            pred.encode.test <- pred.encode.test%*%projection.beta
+            pred.encode.train <- pred.encode.train%*%projection.beta
             
           }
+          
+          pred <- pred.encode.test%*%(MASS::ginv(t(pred.encode.test)%*%pred.encode.test)%*%t(pred.encode.test)%*%x[samples_with_missing_points,])
+          x[row_with_missing_points,column_with_missing_points]  <- (pred)
+          
           
           data_list[[i]] <- recover$predict.list[[i]] <- transform.data(x, method= recover$link_function[2])
           
