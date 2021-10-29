@@ -35,7 +35,7 @@ recover_points <- function(data_list,
             
             for (decode.id in 1:config$n_decode){
               
-              projection.beta <- (MASS::ginv(t(pred.encode)%*%pred.encode)%*%t(pred.encode)%*%t((main.parameters$alpha[[join$alpha[i]]]))%*%MASS::ginv(((main.parameters$alpha[[join$alpha[beta.id]]]))%*%t(main.parameters$alpha[[join$alpha[beta.id]]]))%*%(main.parameters$alpha[[join$alpha[beta.id]]])%*%data_list[[beta.id]]%*%(main.parameters$beta[[join$beta[beta.id]]]))
+              projection.beta <- (MASS::ginv(t(pred.encode)%*%pred.encode)%*%t(pred.encode)%*%t((main.parameters$alpha[[join$alpha[i]]]))%*%MASS::ginv(((main.parameters$alpha[[join$alpha[beta.id]]]))%*%t(main.parameters$alpha[[join$alpha[beta.id]]]))%*%(main.parameters$alpha[[join$alpha[beta.id]]])%*%as.matrix(data_list[[beta.id]])%*%(main.parameters$beta[[join$beta[beta.id]]]))
               pred.encode <- cbind(1,pred.encode%*%projection.beta)
               
               pred <- pred.encode%*%(MASS::ginv(t(pred.encode)%*%pred.encode)%*%t(pred.encode)%*%x)
