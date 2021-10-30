@@ -107,6 +107,16 @@ gcproc <- function(data_list,
         for (join.id in c(1:length(data_list))){
           main.parameters$alpha[[join$alpha[join.id]]][main_batches[[batch.id]]$pivots$alpha,] <- main_batches[[batch.id]]$main.parameters$alpha[[join$alpha[join.id]]][main_batches[[batch.id]]$pivots$alpha,]
           main.parameters$beta[[join$beta[join.id]]][,main_batches[[batch.id]]$pivots$beta] <- main_batches[[batch.id]]$main.parameters$beta[[join$beta[join.id]]][,main_batches[[batch.id]]$pivots$beta]
+        
+          
+          
+          main.code$intercept.code[main_batches[[batch.id]]$pivots$alpha,main_batches[[batch.id]]$pivots$beta] <- 
+            pinv(t(main.parameters$alpha[[join$alpha[join.id]]][main_batches[[batch.id]]$pivots$alpha,]))%*%
+            (main.parameters$alpha[[join$alpha[join.id]]][main_batches[[batch.id]]$pivots$alpha,]%*%(
+              data_list[[join.id]] - t(main.parameters$alpha[[join$alpha[join.id]]])%*%main.code$code%*%t(main.parameters$beta[[join$beta[join.id]]])
+            )%*%(main.parameters$beta[[join$beta[join.id]]][,main_batches[[batch.id]]$pivots$beta]))%*%
+            pinv(main.parameters$beta[[join$beta[join.id]]][,main_batches[[batch.id]]$pivots$beta])
+          
         }
         
         main.code$encode[main_batches[[batch.id]]$pivots$alpha,main_batches[[batch.id]]$pivots$beta] <- main_batches[[batch.id]]$main.code$encode[main_batches[[batch.id]]$pivots$alpha,main_batches[[batch.id]]$pivots$beta]
@@ -114,14 +124,6 @@ gcproc <- function(data_list,
         
       }
       
-      for (i in 1:length(data_list)){
-        for (batch.id in 1:length(main_batches)){
-          main.code$intercept.code[main_batches[[batch.id]]$pivots$alpha,main_batches[[batch.id]]$pivots$beta] <- 
-            pinv(t(main.parameters$alpha[[join$alpha[i]]][main_batches[[batch.id]]$pivots$alpha,]))%*%(main.parameters$alpha[[join$alpha[i]]][main_batches[[batch.id]]$pivots$alpha,]%*%(
-              data_list[[i]] - t(main.parameters$alpha[[join$alpha[i]]])%*%main.code$code%*%t(main.parameters$beta[[join$beta[i]]])
-            )%*%(main.parameters$beta[[join$beta[i]]][,main_batches[[batch.id]]$pivots$beta]))%*%pinv(main.parameters$beta[[join$beta[i]]][,main_batches[[batch.id]]$pivots$beta])
-        }
-      }
     }
     
   }
@@ -212,7 +214,7 @@ update_set <- function(x,
   main.code$encode[pivots$alpha,pivots$beta] <- (main.parameters$alpha[pivots$alpha,]%*%(x)%*%(main.parameters$beta[,pivots$beta]))
   
   if (!fix){
-  main.code$code[pivots$alpha,pivots$beta] <- pinv(t(main.parameters$alpha[pivots$alpha,]))%*%(main.code$encode[pivots$alpha,pivots$beta])%*%pinv(main.parameters$beta[,pivots$beta])
+    main.code$code[pivots$alpha,pivots$beta] <- pinv(t(main.parameters$alpha[pivots$alpha,]))%*%(main.code$encode[pivots$alpha,pivots$beta])%*%pinv(main.parameters$beta[,pivots$beta])
   }
   
   return(list(main.parameters = main.parameters,
