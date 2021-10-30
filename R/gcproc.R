@@ -115,20 +115,10 @@ gcproc <- function(data_list,
       }
       
       for (i in 1:length(data_list)){
-        decoded.code <- 0
-        for (batch.id in 1:length(main_batches)){
-          
-          decoded.code <- decoded.code + 
-            t(main.parameters$alpha[[join$alpha[i]]][main_batches[[batch.id]]$pivots$alpha,])%*%
-            main.code$code[main_batches[[batch.id]]$pivots$alpha,main_batches[[batch.id]]$pivots$beta]%*%
-            t(main.parameters$beta[[join$beta[i]]][,main_batches[[batch.id]]$pivots$beta]) / length(main_batches)
-          
-        }
-        
         for (batch.id in 1:length(main_batches)){
           main.code$intercept.code[main_batches[[batch.id]]$pivots$alpha,main_batches[[batch.id]]$pivots$beta] <- 
             pinv(t(main.parameters$alpha[[join$alpha[i]]][main_batches[[batch.id]]$pivots$alpha,]))%*%(main.parameters$alpha[[join$alpha[i]]][main_batches[[batch.id]]$pivots$alpha,]%*%(
-              data_list[[i]] - decoded.code
+              data_list[[i]] - t(main.parameters$alpha[[join$alpha[i]]])%*%main.code$code%*%t(main.parameters$beta[[join$beta[i]]])
             )%*%(main.parameters$beta[[join$beta[i]]][,main_batches[[batch.id]]$pivots$beta]))%*%pinv(main.parameters$beta[[join$beta[i]]][,main_batches[[batch.id]]$pivots$beta])
         }
       }
