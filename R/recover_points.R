@@ -30,7 +30,7 @@ recover_points <- function(data_list,
           # Full run recover
           for (iter in 1:length(data_list)){
             internal.data <- transform.data(as.matrix(data_list[[i]]), method = recover$link_function[1])
-            pred.encode <- cbind(1,t(main.parameters$alpha[[join$alpha[iter]]])%*%(main.code$code)%*%t(main.parameters$beta[[join$beta[iter]]])%*%(main.parameters$beta[[join$beta[iter]]]))
+            pred.encode <- cbind(1,t(main.parameters$alpha[[join$alpha[i]]])%*%(main.code$code)%*%t(main.parameters$beta[[join$beta[iter]]])%*%(main.parameters$beta[[join$beta[iter]]]))
             pred <- pred.encode%*%(MASS::ginv(t(pred.encode)%*%pred.encode)%*%t(pred.encode)%*%internal.data)
             internal.data[row_with_missing_points,column_with_missing_points]  <- (pred)[row_with_missing_points,column_with_missing_points]
             
