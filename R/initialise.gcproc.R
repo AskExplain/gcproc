@@ -32,7 +32,8 @@ initialise.gcproc <- function(data_list,
       
       main.code = list(
         encode = encode,
-        code = code
+        code = code,
+        intercept.code = code + rnorm(prod(dim(code)))
       )
       
     } else {    

@@ -114,22 +114,24 @@ gcproc <- function(data_list,
         
       }
       
-    }
-    
-    if (any(do.call('c',lapply(recover$design.list,function(X){!is.null(X)})))){
-      
-      recover_data <- recover_points(
-        data_list,
-        main.code = main.code,
-        main.parameters = main.parameters,
-        config = config,
-        recover = recover,
-        join = join
-      )
-      
-      recover <- recover_data$recover
-      data_list <- recover_data$data_list
-      
+      for (i in 1:length(data_list)){
+        decoded.code <- 0
+        for (batch.id in 1:length(main_batches)){
+          
+          decoded.code <- decoded.code + 
+            t(main.parameters$alpha[[join$alpha[i]]][main_batches[[batch.id]]$pivots$alpha,])%*%
+            main.code$code[main_batches[[batch.id]]$pivots$alpha,main_batches[[batch.id]]$pivots$beta]%*%
+            t(main.parameters$beta[[join$beta[i]]][,main_batches[[batch.id]]$pivots$beta]) / length(main_batches)
+          
+        }
+        
+        for (batch.id in 1:length(main_batches)){
+          main.code$intercept.code[main_batches[[batch.id]]$pivots$alpha,main_batches[[batch.id]]$pivots$beta] <- 
+            pinv(t(main.parameters$alpha[[join$alpha[i]]][main_batches[[batch.id]]$pivots$alpha,]))%*%(main.parameters$alpha[[join$alpha[i]]][main_batches[[batch.id]]$pivots$alpha,]%*%(
+              data_list[[i]] - decoded.code
+            )%*%(main.parameters$beta[[join$beta[i]]][,main_batches[[batch.id]]$pivots$beta]))%*%pinv(main.parameters$beta[[join$beta[i]]][,main_batches[[batch.id]]$pivots$beta])
+        }
+      }
     }
     
   }
@@ -140,6 +142,21 @@ gcproc <- function(data_list,
   }
   
   
+  if (any(do.call('c',lapply(recover$design.list,function(X){!is.null(X)})))){
+    
+    recover_data <- recover_points(
+      data_list,
+      main.code = main.code,
+      main.parameters = main.parameters,
+      config = config,
+      recover = recover,
+      join = join
+    )
+    
+    recover <- recover_data$recover
+    data_list <- recover_data$data_list
+    
+  }
   
   
 
@@ -200,8 +217,8 @@ update_set <- function(x,
                        fix){
 
 
-  main.parameters$alpha[pivots$alpha,] <- (t((x)%*%t((main.code$code[pivots$alpha,pivots$beta])%*%t(main.parameters$beta[,pivots$beta]))%*%pinv(t((main.code$code[pivots$alpha,pivots$beta])%*%t(main.parameters$beta[,pivots$beta])))))
-  main.parameters$beta[,pivots$beta] <- (t(pinv(((t(main.parameters$alpha[pivots$alpha,])%*%(main.code$code[pivots$alpha,pivots$beta]))))%*%t(t(main.parameters$alpha[pivots$alpha,])%*%(main.code$code[pivots$alpha,pivots$beta]))%*%(x)))
+  main.parameters$alpha[pivots$alpha,] <- (t((x)%*%t((main.code$intercept.code[pivots$alpha,pivots$beta] + main.code$code[pivots$alpha,pivots$beta])%*%t(main.parameters$beta[,pivots$beta]))%*%pinv(t((main.code$intercept.code[pivots$alpha,pivots$beta] + main.code$code[pivots$alpha,pivots$beta])%*%t(main.parameters$beta[,pivots$beta])))))
+  main.parameters$beta[,pivots$beta] <- (t(pinv(((t(main.parameters$alpha[pivots$alpha,])%*%(main.code$intercept.code[pivots$alpha,pivots$beta] + main.code$code[pivots$alpha,pivots$beta]))))%*%t(t(main.parameters$alpha[pivots$alpha,])%*%(main.code$intercept.code[pivots$alpha,pivots$beta] + main.code$code[pivots$alpha,pivots$beta]))%*%(x)))
   main.code$encode[pivots$alpha,pivots$beta] <- (main.parameters$alpha[pivots$alpha,]%*%(x)%*%(main.parameters$beta[,pivots$beta]))
   
   if (!fix){
