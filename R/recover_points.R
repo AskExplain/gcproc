@@ -27,15 +27,17 @@ recover_points <- function(data_list,
           row_with_missing_points <- which((rowSums(recover$design.list[[i]])>0)==T,arr.ind = T)
           column_with_missing_points <- which((colSums(recover$design.list[[i]])>0)==T,arr.ind = T)
           
+          main.data <- transform.data(as.matrix(data_list[[i]]), method = recover$link_function[1])
+          
           # Full run recover
-          for (iter in 1:length(data_list)){
-            internal.data <- transform.data(as.matrix(data_list[[i]]), method = recover$link_function[1])
-            pred.encode <- cbind(1,t(main.parameters$alpha[[join$alpha[i]]])%*%(main.code$code)%*%t(main.parameters$beta[[join$beta[iter]]])%*%(main.parameters$beta[[join$beta[iter]]]))
-            pred <- pred.encode%*%(MASS::ginv(t(pred.encode)%*%pred.encode)%*%t(pred.encode)%*%internal.data)
-            internal.data[row_with_missing_points,column_with_missing_points]  <- (pred)[row_with_missing_points,column_with_missing_points]
+          for (iter in c(1:length(data_list))[-i]){
+            pred.encode <- cbind(1,main.data%*%(main.parameters$beta[[join$beta[i]]])%*%MASS::ginv(t(main.parameters$beta[[join$beta[i]]])%*%main.parameters$beta[[join$beta[i]]])%*%t(main.parameters$beta[[join$beta[iter]]])%*%(main.parameters$beta[[join$beta[iter]]]))
+            pred <- pred.encode%*%(MASS::ginv(t(pred.encode)%*%pred.encode)%*%t(pred.encode)%*%main.data)
+            main.data[row_with_missing_points,column_with_missing_points]  <- (pred)[row_with_missing_points,column_with_missing_points]
             
-            data_list[[i]] <- recover$predict.list[[i]] <- transform.data(internal.data, method= recover$link_function[2]) 
           }
+          data_list[[i]] <- recover$predict.list[[i]] <- transform.data(main.data, method= recover$link_function[2]) 
+          
         }
       }
       
