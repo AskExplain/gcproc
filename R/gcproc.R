@@ -168,25 +168,21 @@ update_set <- function(x,
   
   for (i in 1:3){
     
-    main.parameters$alpha <- (t((x)%*%t((main.code$code)%*%t(main.parameters$beta))%*%pinv(t((main.code$code)%*%t(main.parameters$beta)))))
-    main.parameters$beta <- (t(pinv(((t(main.parameters$alpha)%*%(main.code$code))))%*%t(t(main.parameters$alpha)%*%(main.code$code))%*%(x)))
+    main.parameters$alpha <- (t((x)%*%t((main.code$code+main.code$intercept.code)%*%t(main.parameters$beta))%*%pinv(t((main.code$code+main.code$intercept.code)%*%t(main.parameters$beta)))))
+    main.parameters$beta <- (t(pinv(((t(main.parameters$alpha)%*%(main.code$code+main.code$intercept.code))))%*%t(t(main.parameters$alpha)%*%(main.code$code+main.code$intercept.code))%*%(x)))
     main.code$encode <- (main.parameters$alpha%*%(x)%*%(main.parameters$beta))
     
     if (!fix){
       main.code$code <- pinv(t(main.parameters$alpha))%*%(main.code$encode)%*%pinv(main.parameters$beta)
+      main.code$intercept.code <- pinv(t(main.parameters$alpha))%*%(main.parameters$alpha%*%((x - t(main.parameters$alpha)%*%main.code$code%*%t(main.parameters$beta)))%*%(main.parameters$beta))%*%pinv(main.parameters$beta)
+    
     }
     
     if (any(recovery$recovery)){
-      pred.encode <- x.recover%*%(main.parameters$beta)%*%main.code$code
-      pred <- pred.encode%*%(MASS::ginv(t(pred.encode)%*%pred.encode)%*%t(pred.encode)%*%x.recover)
-      x.recover  <- pred*recovery$design.list+x.recover*(1-recovery$design.list)
-      x <- transform.data((x.recover),recovery$link_function[2]) 
+      x <- x*(1 - recovery$design.list) + (t(main.parameters$alpha)%*%(main.code$code + main.code$intercept.code)%*%t(main.parameters$beta))*(recovery$design.list)
     }
     
-    
   }
-  
-  
   
   return(list(main.parameters = main.parameters,
               main.code = main.code,

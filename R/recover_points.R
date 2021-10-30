@@ -25,16 +25,19 @@ recover_points <- function(data_list,
         
         if (!is.null(recover$design.list[[i]])){
           
+          
+          
           row_with_missing_points <- which((rowSums(recover$design.list[[i]])>0)==T,arr.ind = T)
           column_with_missing_points <- which((colSums(recover$design.list[[i]])>0)==T,arr.ind = T)
-
+          
+          # Full run recover
           internal.data <- transform.data(as.matrix(data_list[[i]]), method = recover$link_function[1])
-          pred.encode <- cbind(1,t(main.parameters$alpha[[join$alpha[i]]])%*%main.code$code%*%t(main.parameters$beta[[join$beta[i]]])%*%(main.parameters$beta[[join$beta[i]]]))
+          pred.encode <- cbind(1,t(main.parameters$alpha[[join$alpha[i]]])%*%(main.code$code+main.code$intercept.code)%*%t(main.parameters$beta[[join$beta[i]]])%*%(main.parameters$beta[[join$beta[i]]]))
           pred <- pred.encode%*%(MASS::ginv(t(pred.encode)%*%pred.encode)%*%t(pred.encode)%*%internal.data)
           internal.data[row_with_missing_points,column_with_missing_points]  <- (pred)[row_with_missing_points,column_with_missing_points]
-
+          
           data_list[[i]] <- recover$predict.list[[i]] <- transform.data(internal.data, method= recover$link_function[2])
-
+          
         }
       }
       
@@ -47,7 +50,7 @@ recover_points <- function(data_list,
       for (j in which(recover$design.list==0)){
         
         label_code <- Reduce('+',lapply(c(covariate$factor[j,]),function(X){
-          main.code$code[[X]]
+          (main.code$code+main.code$intercept.code)[[X]]
         }))
         
         
@@ -55,7 +58,7 @@ recover_points <- function(data_list,
         for (i in which(recover$design.list==1)){
           
           unlabel_code <- Reduce('+',lapply(c(covariate$factor[i,]),function(X){
-            main.code$code[[X]]
+            (main.code$code+main.code$intercept.code)[[X]]
           }))
           
           labels <- recover$labels
