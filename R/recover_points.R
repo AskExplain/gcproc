@@ -53,9 +53,10 @@ recover_points <- function(data_list,
               }
               
             }
+            data_list[[i]] <- recover$predict.list[[i]] <- transform.data(x, method= recover$link_function[2])
+            
           }
           
-          data_list[[i]] <- recover$predict.list[[i]] <- transform.data(x, method= recover$link_function[2])
           
           
           if ("external" %in% recover$method){
