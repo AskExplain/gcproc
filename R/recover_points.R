@@ -51,6 +51,14 @@ recover_points <- function(data_list,
           
           data_list[[i]] <- recover$predict.list[[i]] <- transform.data(x, method= recover$link_function[2])
           
+          internal.data <- transform.data(as.matrix(data_list[[i]]), method = recover$link_function[1])
+          pred.encode <- cbind(1,t(main.parameters$alpha[[join$alpha[i]]])%*%main.code$code%*%t(main.parameters$beta[[join$beta[i]]])%*%(main.parameters$beta[[join$beta[i]]]))
+          pred <- pred.encode%*%(MASS::ginv(t(pred.encode)%*%pred.encode)%*%t(pred.encode)%*%internal.data)
+          internal.data[row_with_missing_points,column_with_missing_points]  <- (pred)[row_with_missing_points,column_with_missing_points]
+          
+          data_list[[i]] <- recover$predict.list[[i]] <- transform.data(internal.data, method= recover$link_function[2])
+          
+          
         }
       }
       
