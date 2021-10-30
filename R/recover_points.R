@@ -25,41 +25,51 @@ recover_points <- function(data_list,
         
         if (!is.null(recover$design.list[[i]])){
           
-          row_with_missing_points <- which((rowSums(recover$design.list[[i]])>0)==T,arr.ind = T)
-          column_with_missing_points <- which((colSums(recover$design.list[[i]])>0)==T,arr.ind = T)
           
-          # Full run recover
-          internal.data <- transform.data(as.matrix(data_list[[i]]), method = recover$link_function[1])
-          pred.encode <- cbind(1,t(main.parameters$alpha[[join$alpha[i]]])%*%main.code$code%*%t(main.parameters$beta[[join$beta[i]]])%*%(main.parameters$beta[[join$beta[i]]]))
-          pred <- pred.encode%*%(MASS::ginv(t(pred.encode)%*%pred.encode)%*%t(pred.encode)%*%internal.data)
-          internal.data[row_with_missing_points,column_with_missing_points]  <- (pred)[row_with_missing_points,column_with_missing_points]
           
-          data_list[[i]] <- recover$predict.list[[i]] <- transform.data(internal.data, method= recover$link_function[2])
-          
-          # Individual pre-trained dataset recover
-          x <- transform.data(as.matrix(data_list[[i]]), method = recover$link_function[1])
-          
-          for (internal.i in 1:length(data_list)){
-            pred.encode <- cbind(1,t(main.parameters$alpha[[join$alpha[i]]])%*%main.code$code%*%t(main.parameters$beta[[join$beta[i]]])%*%(main.parameters$beta[[join$beta[i]]]))
+          if ("internal" %in% recover$method){
             
-            for (decode.id in 1:config$n_decode){
+            row_with_missing_points <- which((rowSums(recover$design.list[[i]])>0)==T,arr.ind = T)
+            column_with_missing_points <- which((colSums(recover$design.list[[i]])>0)==T,arr.ind = T)
+            
+            # Individual pre-trained dataset recover
+            x <- transform.data(as.matrix(data_list[[i]]), method = recover$link_function[1])
+            
+            for (internal.i in 1:length(data_list)){
+              pred.encode <- cbind(1,t(main.parameters$alpha[[join$alpha[i]]])%*%main.code$code%*%t(main.parameters$beta[[join$beta[i]]])%*%(main.parameters$beta[[join$beta[i]]]))
               
-              set.seed(decode.id)
-              batch.ids <- sample(c(1:dim(x)[1]),size = max(50,dim(x)[1]/100))
-              
-              pred.encode.sample <- pred.encode[batch.ids,]
-              projection.beta <- (MASS::ginv(t(pred.encode.sample)%*%pred.encode.sample)%*%t(pred.encode.sample)%*%x[batch.ids,]%*%(main.parameters$beta[[join$beta[i]]])%*%MASS::ginv(t((main.parameters$beta[[join$beta[i]]]))%*%(main.parameters$beta[[join$beta[i]]]))%*%t(main.parameters$beta[[join$beta[internal.i]]])%*%(main.parameters$beta[[join$beta[internal.i]]]))
-              pred.encode <- cbind(1,pred.encode%*%projection.beta)
-              
-              pred <- pred.encode%*%(MASS::ginv(t(pred.encode)%*%pred.encode)%*%t(pred.encode)%*%x)
-              x[row_with_missing_points,column_with_missing_points]  <- (pred)[row_with_missing_points,column_with_missing_points]
+              for (decode.id in 1:config$n_decode){
+                
+                set.seed(decode.id)
+                batch.ids <- sample(c(1:dim(x)[1]),size = max(50,dim(x)[1]/100))
+                
+                pred.encode.sample <- pred.encode[batch.ids,]
+                projection.beta <- (MASS::ginv(t(pred.encode.sample)%*%pred.encode.sample)%*%t(pred.encode.sample)%*%x[batch.ids,]%*%(main.parameters$beta[[join$beta[i]]])%*%MASS::ginv(t((main.parameters$beta[[join$beta[i]]]))%*%(main.parameters$beta[[join$beta[i]]]))%*%t(main.parameters$beta[[join$beta[internal.i]]])%*%(main.parameters$beta[[join$beta[internal.i]]]))
+                pred.encode <- cbind(1,pred.encode%*%projection.beta)
+                
+                pred <- pred.encode%*%(MASS::ginv(t(pred.encode)%*%pred.encode)%*%t(pred.encode)%*%x)
+                x[row_with_missing_points,column_with_missing_points]  <- (pred)[row_with_missing_points,column_with_missing_points]
+                
+              }
               
             }
-            
           }
           
           data_list[[i]] <- recover$predict.list[[i]] <- transform.data(x, method= recover$link_function[2])
           
+          
+          if ("external" %in% recover$method){
+            row_with_missing_points <- which((rowSums(recover$design.list[[i]])>0)==T,arr.ind = T)
+            column_with_missing_points <- which((colSums(recover$design.list[[i]])>0)==T,arr.ind = T)
+            
+            # Full run recover
+            internal.data <- transform.data(as.matrix(data_list[[i]]), method = recover$link_function[1])
+            pred.encode <- cbind(1,t(main.parameters$alpha[[join$alpha[i]]])%*%main.code$code%*%t(main.parameters$beta[[join$beta[i]]])%*%(main.parameters$beta[[join$beta[i]]]))
+            pred <- pred.encode%*%(MASS::ginv(t(pred.encode)%*%pred.encode)%*%t(pred.encode)%*%internal.data)
+            internal.data[row_with_missing_points,column_with_missing_points]  <- (pred)[row_with_missing_points,column_with_missing_points]
+            
+            data_list[[i]] <- recover$predict.list[[i]] <- transform.data(internal.data, method= recover$link_function[2])
+          }
           
         }
       }
