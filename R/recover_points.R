@@ -28,14 +28,18 @@ recover_points <- function(data_list,
           column_with_missing_points <- which((colSums(recover$design.list[[i]])>0)==T,arr.ind = T)
           
           main.data <- transform.data(as.matrix(data_list[[i]]), method = recover$link_function[1])
-          pred.encode <- main.data%*%main.parameters$beta[[join$beta[i]]]
+          main.sample.encode <- main.parameters$alpha[[join$alpha[i]]]%*%main.data
+          main.feature.encode <- main.data%*%main.parameters$beta[[join$beta[i]]]
+          main.encode <- main.parameters$alpha[[join$alpha[i]]]%*%main.data%*%main.parameters$beta[[join$beta[i]]]
           
           
-          for (iter.id in c(1:length(data_list))){
-            pred.encode <- cbind(1,t(main.parameters$alpha[[join$alpha[i]]])%*%(main.code$code+main.code$intercept.code)%*%t(main.parameters$beta[[join$beta[iter.id]]])%*%(main.parameters$beta[[join$beta[iter.id]]]))
-            pred <- pred.encode%*%(MASS::ginv(t(pred.encode)%*%pred.encode)%*%t(pred.encode)%*%main.data)
-            main.data[row_with_missing_points,column_with_missing_points]  <- (pred)[row_with_missing_points,column_with_missing_points]
-            
+          for (iter.id in c(1:length(data_list))[-i]){
+            pred.sample.encode <- transform.data(data_list[[iter.id]], method= recover$link_function[1])%*%(main.parameters$beta[[join$beta[iter.id]]])
+            pred.encode <- cbind(1,main.parameters$alpha[[join$alpha[iter.id]]]%*%pred.sample.encode)
+            pred.encode.projection <- pred.encode%*%(MASS::ginv(t(pred.encode)%*%pred.encode)%*%t(pred.encode)%*%main.encode)
+            pred.decode.projection <- main.feature.encode%*%t(pred.encode.projection)%*%MASS::ginv(pred.encode.projection%*%t(pred.encode.projection))%*%pred.encode.projection
+            full.pred <- pred.decode.projection%*%MASS::ginv(t(pred.decode.projection)%*%pred.decode.projection)%*%t(pred.decode.projection)%*%main.data
+            main.data[row_with_missing_points,column_with_missing_points]  <- (full.pred)[row_with_missing_points,column_with_missing_points]
             data_list[[i]] <- recover$predict.list[[i]] <- transform.data(main.data, method= recover$link_function[2]) 
             
           }
