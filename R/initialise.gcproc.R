@@ -27,13 +27,13 @@ initialise.gcproc <- function(data_list,
     if (is.null(transfer$code)){
       
       # Find intercept in endecoded space
-      encode <- (alpha%*%as.matrix(data_list[[i]])%*%(beta))
-      code <- (pinv(t(alpha))%*%(encode)%*%pinv((beta)))
+      encode <- (alpha%*%as.matrix(data_list[[i]])%*%(beta))+rnorm(prod(c(config$i_dim,config$j_dim)))
+      code <- (pinv(t(alpha))%*%(encode)%*%pinv((beta)))+rnorm(prod(c(config$i_dim,config$j_dim)))
       
       main.code = list(
         encode = encode,
         code = code,
-        intercept.code = code + rnorm(prod(dim(code)))
+        intercept.code = code+rnorm(prod(c(config$i_dim,config$j_dim)))
       )
       
     } else {    
@@ -53,7 +53,7 @@ initialise.gcproc <- function(data_list,
 
 
 #' @export
-initialise.parameters <- function(x,transfer,i_dim,j_dim,init="random",verbose=F){
+initialise.parameters <- function(x,transfer,i_dim,j_dim,init="svd",verbose=F){
   
   x <- Matrix::Matrix(x,sparse=T)
   
@@ -63,7 +63,6 @@ initialise.parameters <- function(x,transfer,i_dim,j_dim,init="random",verbose=F
     param.beta <- array(rnorm(dim(x)[2]*j_dim),dim=c(dim(x)[2],j_dim))
     param.alpha = array(rnorm(i_dim*dim(x)[1]),dim=c(i_dim,dim(x)[1]))
   } 
-  
   if (init=="irlba"){
     param.beta.svd <- irlba::irlba(
       x,j_dim)
@@ -82,10 +81,12 @@ initialise.parameters <- function(x,transfer,i_dim,j_dim,init="random",verbose=F
       x,i_dim)
     param.alpha = t(param.alpha.svd$u)
   }
-
+  
   pivots <- list(
     pivot_x.sample = as.matrix(param.alpha),
-    pivot_x.feature = as.matrix(param.beta)  )
+    pivot_x.feature = as.matrix(param.beta)  
+  )
+  
   return(pivots)
   
 }
