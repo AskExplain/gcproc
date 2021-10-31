@@ -33,7 +33,7 @@ recover_points <- function(data_list,
           main.encode <- main.parameters$alpha[[join$alpha[i]]]%*%main.data%*%main.parameters$beta[[join$beta[i]]]
           
           
-          for (iter.id in c(1:length(data_list))[-i]){
+          for (iter.id in c(1:length(data_list))){
             pred.sample.encode <- transform.data(as.matrix(data_list[[iter.id]]), method= recover$link_function[1])%*%(main.parameters$beta[[join$beta[iter.id]]])
             pred.encode <- cbind(1,main.parameters$alpha[[join$alpha[iter.id]]]%*%pred.sample.encode)
             pred.encode.projection <- pred.encode%*%(MASS::ginv(t(pred.encode)%*%pred.encode)%*%t(pred.encode)%*%main.encode)
