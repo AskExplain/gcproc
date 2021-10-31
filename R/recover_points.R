@@ -29,11 +29,13 @@ recover_points <- function(data_list,
           
           main.data <- transform.data(as.matrix(data_list[[i]]), method = recover$link_function[1])
         
-          code.projection <- 0
+          pred.encode <- 0
           for (iter.id in c(1:length(data_list))){
-            code.projection <- code.projection + (main.code$code)%*%t(main.parameters$beta[[join$beta[iter.id]]])%*%(main.parameters$beta[[join$beta[iter.id]]]) 
+            code.projection <- (main.code$code)%*%t(main.parameters$beta[[join$beta[iter.id]]])%*%(main.parameters$beta[[join$beta[iter.id]]]) 
+            pred.encode <- pred.encode + scale(t(main.parameters$alpha[[join$alpha[i]]])%*%code.projection) / length(data_list)
           }
-          pred.encode <- cbind(1,scale(t(main.parameters$alpha[[join$alpha[i]]])%*%code.projection))
+          
+          pred.encode <- cbind(1,pred.encode)
           
           if (recover$method == "internal"){
             
