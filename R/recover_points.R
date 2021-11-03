@@ -31,8 +31,9 @@ recover_points <- function(data_list,
         
           pred.encode <- 0
           for (iter.id in c(1:length(data_list))){
-            code.projection <- (main.code$code)%*%t(main.parameters$beta[[join$beta[iter.id]]])%*%(main.parameters$beta[[join$beta[iter.id]]]) 
-            pred.encode <- pred.encode + scale(t(main.parameters$alpha[[join$alpha[i]]])%*%code.projection) / length(data_list)
+            code.projection <- (main.parameters$alpha[[join$alpha[iter.id]]]%*%data_list[[iter.id]]%*%main.parameters$beta[[join$beta[iter.id]]]) 
+            alpha.projection <- t(main.parameters$alpha[[join$alpha[i]]])%*%MASS::ginv((main.parameters$alpha[[join$alpha[iter.id]]])%*%t(main.parameters$alpha[[join$alpha[iter.id]]]))
+            pred.encode <- pred.encode + scale(alpha.projection%*%code.projection) / length(data_list)
           }
           
           pred.encode <- cbind(1,pred.encode)
