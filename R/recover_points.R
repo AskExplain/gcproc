@@ -25,7 +25,7 @@ recover_points <- function(data_list,
         
         if (!is.null(recover$design.list[[i]])){
           
-          missing_points <- which(((recover$design.list[[i]])>0)==T,arr.ind = T)
+          missing_points <- which(recover$design.list[[i]]>0,arr.ind = T)
           row_with_missing_points <- unique(missing_points[,1])
           column_with_missing_points <- unique(missing_points[,2])
           
