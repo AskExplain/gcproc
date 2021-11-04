@@ -39,7 +39,8 @@ recover_points <- function(data_list,
           
           pred.encode <- cbind(1,pred.encode)
           
-          if (recover$method == "internal"){
+          
+          if ("internal" %in% recover$method){
             
             pred <- pred.encode%*%(MASS::ginv(t(pred.encode[-row_with_missing_points,])%*%pred.encode[-row_with_missing_points,])%*%t(pred.encode[-row_with_missing_points,])%*%main.data[-row_with_missing_points,]) 
             
@@ -48,7 +49,7 @@ recover_points <- function(data_list,
             
             
           } 
-          if (recover$method == "external"){
+          if ("external" %in% recover$method){
             
             pred <- pred.encode%*%(MASS::ginv(t(pred.encode)%*%pred.encode)%*%t(pred.encode)%*%main.data) 
             
