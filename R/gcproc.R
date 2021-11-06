@@ -191,7 +191,7 @@ gcproc <- function(data_list,
 
 }
 
-
+#' @export
 update_set <- function(x,
                        main.parameters,
                        main.code,
