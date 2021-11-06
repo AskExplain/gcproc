@@ -61,12 +61,12 @@ The covariates for the Xin and Segerstolpe datasets are removed by subtracting t
 
 ```{r step_3}
 
-fixed <- gcproc::extract_fixed_framework(F)
-fixed$beta <- c(1,1,1)
+join <- gcproc::extract_join_framework(F)
+join$beta <- c(1,1,1)
 
 gcproc.pancreas <- gcproc::gcproc(data_list = main_list,
                                   config = config,
-                                  fixed = fixed
+                                  join = join
                                  )
 
 

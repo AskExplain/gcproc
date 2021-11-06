@@ -101,6 +101,9 @@
       <a href="../articles/Dimensionality_reduction_with_gcproc.html">Dimensionality reduction with gcproc</a>
     </li>
     <li>
+      <a href="../articles/Neurips_OpenSingleCell_Prediction_task.html">Neurips Open Problems in Single Cell Analysis: Prediction task</a>
+    </li>
+    <li>
       <a href="../articles/Recovering_missing_test_data_points.html">Recovering missing test data points</a>
     </li>
   </ul>
@@ -133,10 +136,9 @@
     <pre class="usage"><span class='fu'>gcproc</span><span class='op'>(</span>
   <span class='va'>data_list</span>,
   config <span class='op'>=</span> <span class='fu'>gcproc</span><span class='fu'>::</span><span class='fu'><a href='extract_config.html'>extract_config</a></span><span class='op'>(</span>verbose <span class='op'>=</span> <span class='cn'>F</span><span class='op'>)</span>,
-  anchors <span class='op'>=</span> <span class='fu'>gcproc</span><span class='fu'>::</span><span class='fu'><a href='extract_anchors_framework.html'>extract_anchors_framework</a></span><span class='op'>(</span>verbose <span class='op'>=</span> <span class='cn'>F</span><span class='op'>)</span>,
-  pivots <span class='op'>=</span> <span class='fu'>gcproc</span><span class='fu'>::</span><span class='fu'><a href='extract_pivots_framework.html'>extract_pivots_framework</a></span><span class='op'>(</span>verbose <span class='op'>=</span> <span class='cn'>F</span><span class='op'>)</span>,
+  transfer <span class='op'>=</span> <span class='fu'>gcproc</span><span class='fu'>::</span><span class='fu'><a href='extract_transfer_framework.html'>extract_transfer_framework</a></span><span class='op'>(</span>verbose <span class='op'>=</span> <span class='cn'>F</span><span class='op'>)</span>,
   recover <span class='op'>=</span> <span class='fu'>gcproc</span><span class='fu'>::</span><span class='fu'><a href='extract_recovery_framework.html'>extract_recovery_framework</a></span><span class='op'>(</span>verbose <span class='op'>=</span> <span class='cn'>F</span><span class='op'>)</span>,
-  fixed <span class='op'>=</span> <span class='fu'>gcproc</span><span class='fu'>::</span><span class='fu'><a href='extract_fixed_framework.html'>extract_fixed_framework</a></span><span class='op'>(</span>verbose <span class='op'>=</span> <span class='cn'>F</span><span class='op'>)</span>
+  join <span class='op'>=</span> <span class='fu'>gcproc</span><span class='fu'>::</span><span class='fu'><a href='extract_join_framework.html'>extract_join_framework</a></span><span class='op'>(</span>verbose <span class='op'>=</span> <span class='cn'>F</span><span class='op'>)</span>
 <span class='op'>)</span></pre>
 
     <h2 class="hasAnchor" id="arguments"><a class="anchor" href="#arguments"></a>Arguments</h2>
@@ -151,20 +153,16 @@
       <td><p>Configuration parameters (required, default provided)</p></td>
     </tr>
     <tr>
-      <th>anchors</th>
+      <th>transfer</th>
       <td><p>Transferring pre-trained model parameters (not required)</p></td>
     </tr>
     <tr>
-      <th>pivots</th>
-      <td><p>Initialisation of model parameters (not required)</p></td>
-    </tr>
-    <tr>
       <th>recover</th>
-      <td><p>Important information for prediction or imputation (not required)</p></td>
+      <td><p>Important information used for prediction or imputation (not required)</p></td>
     </tr>
     <tr>
-      <th>fixed</th>
-      <td><p>Constrain parameters that share the same axes to be similar (not required)</p></td>
+      <th>join</th>
+      <td><p>Join parameters that share the same axes to be similar (not required)</p></td>
     </tr>
     </table>
 

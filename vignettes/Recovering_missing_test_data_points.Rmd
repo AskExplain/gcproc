@@ -30,10 +30,14 @@ library(irlba,quietly = T)
 ```{r step_1}
 
 config.recover <- gcproc::extract_config(T)
-config.recover$i_dim <- 10
-config.recover$j_dim <- 10
-config.recover$verbose <- F
-config.recover$n_cores <- 4
+config.recover$i_dim <- 300
+config.recover$j_dim <- 100
+config.recover$init <- "random"
+config.recover$verbose <- T
+config.recover$n_cores <- 1
+config.recover$n_batch <- 1
+config.recover$n_decode <- 1
+config.recover$n_epoch <- 1
 
 ```
 
@@ -87,7 +91,7 @@ for (list_id in c(1:length(predict.list))){
   
   main_scores.1 <- c()
   
-  for (seed in c(1:30)){
+  for (seed in c(1:10)){
     
     # Set up training ids
     set.seed(seed)
@@ -106,23 +110,24 @@ for (list_id in c(1:length(predict.list))){
     
     # Set up recovery for gcproc
     recover <- gcproc::extract_recovery_framework(F)
-    recover$method <- "matrix.projection"
+    recover$task <- c("regression")
+    recover$method <- c("decode")
     recover.x <- array(0,dim=dim(data___x))
     recover.x[-train_id,y_predict.id_col] <- 1
     
     # Initialise missing values given by recovery design matrix with median feature value
     x.x.check <- as.matrix(data___x)
-    x.x.check[-train_id,y_predict.id_col] <- lm_predict
+    x.x.check[-train_id,y_predict.id_col] <- (glmnet_predict+lm_predict)/2
     
-    main_data <- list(x.x.check,x.x.check)
+    main_data <- list(x.x.check)
     
-    recover$design.list <- list(recover.x,NULL)
+    recover$design.list <- list(recover.x)
     
-
     # Run gcproc
-    gcproc.model <- gcproc::gcproc(main_data,
+    gcproc.model <- gcproc::gcproc(data_list = main_data,
                                    config = config.recover,
-                                   recover = recover
+                                   recover = recover,
+                                   join = list(alpha=1,beta=1)
                                    )
     
     # Extract predicted values
@@ -181,7 +186,7 @@ for (list_id in c(1:length(predict.list))){
 
   main_scores.2<-c()
   
-  for (seed in 1:30){
+  for (seed in 1:10){
     
     set.seed(seed)
     
@@ -200,14 +205,21 @@ for (list_id in c(1:length(predict.list))){
     x.x.check <- x.x.check*(1-recover.x) + do.call('cbind',lapply(c(1:dim(x.x.check*(1-recover.x))[2]),function(X){(recover.x[,X])*median(x.x.check[which((1-recover.x)[,X]==1),X])}))
     
     
-    main_data <- list(x.x.check,x.x.check)
+    main_data <- list(x.x.check)
     
-    recover$design.list <- list(recover.x,NULL)
+    recover$design.list <- list(recover.x)
+    recover$task <- c("regression")
+    recover$method <- c("decode")
+    
+    join <- gcproc::extract_join_framework(F)
+    join$alpha <- c(1)
+    join$beta <- c(1)
     
     # Run gcproc
     gcproc.model <- gcproc::gcproc(main_data,
                                    config = config.recover,
-                                   recover = recover
+                                   recover = recover,
+                                   join = join
     )
     
     gcproc.recover <- gcproc.model$recover$predict.list[[1]]
