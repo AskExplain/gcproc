@@ -191,6 +191,11 @@ gcproc <- function(data_list,
 
 }
 
+
+
+
+
+#' @export
 update_set <- function(x,
                        main.parameters,
                        main.code,
@@ -214,12 +219,14 @@ update_set <- function(x,
 }
 
 
-
+#' @export
 pinv <- function(X){
   MASS::ginv(t(X)%*%X)
 }
 
 
+
+#' @export
 chunk <- function(x,n){
   if (n==1){
     list(x)
