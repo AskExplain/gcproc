@@ -11,165 +11,138 @@
 #' @return  Recovered data from imputation or prediction, with the design matrices and any user input parameters and functions
 #' @export
 recover_points <- function(data_list,
-                           code,
+                           main.code,
                            main.parameters,
                            config,
+                           join,
                            recover){
-
-
-  if (recover$task == "regression"){
-
-    matrix.projection <- c("matrix.projection"%in%recover$method)
-    knn.reg <- c("knn.reg"%in%recover$method)
-
-    for (i in 1:length(data_list)){
-
-      if (!is.null(recover$design.list[[i]])){
-
-        if (matrix.projection){
-
-
-
-          x <- as.matrix(data_list[[i]])
-
-
-          if (is.null(recover$encoded_covariate)){
-            recover$encoded_covariate <- lapply(c(1:length(data_list))[-i],function(X){
-              transformed.data <- as.matrix(MASS::ginv((main.parameters[[X]]$alpha)%*%t(main.parameters[[X]]$alpha))%*%(main.parameters[[X]]$alpha)%*%as.matrix(data_list[[X]])%*%(main.parameters[[X]]$beta)%*%MASS::ginv(t((main.parameters[[X]]$beta))%*%(main.parameters[[X]]$beta)))
-            })
+  
+  for (task in recover$task){
+    
+    if ("regression" %in% task){
+      
+      for (i in 1:length(data_list)){
+        
+        if (!is.null(recover$design.list[[i]])){
+          
+          missing_points <- which(recover$design.list[[i]]>0,arr.ind = T)
+          row_with_missing_points <- unique(missing_points[,1])
+          column_with_missing_points <- unique(missing_points[,2])
+          
+          main.data <- transform.data(as.matrix(data_list[[i]]), method = recover$link_function[1])
+          
+          pred.encode <- 0
+          for (iter.id in c(1:length(data_list))){
+            code.projection <- (main.code$code)%*%t(main.parameters$beta[[join$beta[iter.id]]])%*%(main.parameters$beta[[join$beta[iter.id]]]) 
+            pred.encode <- pred.encode + scale(t(main.parameters$alpha[[join$alpha[i]]])%*%code.projection) / length(data_list)
           }
-
-          decoded_covariate <- cbind(1,scale(Reduce('+',lapply(c(1:length(recover$encoded_covariate)),function(X){
-            t(main.parameters[[i]]$alpha)%*%recover$encoded_covariate[[X]]
-          }))))
-
-          samples_with_missing_points <- which((rowSums(recover$design.list[[i]])>0)==T)
-          covariate_predictors <-  decoded_covariate[-samples_with_missing_points,]
-          test_predictors <- decoded_covariate[samples_with_missing_points,]
-
-          elements_with_missing_points <- which((recover$design.list[[i]]>0)[samples_with_missing_points,]==T,arr.ind = T)
-          x[samples_with_missing_points,][elements_with_missing_points]  <- (((test_predictors)%*%(MASS::ginv(t(covariate_predictors)%*%(covariate_predictors))%*%t(covariate_predictors)%*%(x[-samples_with_missing_points,]))))[elements_with_missing_points]
-
-          data_list[[i]] <- recover$predict.list[[i]] <- x
+          
+          pred.encode <- cbind(1,pred.encode)
+          
+          if (recover$method == "internal"){
+            
+            pred <- pred.encode%*%(MASS::ginv(t(pred.encode[-row_with_missing_points,])%*%pred.encode[-row_with_missing_points,])%*%t(pred.encode[-row_with_missing_points,])%*%main.data[-row_with_missing_points,]) 
+            
+            main.data[row_with_missing_points,column_with_missing_points]  <- pred[row_with_missing_points,column_with_missing_points]
+            data_list[[i]] <- recover$predict.list[[i]] <- transform.data(main.data, method= recover$link_function[2]) 
+            
+            
+          } 
+          if (recover$method == "external"){
+            
+            pred <- pred.encode%*%(MASS::ginv(t(pred.encode)%*%pred.encode)%*%t(pred.encode)%*%main.data) 
+            
+            main.data[missing_points]  <- pred[missing_points]
+            data_list[[i]] <- recover$predict.list[[i]] <- transform.data(main.data, method= recover$link_function[2]) 
+            
+          }
+          
         }
-
-
-        if (knn.reg){
-
-
-          x <- as.matrix(data_list[[i]])
-
-
-          if (is.null(recover$encoded_covariate)){
-            recover$encoded_covariate <- lapply(c(1:length(data_list))[-i],function(X){
-              transformed.data <- as.matrix(MASS::ginv((main.parameters[[X]]$alpha)%*%t(main.parameters[[X]]$alpha))%*%(main.parameters[[X]]$alpha)%*%as.matrix(data_list[[X]])%*%(main.parameters[[X]]$beta)%*%MASS::ginv(t((main.parameters[[X]]$beta))%*%(main.parameters[[X]]$beta)))
-            })
-          }
-
-          decoded_covariate <- cbind(1,scale(Reduce('+',lapply(c(1:length(recover$encoded_covariate)),function(X){
-            t(main.parameters[[i]]$alpha)%*%recover$encoded_covariate[[X]]
-          }))))
-
-          samples_with_missing_points <- which((rowSums(recover$design.list[[i]])>0)==T)
-          covariate_predictors <-  decoded_covariate[-samples_with_missing_points,]
-          test_predictors <- decoded_covariate[samples_with_missing_points,]
-
-          knn_ix <- FNN::get.knnx(
-            covariate_predictors,
-            test_predictors,
-            k = 20
-          )$nn.index
-
-          pred <- (x[-samples_with_missing_points,])[knn_ix[, 1], , drop = FALSE]
-          if (20 > 1) {
-            for (k in seq(2, 20)) {
-              pred <- pred + (x[-samples_with_missing_points,])[knn_ix[, k], , drop = FALSE]
-            }
-          }
-          pred <- pred / 20
-
-          elements_with_missing_points <- which((recover$design.list[[i]]>0)[samples_with_missing_points,]==T,arr.ind = T)
-          x[samples_with_missing_points,][elements_with_missing_points]  <- (pred)[elements_with_missing_points]
-
-          data_list[[i]] <- recover$predict.list[[i]] <- x
-
-        }
-
-
-        if (!is.null(recover$fn)){
-
-          x <- as.matrix(data_list[[i]])
-
-
-
-          if (is.null(recover$encoded_covariate)){
-            recover$encoded_covariate <- lapply(c(1:length(data_list))[-i],function(X){
-              transformed.data <- as.matrix(MASS::ginv((main.parameters[[X]]$alpha)%*%t(main.parameters[[X]]$alpha))%*%(main.parameters[[X]]$alpha)%*%as.matrix(data_list[[X]])%*%(main.parameters[[X]]$beta)%*%MASS::ginv(t((main.parameters[[X]]$beta))%*%(main.parameters[[X]]$beta)))
-            })
-          }
-
-          decoded_covariate <- cbind(1,scale(Reduce('+',lapply(c(1:length(recover$encoded_covariate)),function(X){
-            t(main.parameters[[i]]$alpha)%*%recover$encoded_covariate[[X]]
-          }))))
-
-
-          samples_with_missing_points <- which((rowSums(recover$design.list[[i]])>0)==T)
-          covariate_predictors <-  decoded_covariate[-samples_with_missing_points,]
-          test_predictors <- decoded_covariate[samples_with_missing_points,]
-
-          pred <- recover$fn(train = covariate_predictors, test = test_predictors, y = x[-samples_with_missing_points,], parameters = recover$param)
-
-          elements_with_missing_points <- which((recover$design.list[[i]]>0)[samples_with_missing_points,]==T,arr.ind = T)
-          x[samples_with_missing_points,][elements_with_missing_points]  <- (pred)[elements_with_missing_points]
-
-          data_list[[i]] <- recover$predict.list[[i]] <- x
-        }
-
-
       }
-
-
+      
     }
-
-
-  }
-  if (recover$task == "classification"){
-
-
-    label.projection <- c(recover$method=="label.projection")
-
-    if (label.projection){
-
+    
+    if ("classification" %in% task){
+      
+      
+      
       for (j in which(recover$design.list==0)){
-
-        recover$encoded_covariate <- lapply(c(1:length(data_list)),function(X){
-          transformed.data <- as.matrix(MASS::ginv((main.parameters[[X]]$alpha)%*%t(main.parameters[[X]]$alpha))%*%(main.parameters[[X]]$alpha)%*%as.matrix(data_list[[X]])%*%(main.parameters[[X]]$beta)%*%MASS::ginv(t((main.parameters[[X]]$beta))%*%(main.parameters[[X]]$beta)))
-        })
-
-        label.decoded_covariate <- scale(Reduce('+',lapply(c(1:length(recover$encoded_covariate)),function(X){
-          t(main.parameters[[j]]$alpha)%*%recover$encoded_covariate[[X]]
-        })))
-
+        
+        label_code <- Reduce('+',lapply(c(covariate$factor[j,]),function(X){
+          ((main.code$code+main.code$intercept.code))[[X]]
+        }))
+        
+        
+        
         for (i in which(recover$design.list==1)){
-
-          unlabel.decoded_covariate <- scale(Reduce('+',lapply(c(1:length(recover$encoded_covariate)),function(X){
-            t(main.parameters[[i]]$alpha)%*%recover$encoded_covariate[[X]]
-          })))
-
+          
+          unlabel_code <- Reduce('+',lapply(c(covariate$factor[i,]),function(X){
+            ((main.code$code+main.code$intercept.code))[[X]]
+          }))
+          
           labels <- recover$labels
-
+          
           recover$predict.list[[j]][[i]] <- apply((unlabel.decoded_covariate)%*%t(label.decoded_covariate),1,function(X){names(sort(table(labels[order(X,decreasing = T)[1]]))[1])})
-
+          
         }
-
+        
       }
+      
+      
     }
-
-
-
+    
   }
-
-  return(recover)
+  
+  return(list(recover=recover,
+              data_list=data_list))
 }
 
 
+transform.data <- function(x,method="scale"){
+  
+  if (method == "scale"){
+    center = T
+    scale = T
+    
+    x <- as.matrix(x)
+    nc <- ncol(x)
+    if (is.logical(center)) {
+      if (center) {
+        center <- colMeans(x, na.rm=TRUE)
+        x <- sweep(x, 2L, center, check.margin=FALSE)
+      }
+    }
+    else if (is.numeric(center) && (length(center) == nc))
+      x <- sweep(x, 2L, center, check.margin=FALSE)
+    else
+      stop("length of 'center' must equal the number of columns of 'x'")
+    if (is.logical(scale)) {
+      if (scale) {
+        f <- function(v) {
+          v <- v[!is.na(v)]
+          sqrt(sum(v^2) / max(1, length(v) - 1L))
+        }
+        scale <- apply(x, 2L, f)
+        scale <- sapply(scale,function(scale){if(scale==0|is.na(scale)){1}else{scale}})
+        x <- sweep(x, 2L, scale, "/", check.margin=FALSE)
+      }
+    }
+    else if (is.numeric(scale) && length(scale) == nc)
+      x <- sweep(x, 2L, scale, "/", check.margin=FALSE)
+    else
+      stop("length of 'scale' must equal the number of columns of 'x'")
+    if(is.numeric(center)) attr(x, "scaled:center") <- center
+    if(is.numeric(scale)) attr(x, "scaled:scale") <- scale
+    x
+  }
+  if (method == "log"){
+    x <- log(x+0.1)
+  }
+  if (method == "exp"){
+    x <- exp(x)-0.1
+  }
+  if (method == "identity"){
+    return(x)
+  }
+  return(x)
+}
