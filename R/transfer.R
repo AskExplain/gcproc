@@ -71,11 +71,8 @@ transfer <- function(model_list,
 
     for (set.id in c(1:length(data_list))){
 
-      internal.config <- config
-      internal.config$verbose <- F
-
       gcproc.model_list[[set.id]] <- gcproc(data_list = data_list[[set.id]],
-                                            config = internal.config,
+                                            config = config,
                                             transfer = transfer_list[[set.id]],
                                             recover = recover_list[[set.id]],
                                             join = join_list[[set.id]])
