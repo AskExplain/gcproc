@@ -17,8 +17,6 @@ extract_config(verbose = T)
 
 \item{max_iter}{Maximum iteration of gcproc}
 
-\item{n_cores}{Number of CPU cores, used for prediction only}
-
 \item{tol}{Tolerance threshold for convergence (metric: Root Mean Squared Error)}
 
 \item{init}{Initialisation method for the model ("random","eigen-quick","eigen-dense","svd-quick","svd-dense")}

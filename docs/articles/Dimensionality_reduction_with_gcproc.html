@@ -60,9 +60,6 @@
       <a href="../articles/Dimensionality_reduction_with_gcproc.html">Dimensionality reduction with gcproc</a>
     </li>
     <li>
-      <a href="../articles/Neurips_OpenSingleCell_Prediction_task.html">Neurips Open Problems in Single Cell Analysis: Prediction task</a>
-    </li>
-    <li>
       <a href="../articles/Recovering_missing_test_data_points.html">Recovering missing test data points</a>
     </li>
   </ul>
@@ -83,7 +80,7 @@
     <div class="page-header toc-ignore">
       <h1 data-toc-skip>Dimensionality reduction with gcproc</h1>
             
-            <h4 class="date">Compiled: October 07, 2021</h4>
+            <h4 class="date">Compiled: October 03, 2021</h4>
       
       
       <div class="hidden name"><code>Dimensionality_reduction_with_gcproc.Rmd</code></div>
@@ -134,19 +131,16 @@
 ## [1] 30
 ## 
 ## $min_iter
-## [1] 1
+## [1] 2
 ## 
 ## $max_iter
-## [1] 150
+## [1] 350
 ## 
 ## $tol
 ## [1] 1
 ## 
 ## $verbose
 ## [1] TRUE
-## 
-## $n_cores
-## [1] 8
 ## 
 ## $init
 ## [1] "random"</code></pre>
@@ -161,12 +155,12 @@
 <p>Given gcproc can only align two datasets at a time, Baron is used as a reference for the alignment of Xin and Segerstolpe. They are combined to enrich the encoding of the gene dimension into an informative and shared subspace for the cell axis to be interpreted.</p>
 <p>The covariates for the Xin and Segerstolpe datasets are removed by subtracting the difference at the code level. The code is the latent structure each dataset retains that represents the data generating process. By taking the difference between the scRNA-seq and the covariates codes, the relevant structure will be left. With the residual code, it is decoded to recover the covariate adjusted scRNAseq data.</p>
 <div class="sourceCode" id="cb9"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span class="va">join</span> <span class="op">&lt;-</span> <span class="fu">gcproc</span><span class="fu">::</span><span class="fu"><a href="../reference/extract_join_framework.html">extract_join_framework</a></span><span class="op">(</span><span class="cn">F</span><span class="op">)</span>
-<span class="va">join</span><span class="op">$</span><span class="va">beta</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html">c</a></span><span class="op">(</span><span class="fl">1</span>,<span class="fl">1</span>,<span class="fl">1</span><span class="op">)</span>
+<code class="sourceCode R"><span class="va">fixed</span> <span class="op">&lt;-</span> <span class="fu">gcproc</span><span class="fu">::</span><span class="fu"><a href="../reference/extract_fixed_framework.html">extract_fixed_framework</a></span><span class="op">(</span><span class="cn">F</span><span class="op">)</span>
+<span class="va">fixed</span><span class="op">$</span><span class="va">beta</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html">c</a></span><span class="op">(</span><span class="fl">1</span>,<span class="fl">1</span>,<span class="fl">1</span><span class="op">)</span>
 
 <span class="va">gcproc.pancreas</span> <span class="op">&lt;-</span> <span class="fu">gcproc</span><span class="fu">::</span><span class="fu"><a href="../reference/gcproc.html">gcproc</a></span><span class="op">(</span>data_list <span class="op">=</span> <span class="va">main_list</span>,
                                   config <span class="op">=</span> <span class="va">config</span>,
-                                  join <span class="op">=</span> <span class="va">join</span>
+                                  fixed <span class="op">=</span> <span class="va">fixed</span>
                                  <span class="op">)</span></code></pre></div>
 </div>
 <div id="step-4---plot-dimensionality-reduction" class="section level3">

@@ -101,9 +101,6 @@
       <a href="../articles/Dimensionality_reduction_with_gcproc.html">Dimensionality reduction with gcproc</a>
     </li>
     <li>
-      <a href="../articles/Neurips_OpenSingleCell_Prediction_task.html">Neurips Open Problems in Single Cell Analysis: Prediction task</a>
-    </li>
-    <li>
       <a href="../articles/Recovering_missing_test_data_points.html">Recovering missing test data points</a>
     </li>
   </ul>
@@ -140,11 +137,11 @@
     <colgroup><col class="name" /><col class="desc" /></colgroup>
     <tr>
       <th>task</th>
-      <td><p>Allows user to specify either a regression, classification, or imputation task</p></td>
+      <td><p>Allows user to specify either a regression or classification task</p></td>
     </tr>
     <tr>
       <th>method</th>
-      <td><p>The algorithm for the task (Options are regression/imputation: "knn","matrix.projection", -- provide your own --   ;   classification: "label.projection")</p></td>
+      <td><p>The algorithm for the task (Options are regression: "knn.reg","matrix.projection", -- provide your own --   ;   classification: "label.projection")</p></td>
     </tr>
     <tr>
       <th>design.list</th>
@@ -153,6 +150,10 @@
     <tr>
       <th>labels</th>
       <td><p>For classification, these are the pre-defined labels</p></td>
+    </tr>
+    <tr>
+      <th>predict.list</th>
+      <td><p>This will be filled in by gpcroc with the predictions and return a prediction for indicated design matrices only. Leave as NULL to begin.</p></td>
     </tr>
     </table>
 
