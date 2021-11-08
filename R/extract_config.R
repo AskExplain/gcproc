@@ -42,14 +42,14 @@ extract_config <- function(verbose=T){
 #' @export
 extract_transfer_framework <- function(verbose=T){
   transfer <- list(
-    code = NULL,
-    fix = F
+    main.code = NULL,
+    main.parameters = list(alpha=list(NULL),beta=list(NULL))
   )
-
+  
   if (verbose == T){
     print(transfer)
   }
-
+  
   return(transfer)
 }
 
@@ -94,11 +94,11 @@ extract_recovery_framework <- function(verbose=T){
 extract_join_framework <- function(verbose=T){
   join <- list(alpha=NULL,
                beta=NULL)
-
+  
   if (verbose == T){
     print(join)
   }
-
+  
   return(join)
 }
 

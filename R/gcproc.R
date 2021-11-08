@@ -52,23 +52,16 @@ gcproc <- function(data_list,
       internal.parameters <- list(alpha=main.parameters$alpha[[join$alpha[i]]],
                               beta=main.parameters$beta[[join$beta[i]]])
       
-      recovery <- list(recovery = !is.null(recover$design.list[[i]]), 
-                       link_function = recover$link_function,
-                       design.list = recover$design.list[[i]])
-      
       return_update <- update_set(x = as.matrix(data_list[[i]]),
                                   main.parameters = internal.parameters,
-                                  main.code = main.code,
-                                  fix = transfer$fix,
-                                  recovery = recovery
-      )
+                                  main.code = main.code
+                                  )
       
       main.parameters$alpha[[join$alpha[i]]] <- return_update$main.parameters$alpha
       main.parameters$beta[[join$beta[i]]] <- return_update$main.parameters$beta
       
       main.code <- return_update$main.code
       
-      recover$predict.list[[i]] <- data_list[[i]] <- if(convergence.parameters$count > 3){return_update$x}else{data_list[[i]]}
     }
     
     
@@ -177,32 +170,17 @@ gcproc <- function(data_list,
 
 update_set <- function(x,
                        main.parameters,
-                       main.code,
-                       fix,
-                       recovery){
-  x.recover <- transform.data(as.matrix(x), method = recovery$link_function[1])
+                       main.code){
+
+  main.code$code <- pinv(t(main.parameters$alpha))%*%(main.code$encode)%*%pinv(main.parameters$beta)
   
-  for (i in 1:3){
-    
-    main.parameters$alpha <- (t((x)%*%t((main.code$code+main.code$intercept.code)%*%t(main.parameters$beta))%*%pinv(t((main.code$code+main.code$intercept.code)%*%t(main.parameters$beta)))))
-    main.parameters$beta <- (t(pinv(((t(main.parameters$alpha)%*%(main.code$code+main.code$intercept.code))))%*%t(t(main.parameters$alpha)%*%(main.code$code+main.code$intercept.code))%*%(x)))
-    main.code$encode <- (main.parameters$alpha%*%(x)%*%(main.parameters$beta))
-    
-    if (!fix){
-      main.code$code <- pinv(t(main.parameters$alpha))%*%(main.code$encode)%*%pinv(main.parameters$beta)
-      main.code$intercept.code <- pinv(t(main.parameters$alpha))%*%(main.parameters$alpha%*%((x - t(main.parameters$alpha)%*%main.code$code%*%t(main.parameters$beta)))%*%(main.parameters$beta))%*%pinv(main.parameters$beta)
-    
-    }
-    
-    if (any(recovery$recovery)){
-      x <- x*(1 - recovery$design.list) + (t(main.parameters$alpha)%*%(main.code$code + main.code$intercept.code)%*%t(main.parameters$beta))*(recovery$design.list)
-    }
-    
-  }
+  main.parameters$alpha <- (t((x)%*%t((main.code$code)%*%t(main.parameters$beta))%*%pinv(t((main.code$code)%*%t(main.parameters$beta)))))
+  main.parameters$beta <- (t(pinv(((t(main.parameters$alpha)%*%(main.code$code))))%*%t(t(main.parameters$alpha)%*%(main.code$code))%*%(x)))
+  
+  main.code$encode <- (main.parameters$alpha%*%(x)%*%(main.parameters$beta))
   
   return(list(main.parameters = main.parameters,
-              main.code = main.code,
-              x = x
+              main.code = main.code
               ))
 
 }
