@@ -1,3 +1,15 @@
+#' Transfer model from one to another
+#'
+#' Main function to transferring models 
+#' 
+#' @param model_list A list of gcproc models 
+#' @param data_list A list of datasets (matrix or tensor etc.)
+#' @param config Configuration parameters (required, default provided)
+#' @param transfer Transferring pre-trained model parameters (not required)
+#' @param recover Important information used for prediction or imputation (not required)
+#' @param join Join parameters that share the same axes to be similar (not required)
+#'
+#' @return  All models to be learned or updated
 #' @export
 transfer <- function(model_list,
                      data_list,
