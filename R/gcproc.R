@@ -44,13 +44,10 @@ gcproc <- function(data_list,
     beta=pivots$beta[[1]]
   )
 
-
   initialise.model <- initialise.gcproc(data_list = data_list,
                                         config = config,
                                         transfer = transfer,
-                                        join = join,
-                                        pivots = internal_pivots)
-
+                                        join = join)
 
   main.parameters <- initialise.model$main.parameters
   main.code <- initialise.model$main.code
@@ -69,7 +66,8 @@ gcproc <- function(data_list,
       mini.batch_table <- batch_table[(seq(c(1+config$n_batch*set.of.batch.id),(config$n_batch*(1+set.of.batch.id)),1)),,drop=F]
       
       main_batches <- 
-        parallel::mclapply(X = c(1:dim(mini.batch_table)[1]),function(batch){
+        # parallel::mc
+      lapply(X = c(1:dim(mini.batch_table)[1]),function(batch){
           pivots <- list(alpha = pivots$alpha[[mini.batch_table[batch,1]]],
                          beta = pivots$beta[[mini.batch_table[batch,2]]])
           
@@ -83,8 +81,7 @@ gcproc <- function(data_list,
             return_update <- update_set(x = as.matrix(data_list[[i]]),
                                         main.parameters = internal.param,
                                         main.code = main.code,
-                                        pivots = pivots,
-                                        fix = transfer$fix)
+                                        pivots = pivots)
             
             main.parameters$alpha[[join$alpha[i]]] <- return_update$main.parameters$alpha
             main.parameters$beta[[join$beta[i]]] <- return_update$main.parameters$beta
@@ -99,7 +96,9 @@ gcproc <- function(data_list,
           )
           )
           
-        },mc.cores = config$n_cores)
+      }
+      )
+        # ,mc.cores = config$n_cores)
       
       
       for (batch.id in 1:length(main_batches)){
@@ -139,9 +138,6 @@ gcproc <- function(data_list,
     data_list <- recover_data$data_list
     
   }
-  
-  
-
 
 
   dimension_reduction <- lapply(c(1:length(data_list)),function(Y){
@@ -197,15 +193,14 @@ update_set <- function(x,
                        main.code,
                        pivots,
                        fix){
-
-
+  
+  main.code$code[pivots$alpha,pivots$beta] <- pinv(t(main.parameters$alpha[pivots$alpha,]))%*%(main.code$encode[pivots$alpha,pivots$beta])%*%pinv(main.parameters$beta[,pivots$beta])
+  
   main.parameters$alpha[pivots$alpha,] <- (t((x)%*%t((main.code$code[pivots$alpha,pivots$beta])%*%t(main.parameters$beta[,pivots$beta]))%*%pinv(t((main.code$code[pivots$alpha,pivots$beta])%*%t(main.parameters$beta[,pivots$beta])))))
   main.parameters$beta[,pivots$beta] <- (t(pinv(((t(main.parameters$alpha[pivots$alpha,])%*%(main.code$code[pivots$alpha,pivots$beta]))))%*%t(t(main.parameters$alpha[pivots$alpha,])%*%(main.code$code[pivots$alpha,pivots$beta]))%*%(x)))
+  
   main.code$encode[pivots$alpha,pivots$beta] <- (main.parameters$alpha[pivots$alpha,]%*%(x)%*%(main.parameters$beta[,pivots$beta]))
   
-  if (!fix){
-    main.code$code[pivots$alpha,pivots$beta] <- pinv(t(main.parameters$alpha[pivots$alpha,]))%*%(main.code$encode[pivots$alpha,pivots$beta])%*%pinv(main.parameters$beta[,pivots$beta])
-  }
   
   return(list(main.parameters = main.parameters,
               main.code = main.code

@@ -45,8 +45,8 @@ extract_config <- function(verbose=T){
 #' @export
 extract_transfer_framework <- function(verbose=T){
   transfer <- list(
-    code = NULL,
-    fix = F
+    main.code = NULL,
+    main.parameters = list(alpha=list(NULL),beta=list(NULL))
   )
 
   if (verbose == T){
