@@ -135,7 +135,7 @@ gcproc <- function(data_list,
     )
     
     recover <- recover_data
-    data_list <- recover_data$predict.list
+    data_list <- recover$predict.list
     
   }
 

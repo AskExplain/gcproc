@@ -8,7 +8,6 @@
 #' @param config Configuration parameters from gcproc
 #' @param recover Recover list from gcproc
 #' @param join Join parameters in gcproc
-#' @param fixed Fixed parameters from gcproc
 #'
 #' @return  Recovered data from imputation or prediction, with the design matrices and any user input parameters and functions
 #' @export
@@ -17,8 +16,8 @@ recover_points <- function(data_list,
                            main.parameters,
                            config,
                            recover,
-                           join,
-                           fixed){
+                           join
+){
   
   
   
@@ -29,12 +28,9 @@ recover_points <- function(data_list,
       for (method in recover$method){
         
         for (i in 1:length(data_list)){
+          Y.y <- y <- as.matrix(data_list[[i]],method = recover$link_function[1])
           
           if (!is.null(recover$design.list[[i]])){
-            
-            
-            y <- as.matrix(data_list[[i]])
-            Y.y <- transform.data(y)
             
             if (is.null(recover$encoded_covariate)){
               recover$encoded_covariate <- lapply(c(1:length(data_list))[-i],function(X){
@@ -44,11 +40,9 @@ recover_points <- function(data_list,
             }
             
             
-            X.x <- cbind(1,
-                                       transform.data(Reduce('+',lapply(c(1:length(recover$encoded_covariate)),function(X){
-                                         recover$encoded_covariate[[X]]
-                                       })))
-                         )
+            X.x <- transform.data(Reduce('+',lapply(c(1:length(recover$encoded_covariate)),function(X){
+              recover$encoded_covariate[[X]]
+            })))
             
             
             y[,which((colSums(recover$design.list[[i]])>0)==T)]  <- do.call('cbind',parallel::mclapply(c(which((colSums(recover$design.list[[i]])>0)==T)),function(id_col){
@@ -59,13 +53,13 @@ recover_points <- function(data_list,
               
               if (any(test_id) & any(train_id)){
                 
-                x.covariate_predictors <- y.covariate_predictors <- cbind(1,Y.y[train_id,-id_col]%*%main.parameters$beta[-id_col,])
-                x.test_predictors <- y.test_predictors <- cbind(1,Y.y[test_id,-id_col]%*%main.parameters$beta[-id_col,])
+                x.covariate_predictors <- y.covariate_predictors <- Y.y[train_id,-id_col]%*%main.parameters$beta[[i]][-id_col,]
+                x.test_predictors <- y.test_predictors <- Y.y[test_id,-id_col]%*%main.parameters$beta[[i]][-id_col,]
                 
                 b.a <- 0
-                if (!identical(recover$x,recover$design.list[[i]]) & fixed$i_dim == T) {
-                  x.covariate_predictors <- cbind(1,X.x[train_id,]%*%main.parameters$u.beta)
-                  x.test_predictors <- cbind(1,X.x[test_id,]%*%main.parameters$u.beta)
+                if (!identical(recover$x,recover$design.list[[i]])) {
+                  x.covariate_predictors <- cbind(1,X.x[train_id,])
+                  x.test_predictors <- cbind(1,X.x[test_id,])
                   b.a <- 0.5
                 }
                 a.b <- 1 - b.a
@@ -89,7 +83,7 @@ recover_points <- function(data_list,
                   
                 }
                 if (method=="glmnet"){
-                  
+                  x
                   sparse.y[test_id] <- a.b * c(predict(glmnet::cv.glmnet(x=(y.covariate_predictors),y=sparse.y[train_id],type.measure = "mse"),(y.test_predictors), s = "lambda.min")) +
                     b.a * (predict(glmnet::cv.glmnet(x=(x.covariate_predictors),y=sparse.y[train_id],type.measure = "mse"),(x.test_predictors), s = "lambda.min"))
                   
@@ -112,12 +106,13 @@ recover_points <- function(data_list,
               }
               
               return(sparse.y)
-            }))
+            },mc.cores = config$n_cores))
             
-            recover$predict.list[[i]] <- as.matrix(y)
             
             
           }
+          recover$predict.list[[i]] <- transform.data(as.matrix(y),method = recover$link_function[2])
+          
         }
       }
     }
@@ -176,3 +171,4 @@ transform.data <- function(x,method="scale"){
   }
   return(x)
 }
+
