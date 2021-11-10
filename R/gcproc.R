@@ -93,23 +93,22 @@ gcproc <- function(data_list,
     
     convergence.parameters$count = convergence.parameters$count + 1
     
+  }
+  
+  
+  if (convergence.parameters$count > 2 & any(do.call('c',lapply(recover$design.list,function(X){!is.null(X)})))){
     
-
-    if (convergence.parameters$count > 2 & any(do.call('c',lapply(recover$design.list,function(X){!is.null(X)})))){
-      
-      recover_data <- recover_points(
-        data_list,
-        main.code = main.code,
-        main.parameters = main.parameters,
-        config = config,
-        recover = recover,
-        join = join
-      )
-      
-      recover <- recover_data$recover
-      data_list <- recover_data$data_list
-      
-    }
+    recover_data <- recover_points(
+      data_list,
+      main.code = main.code,
+      main.parameters = main.parameters,
+      config = config,
+      recover = recover,
+      join = join
+    )
+    
+    recover <- recover_data
+    data_list <- recover_data$predict.list
     
   }
   
