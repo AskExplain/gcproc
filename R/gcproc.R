@@ -134,8 +134,8 @@ gcproc <- function(data_list,
       join = join
     )
     
-    recover <- recover_data$recover
-    data_list <- recover_data$data_list
+    recover <- recover_data
+    data_list <- recover_data$predict.list
     
   }
 
