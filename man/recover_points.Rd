@@ -4,10 +4,20 @@
 \alias{recover_points}
 \title{Recover missing data points via imputation or prediction}
 \usage{
-recover_points(data_list, main.code, main.parameters, config, join, recover)
+recover_points(
+  data_list,
+  main.code,
+  main.parameters,
+  config,
+  recover,
+  join,
+  fixed
+)
 }
 \arguments{
-\item{data_list}{A list of datasets (matrix or tensor etc.)}
+\item{data_list}{List of Datasets}
+
+\item{main.code}{Main code from gcproc}
 
 \item{main.parameters}{Main parameters from gcproc}
 
@@ -15,7 +25,9 @@ recover_points(data_list, main.code, main.parameters, config, join, recover)
 
 \item{recover}{Recover list from gcproc}
 
-\item{code}{Code parameters from gcproc}
+\item{join}{Join parameters in gcproc}
+
+\item{fixed}{Fixed parameters from gcproc}
 }
 \value{
 Recovered data from imputation or prediction, with the design matrices and any user input parameters and functions

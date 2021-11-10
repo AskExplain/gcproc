@@ -13,7 +13,7 @@
 #' @return  Recovered data from imputation or prediction, with the design matrices and any user input parameters and functions
 #' @export
 recover_points <- function(data_list,
-                           main.code.
+                           main.code,
                            main.parameters,
                            config,
                            recover,
@@ -45,10 +45,10 @@ recover_points <- function(data_list,
             
             
             X.x <- cbind(1,
-                         transform.data(Reduce('+',lapply(c(1:length(recover$encoded_covariate)),function(X){
-                           recover$encoded_covariate[[X]]
-                         })))
-            )
+                                       transform.data(Reduce('+',lapply(c(1:length(recover$encoded_covariate)),function(X){
+                                         recover$encoded_covariate[[X]]
+                                       })))
+                         )
             
             
             y[,which((colSums(recover$design.list[[i]])>0)==T)]  <- do.call('cbind',parallel::mclapply(c(which((colSums(recover$design.list[[i]])>0)==T)),function(id_col){
