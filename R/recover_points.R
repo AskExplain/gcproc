@@ -1,13 +1,14 @@
+
+
 #' Recover missing data points via imputation or prediction
 #'
 #' Main function to recover missing points. Used internally, but can be re-purposed by the user.
 #'
-#' @param data_list List of Datasets
-#' @param main.code Main code from gcproc
+#' @param data_list A list of datasets (matrix or tensor etc.)
+#' @param code Code parameters from gcproc
 #' @param main.parameters Main parameters from gcproc
 #' @param config Configuration parameters from gcproc
 #' @param recover Recover list from gcproc
-#' @param join Join parameters in gcproc
 #'
 #' @return  Recovered data from imputation or prediction, with the design matrices and any user input parameters and functions
 #' @export
@@ -15,112 +16,79 @@ recover_points <- function(data_list,
                            main.code,
                            main.parameters,
                            config,
-                           recover,
-                           join
-){
-  
-  
+                           join,
+                           recover){
   
   for (task in recover$task){
     
     if ("regression" %in% task){
       
-      for (method in recover$method){
+      for (i in 1:length(data_list)){
         
-        for (i in 1:length(data_list)){
-          Y.y <- y <- as.matrix(data_list[[i]],method = recover$link_function[1])
+        if (!is.null(recover$design.list[[i]])){
           
-          if (!is.null(recover$design.list[[i]])){
+          missing_points <- which(recover$design.list[[i]]>0,arr.ind = T)
+          row_with_missing_points <- unique(missing_points[,1])
+          # column_with_missing_points <- unique(missing_points[,2])
+          
+          
+          pred.encode <- 0
+          for (iter.id in c(1:length(data_list))){
             
-            if (is.null(recover$encoded_covariate)){
-              recover$encoded_covariate <- lapply(c(1:length(data_list))[-i],function(X){
-                transformed.data <- as.matrix(data_list[[X]])%*%(main.parameters$beta[[join$beta[X]]])
-                return(transformed.data)
-              })
-            }
+            main.data <- transform.data(as.matrix(data_list[[i]]), method = recover$link_function[1])
+            main.data_embed <- (irlba::irlba(main.data)$v)
+            main.data_trans <- main.data%*%main.data_embed
             
+            code.projection <- (main.code$code)%*%t(main.parameters$beta[[join$beta[iter.id]]])%*%(main.parameters$beta[[join$beta[iter.id]]]) 
+            pred.encode <- cbind(1,t(main.parameters$alpha[[join$alpha[i]]])%*%code.projection)
             
-            X.x <- transform.data(Reduce('+',lapply(c(1:length(recover$encoded_covariate)),function(X){
-              recover$encoded_covariate[[X]]
-            })))
+            pred <- pred.encode%*%(MASS::ginv(t(pred.encode[-row_with_missing_points,])%*%pred.encode[-row_with_missing_points,])%*%t(pred.encode[-row_with_missing_points,])%*%main.data_trans[-row_with_missing_points,]) 
             
-            
-            y[,which((colSums(recover$design.list[[i]])>0)==T)]  <- do.call('cbind',parallel::mclapply(c(which((colSums(recover$design.list[[i]])>0)==T)),function(id_col){
-              
-              test_id <- as.logical(recover$design.list[[i]][,id_col])
-              train_id <- as.logical(1 - recover$design.list[[i]][,id_col])
-              sparse.y <- c(y[,id_col])
-              
-              if (any(test_id) & any(train_id)){
-                
-                x.covariate_predictors <- y.covariate_predictors <- Y.y[train_id,-id_col]%*%main.parameters$beta[[i]][-id_col,]
-                x.test_predictors <- y.test_predictors <- Y.y[test_id,-id_col]%*%main.parameters$beta[[i]][-id_col,]
-                
-                b.a <- 0
-                if (!identical(recover$x,recover$design.list[[i]])) {
-                  x.covariate_predictors <- cbind(1,X.x[train_id,])
-                  x.test_predictors <- cbind(1,X.x[test_id,])
-                  b.a <- 0.5
-                }
-                a.b <- 1 - b.a
-                
-                
-                if (method=="knn"){
-                  
-                  sparse.y[test_id] <-
-                    a.b * FNN::knn.reg(
-                      train = y.covariate_predictors,
-                      test = y.test_predictors,
-                      y = sparse.y[train_id],
-                      k = 5
-                    )$pred +
-                    b.a * FNN::knn.reg(
-                      train = x.covariate_predictors,
-                      test = x.test_predictors,
-                      y = sparse.y[train_id],
-                      k = 5
-                    )$pred
-                  
-                }
-                if (method=="glmnet"){
-                  x
-                  sparse.y[test_id] <- a.b * c(predict(glmnet::cv.glmnet(x=(y.covariate_predictors),y=sparse.y[train_id],type.measure = "mse"),(y.test_predictors), s = "lambda.min")) +
-                    b.a * (predict(glmnet::cv.glmnet(x=(x.covariate_predictors),y=sparse.y[train_id],type.measure = "mse"),(x.test_predictors), s = "lambda.min"))
-                  
-                }
-                
-                if (method=="matrix.projection"){
-                  
-                  sparse.y[test_id] <- a.b*((y.test_predictors)%*%(MASS::ginv(t(y.covariate_predictors)%*%(y.covariate_predictors))%*%t(y.covariate_predictors)%*%((as.matrix(y[train_id,id_col]))))) +
-                    b.a*((x.test_predictors)%*%(MASS::ginv(t(x.covariate_predictors)%*%(x.covariate_predictors))%*%t(x.covariate_predictors)%*%((as.matrix(y[train_id,id_col])))))
-                  
-                }
-                if (!is.null(recover$fn)){
-                  
-                  sparse.y[test_id] <- a.b*recover$fn(train = y.covariate_predictors, test = y.test_predictors, y = sparse.y[train_id], parameters = recover$param) +
-                    b.a*recover$fn(train = x.covariate_predictors, test = x.test_predictors, y = sparse.y[train_id], parameters = recover$param)
-                  
-                }
-                
-                
-              }
-              
-              return(sparse.y)
-            },mc.cores = config$n_cores))
-            
-            
+            main.data[row_with_missing_points,]  <- (pred%*%t(main.data_embed))[row_with_missing_points,]
+            data_list[[i]] <- recover$predict.list[[i]] <- transform.data(main.data, method= recover$link_function[2]) 
             
           }
-          recover$predict.list[[i]] <- transform.data(as.matrix(y),method = recover$link_function[2])
+          
           
         }
       }
+      
     }
+    
+    if ("classification" %in% task){
+      
+      
+      
+      for (j in which(recover$design.list==0)){
+        
+        label_code <- Reduce('+',lapply(c(covariate$factor[j,]),function(X){
+          ((main.code$code+main.code$intercept.code))[[X]]
+        }))
+        
+        
+        
+        for (i in which(recover$design.list==1)){
+          
+          unlabel_code <- Reduce('+',lapply(c(covariate$factor[i,]),function(X){
+            ((main.code$code+main.code$intercept.code))[[X]]
+          }))
+          
+          labels <- recover$labels
+          
+          recover$predict.list[[j]][[i]] <- apply((unlabel.decoded_covariate)%*%t(label.decoded_covariate),1,function(X){names(sort(table(labels[order(X,decreasing = T)[1]]))[1])})
+          
+        }
+        
+      }
+      
+      
+    }
+    
   }
   
-  return(recover)
+  return(list(recover=recover,
+              data_list=data_list))
 }
-
 
 
 transform.data <- function(x,method="scale"){
@@ -171,4 +139,3 @@ transform.data <- function(x,method="scale"){
   }
   return(x)
 }
-
