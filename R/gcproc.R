@@ -193,20 +193,38 @@ update_set <- function(x,
                        fix,
                        method){
   
-  main.code$encode[pivots$alpha,pivots$beta] <- (main.parameters$alpha[pivots$alpha,]%*%(x)%*%(main.parameters$beta[,pivots$beta]))
+  sample_component_assignment <- do.call('c',lapply(c(1:dim(main.parameters$alpha)[2]),function(X){
+    which(main.parameters$alpha[,X]==max(main.parameters$alpha[,X]))
+  }))
   
-  if (method == "svd"){
-    main.code$code[pivots$alpha,pivots$beta] <- main.code$encode[pivots$alpha,pivots$beta]
+  feature_component_assignment <- do.call('c',lapply(c(1:dim(main.parameters$beta)[1]),function(X){
+    which(main.parameters$beta[X,]==max(main.parameters$beta[X,]))
+  }))
+  
+  
+  for (f_comp in 1:length(unique(feature_component_assignment))){
+    
+    for (s_comp in 1:length(unique(sample_component_assignment))){
+      
+      alpha_ids <- which(sample_component_assignment==unique(sample_component_assignment)[s_comp])
+      beta_ids <- which(feature_component_assignment==unique(feature_component_assignment)[f_comp])
+      
+      main.code$encode[pivots$alpha,pivots$beta] <- (main.parameters$alpha[pivots$alpha,alpha_ids,drop=F]%*%(x[alpha_ids,beta_ids,drop=F])%*%(main.parameters$beta[beta_ids,pivots$beta,drop=F]))
+      
+      if (method == "svd"){
+        main.code$code[pivots$alpha,pivots$beta] <- main.code$encode[pivots$alpha,pivots$beta]
+      }
+      if (method == "gcproc"){
+        main.code$code[pivots$alpha,pivots$beta] <- pinv(t(main.parameters$alpha[pivots$alpha,alpha_ids,drop=F]))%*%(main.code$encode[pivots$alpha,pivots$beta])%*%pinv(main.parameters$beta[beta_ids,pivots$beta,drop=F])
+      }
+      
+      main.parameters$alpha[pivots$alpha,alpha_ids] <- (t((x[alpha_ids,beta_ids,drop=F])%*%t((main.code$code[pivots$alpha,pivots$beta])%*%t(main.parameters$beta[beta_ids,pivots$beta,drop=F]))%*%pinv(t((main.code$code[pivots$alpha,pivots$beta])%*%t(main.parameters$beta[beta_ids,pivots$beta,drop=F])))))
+      main.parameters$beta[beta_ids,pivots$beta] <- (t(pinv(((t(main.parameters$alpha[pivots$alpha,alpha_ids,drop=F])%*%(main.code$code[pivots$alpha,pivots$beta]))))%*%t(t(main.parameters$alpha[pivots$alpha,alpha_ids,drop=F])%*%(main.code$code[pivots$alpha,pivots$beta]))%*%(x[alpha_ids,beta_ids,drop=F])))
+      
+    }
+    
   }
-  if (method == "gcproc"){
-    main.code$code[pivots$alpha,pivots$beta] <- pinv(t(main.parameters$alpha[pivots$alpha,]))%*%(main.code$encode[pivots$alpha,pivots$beta])%*%pinv(main.parameters$beta[,pivots$beta])
-  }
-  
-  main.parameters$alpha[pivots$alpha,] <- (t((x)%*%t((main.code$code[pivots$alpha,pivots$beta])%*%t(main.parameters$beta[,pivots$beta]))%*%pinv(t((main.code$code[pivots$alpha,pivots$beta])%*%t(main.parameters$beta[,pivots$beta])))))
-  main.parameters$beta[,pivots$beta] <- (t(pinv(((t(main.parameters$alpha[pivots$alpha,])%*%(main.code$code[pivots$alpha,pivots$beta]))))%*%t(t(main.parameters$alpha[pivots$alpha,])%*%(main.code$code[pivots$alpha,pivots$beta]))%*%(x)))
-  
-  
-  
+
   return(list(main.parameters = main.parameters,
               main.code = main.code
   ))
