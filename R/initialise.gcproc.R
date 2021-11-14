@@ -54,7 +54,7 @@ initialise.gcproc <- function(data_list,
     
   }
   
-  for (iter in 1:2){
+  for (iter in 1:1){
     for (i in 1:length(data_list)){
       
       internal.parameters <- list(alpha=main.parameters$alpha[[join$alpha[i]]],
