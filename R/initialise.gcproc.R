@@ -63,7 +63,7 @@ initialise.gcproc <- function(data_list,
       return_update <- update_set(x = as.matrix(data_list[[i]]),
                                   main.parameters = internal.parameters,
                                   main.code = main.code, 
-                                  method = "svd",
+                                  method = "gcproc",
                                   pivots = list(alpha = c(1:config$i_dim) ,beta = c(1:config$j_dim))
       )
       
