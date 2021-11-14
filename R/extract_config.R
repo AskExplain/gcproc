@@ -12,6 +12,7 @@
 #' @export
 extract_config <- function(verbose=T){
   config <- list(
+    method="gcproc",
     init="random",
     i_dim = 30,
     j_dim = 30,
