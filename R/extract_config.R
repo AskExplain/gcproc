@@ -12,8 +12,8 @@
 #' @export
 extract_config <- function(verbose=T){
   config <- list(
-    method="gcproc",
-    init="random",
+    method = "gcproc",
+    init=c("random","svd"),
     i_dim = 30,
     j_dim = 30,
     min_iter=2,

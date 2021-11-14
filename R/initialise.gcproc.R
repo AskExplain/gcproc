@@ -63,7 +63,7 @@ initialise.gcproc <- function(data_list,
       return_update <- update_set(x = as.matrix(data_list[[i]]),
                                   main.parameters = internal.parameters,
                                   main.code = main.code, 
-                                  method = "svd"
+                                  method = config$init[2]
                                   )
       
       main.parameters$alpha[[join$alpha[i]]] <- return_update$main.parameters$alpha
@@ -95,13 +95,13 @@ initialise.parameters <- function(x,config,transfer){
   
   param.beta <-   if (!is.null(transfer$main.parameters$beta)){
     transfer$main.parameters$beta
-  } else if (config$init=="random"){
+  } else if (config$init[1]=="random"){
     array(rnorm(dim(x)[2]*config$j_dim),dim=c(dim(x)[2],config$j_dim))
   } 
   
   param.alpha <- if (!is.null(transfer$main.parameters$alpha)){
     transfer$main.parameters$alpha
-  } else if (config$init=="random") {
+  } else if (config$init[1]=="random") {
     array(rnorm(config$i_dim*dim(x)[1]),dim=c(config$i_dim,dim(x)[1]))
   } 
   
