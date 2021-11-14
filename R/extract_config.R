@@ -12,6 +12,7 @@
 #' @export
 extract_config <- function(verbose=T){
   config <- list(
+    method = "svd",
     init="random",
     i_dim = 30,
     j_dim = 30,
@@ -45,7 +46,8 @@ extract_config <- function(verbose=T){
 #' @export
 extract_transfer_framework <- function(verbose=T){
   transfer <- list(
-    main.code = NULL
+    main.code = NULL,
+    main.parameters = list(alpha = NULL, beta = NULL)
   )
 
   if (verbose == T){

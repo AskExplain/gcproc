@@ -54,6 +54,27 @@ initialise.gcproc <- function(data_list,
     
   }
   
+  for (iter in 1:10){
+    for (i in 1:length(data_list)){
+      
+      internal.parameters <- list(alpha=main.parameters$alpha[[join$alpha[i]]],
+                                  beta=main.parameters$beta[[join$beta[i]]])
+      
+      return_update <- update_set(x = as.matrix(data_list[[i]]),
+                                  main.parameters = internal.parameters,
+                                  main.code = main.code, 
+                                  method = "svd",
+                                  pivots = list(alpha = c(1:config$i_dim) ,beta = c(1:config$j_dim))
+      )
+      
+      main.parameters$alpha[[join$alpha[i]]] <- return_update$main.parameters$alpha
+      main.parameters$beta[[join$beta[i]]] <- return_update$main.parameters$beta
+      
+      main.code <- return_update$main.code
+      
+    }
+  }
+  
   return(
     list(
       main.parameters = main.parameters,
@@ -77,17 +98,13 @@ initialise.parameters <- function(x,config,transfer){
     transfer$main.parameters$beta
   } else if (config$init=="random"){
     array(rnorm(dim(x)[2]*config$j_dim),dim=c(dim(x)[2],config$j_dim))
-  }  else if(config$init=="svdr"){
-    irlba::irlba(x,config$j_dim)$v
-  }
+  } 
   
   param.alpha <- if (!is.null(transfer$main.parameters$alpha)){
     transfer$main.parameters$alpha
   } else if (config$init=="random") {
     array(rnorm(config$i_dim*dim(x)[1]),dim=c(config$i_dim,dim(x)[1]))
-  } else if (config$init=="irlba"){
-    t(irlba::irlba(x,config$i_dim)$u)
-  }
+  } 
   
   pivots <- list(
     pivot_x.sample = as.matrix(param.alpha),
