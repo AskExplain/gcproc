@@ -70,7 +70,7 @@ transfer <- function(model_list,
     }
 
     for (set.id in c(1:length(data_list))){
-
+      config$verbose <- F
       gcproc.model_list[[set.id]] <- gcproc(data_list = data_list[[set.id]],
                                             config = config,
                                             transfer = transfer_list[[set.id]],
@@ -82,13 +82,17 @@ transfer <- function(model_list,
       
     }
 
+    config$verbose <- T
+    
     mae <- mean(abs(prev.encode - Reduce('+',lapply(c(1:length(model_list)),function(X){gcproc.model_list[[X]]$main.code$encode}))))
-
+    print(mae)
+    
     # Check convergence
     convergence.parameters$score.vec <- c(convergence.parameters$score.vec, mae)
     MAE <- mean(tail(convergence.parameters$score.vec,2))
     prev.MAE <- mean(tail(convergence.parameters$score.vec,3)[1:2])
 
+    
     if ( convergence.parameters$count > ( 3 ) ){
       if (config$verbose == T){
         print(paste("Iteration: ",convergence.parameters$count," with Tolerance of: ", abs(prev.MAE - MAE),sep=""))
@@ -98,12 +102,13 @@ transfer <- function(model_list,
         print(paste("Iteration: ",convergence.parameters$count," ... initialising ... ",sep=""))
       }
     }
-
+    
     if (convergence.parameters$count > config$min_iter){
       if ((convergence.parameters$count > config$max_iter ) | abs(prev.MAE - MAE) < config$tol){
         break
       }
     }
+    
 
     convergence.parameters$count = convergence.parameters$count + 1
 

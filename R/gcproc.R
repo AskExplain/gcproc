@@ -54,7 +54,8 @@ gcproc <- function(data_list,
       
       return_update <- update_set(x = as.matrix(data_list[[i]]),
                                   main.parameters = internal.parameters,
-                                  main.code = main.code
+                                  main.code = main.code, 
+                                  method = config$method
                                   )
       
       main.parameters$alpha[[join$alpha[i]]] <- return_update$main.parameters$alpha
@@ -93,24 +94,25 @@ gcproc <- function(data_list,
     
     convergence.parameters$count = convergence.parameters$count + 1
     
+    if (convergence.parameters$count > 2 & any(do.call('c',lapply(recover$design.list,function(X){!is.null(X)})))){
+      
+      recover_data <- recover_points(
+        data_list,
+        main.code = main.code,
+        main.parameters = main.parameters,
+        config = config,
+        recover = recover,
+        join = join
+      )
+      
+      recover <- recover_data$recover
+      data_list <- recover_data$data_list
+      
+    }
+    
   }
   
   
-  if (convergence.parameters$count > 2 & any(do.call('c',lapply(recover$design.list,function(X){!is.null(X)})))){
-    
-    recover_data <- recover_points(
-      data_list,
-      main.code = main.code,
-      main.parameters = main.parameters,
-      config = config,
-      recover = recover,
-      join = join
-    )
-    
-    recover <- recover_data
-    data_list <- recover_data$predict.list
-    
-  }
   
   
   if (config$verbose){
@@ -169,13 +171,22 @@ gcproc <- function(data_list,
 
 update_set <- function(x,
                        main.parameters,
-                       main.code){
+                       main.code, 
+                       method){
 
+  main.parameters$alpha <- (t((x)%*%t((main.code$code)%*%t(main.parameters$beta))%*%pinv(t((main.code$code)%*%t(main.parameters$beta)))))
+  main.parameters$beta <- (t(pinv(((t(main.parameters$alpha)%*%(main.code$code))))%*%t(t(main.parameters$alpha)%*%(main.code$code))%*%(x)))
+  
+  
   main.code$encode <- (main.parameters$alpha%*%(x)%*%(main.parameters$beta))
   main.code$code <- pinv(t(main.parameters$alpha))%*%(main.code$encode)%*%pinv(main.parameters$beta)
   
-  main.parameters$alpha <- (t((x)%*%t((main.code$code)%*%t(main.parameters$beta))%*%pinv(t((main.code$code)%*%t(main.parameters$beta)))))
-  main.parameters$beta <- (t(pinv(((t(main.parameters$alpha)%*%(main.code$code))))%*%t(t(main.parameters$alpha)%*%(main.code$code))%*%(x)))
+  if (method == "svd"){
+    main.code$code <- main.code$encode
+  }
+  if (method == "gcproc"){
+    main.code$code <- pinv(t(main.parameters$alpha))%*%(main.code$encode)%*%pinv(main.parameters$beta)
+  }
   
   
   return(list(main.parameters = main.parameters,
