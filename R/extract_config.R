@@ -18,6 +18,9 @@ extract_config <- function(verbose=T){
     j_dim = 30,
     min_iter=2,
     max_iter=350,
+    n_batch = 10,
+    n_epochs = 1,
+    n_cores = 2,
     n_decode = 30,
     seed = 1,
     tol=1,
@@ -45,12 +48,12 @@ extract_transfer_framework <- function(verbose=T){
   transfer <- list(
     main.code = NULL,
     main.parameters = list(alpha = NULL, beta = NULL)
-    )
-  
+  )
+
   if (verbose == T){
     print(transfer)
   }
-  
+
   return(transfer)
 }
 
@@ -73,11 +76,11 @@ extract_recovery_framework <- function(verbose=T){
     design.list = NULL,
     labels = NULL
   )
-  
+
   if (verbose == T){
     print(recover)
   }
-  
+
   return(recover)
 }
 
@@ -95,11 +98,11 @@ extract_recovery_framework <- function(verbose=T){
 extract_join_framework <- function(verbose=T){
   join <- list(alpha=NULL,
                beta=NULL)
-  
+
   if (verbose == T){
     print(join)
   }
-  
+
   return(join)
 }
 

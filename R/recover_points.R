@@ -40,7 +40,12 @@ recover_points <- function(data_list,
           
           if (recover$method == "internal"){
             
-            pred <- pred.encode%*%(MASS::ginv(t(pred.encode[-row_with_missing_points,])%*%pred.encode[-row_with_missing_points,])%*%t(pred.encode[-row_with_missing_points,])%*%main.data[-row_with_missing_points,]) 
+            print(length(row_with_missing_points)==dim(pred.encode)[1])
+            if (length(row_with_missing_points)==dim(pred.encode)[1]){
+              pred <- pred.encode%*%(MASS::ginv(t(pred.encode)%*%pred.encode)%*%t(pred.encode)%*%main.data) 
+            } else {
+              pred <- pred.encode%*%(MASS::ginv(t(pred.encode[-row_with_missing_points,,drop=F])%*%pred.encode[-row_with_missing_points,,drop=F])%*%t(pred.encode[-row_with_missing_points,,drop=F])%*%main.data[-row_with_missing_points,,drop=F]) 
+            }
             
             main.data[row_with_missing_points,column_with_missing_points]  <- pred[row_with_missing_points,column_with_missing_points]
             data_list[[i]] <- recover$predict.list[[i]] <- transform.data(main.data, method= recover$link_function[2]) 

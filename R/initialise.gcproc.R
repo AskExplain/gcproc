@@ -4,7 +4,7 @@ initialise.gcproc <- function(data_list,
                               covariate,
                               transfer,
                               join
-){
+                              ){
   
   if (config$verbose){
     print(paste("Initialising data with : ",config$init,sep=""))
@@ -19,7 +19,7 @@ initialise.gcproc <- function(data_list,
       transfer.param <- list(main.parameters = list(
         alpha = transfer$main.parameters$alpha[[join$alpha[i]]],
         beta = transfer$main.parameters$beta[[join$beta[i]]]
-      )
+        )
       )
     } else {
       transfer.param <- transfer$main.parameters
@@ -63,8 +63,9 @@ initialise.gcproc <- function(data_list,
       return_update <- update_set(x = as.matrix(data_list[[i]]),
                                   main.parameters = internal.parameters,
                                   main.code = main.code, 
-                                  method = config$init[2]
-                                  )
+                                  method = config$init[2],
+                                  pivots = list(alpha = c(1:config$i_dim) ,beta = c(1:config$j_dim))
+      )
       
       main.parameters$alpha[[join$alpha[i]]] <- return_update$main.parameters$alpha
       main.parameters$beta[[join$beta[i]]] <- return_update$main.parameters$beta
@@ -103,12 +104,12 @@ initialise.parameters <- function(x,config,transfer){
     transfer$main.parameters$alpha
   } else if (config$init[1]=="random") {
     array(rnorm(config$i_dim*dim(x)[1]),dim=c(config$i_dim,dim(x)[1]))
-  } 
+  }
   
   pivots <- list(
     pivot_x.sample = as.matrix(param.alpha),
     pivot_x.feature = as.matrix(param.beta)  
-  )
+    )
   
   
   return(pivots)
