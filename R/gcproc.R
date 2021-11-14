@@ -21,51 +21,53 @@ gcproc <- function(data_list,
                    recover = gcproc::extract_recovery_framework(verbose = F),
                    join = gcproc::extract_join_framework(verbose=F)
 ){
-  
+
   runtime.start <- Sys.time()
-  
+
   set.seed(config$seed)
-  
+
   convergence.parameters <- list()
-  
+
   recover$predict.list <- lapply(c(1:length(data_list)),function(X){NULL})
-  
+
   pivots <- list(
     alpha = chunk(sample(c(1:config$i_dim)),config$n_batch),
     beta = chunk(sample(c(1:config$j_dim)),config$n_batch)
   )
-  
+
   batch_table <- cbind(rep(1:length(pivots$alpha),each=length(pivots$beta)),
                        rep(1:length(pivots$beta),times=length(pivots$alpha))
   )
-  
+
   internal_pivots <- list(
     alpha=pivots$alpha[[1]],
     beta=pivots$beta[[1]]
   )
-  
+
   initialise.model <- initialise.gcproc(data_list = data_list,
                                         config = config,
                                         transfer = transfer,
                                         join = join)
-  
+
   main.parameters <- initialise.model$main.parameters
   main.code <- initialise.model$main.code
-  
+
   if (config$verbose){
     print(paste("Beginning gcproc learning with:    Sample dimension reduction (config$i_dim): ",config$i_dim, "    Feature dimension reduction (config$j_dim): ", config$j_dim,"    Tolerance Threshold: ", config$tol, "   Maximum number of iterations: ", config$max_iter, "   Verbose: ", config$verbose, sep=""))
   }
-  
-  
+
+
   for (epoch in c(1:config$n_epochs)){
-    
+
     for (set.of.batch.id in c(0:(config$n_batch-1))){
       
       print(paste("Batch number :   ",set.of.batch.id,sep=""))
       
       mini.batch_table <- batch_table[(seq(c(1+config$n_batch*set.of.batch.id),(config$n_batch*(1+set.of.batch.id)),1)),,drop=F]
       
-      main_batches <- parallel::mclapply(X = c(1:dim(mini.batch_table)[1]),function(batch){
+      main_batches <- 
+        # parallel::mc
+      lapply(X = c(1:dim(mini.batch_table)[1]),function(batch){
           pivots <- list(alpha = pivots$alpha[[mini.batch_table[batch,1]]],
                          beta = pivots$beta[[mini.batch_table[batch,2]]])
           
@@ -79,8 +81,7 @@ gcproc <- function(data_list,
             return_update <- update_set(x = as.matrix(data_list[[i]]),
                                         main.parameters = internal.param,
                                         main.code = main.code,
-                                        pivots = pivots,
-                                        method = config$method)
+                                        pivots = pivots)
             
             main.parameters$alpha[[join$alpha[i]]] <- return_update$main.parameters$alpha
             main.parameters$beta[[join$beta[i]]] <- return_update$main.parameters$beta
@@ -95,7 +96,9 @@ gcproc <- function(data_list,
           )
           )
           
-        },mc.cores = config$n_cores)
+      }
+      )
+        # ,mc.cores = config$n_cores)
       
       
       for (batch.id in 1:length(main_batches)){
@@ -113,7 +116,7 @@ gcproc <- function(data_list,
     }
     
   }
-  
+
   
   if (config$verbose){
     print("Learning has converged for gcproc, beginning prediction (if requested) and dimension reduction")
@@ -131,43 +134,42 @@ gcproc <- function(data_list,
       join = join
     )
     
-    recover <- recover_data$recover
-    data_list <- recover_data$data_list
+    recover <- recover_data
+    data_list <- recover$predict.list
     
   }
-  
-  
-  
+
+
   dimension_reduction <- lapply(c(1:length(data_list)),function(Y){
-    
+
     x <- as.matrix(data_list[[Y]])
-    
+
     feature_x.dim_reduce.encode <- t(main.parameters$alpha[[join$alpha[Y]]]%*%x)
     sample_x.dim_reduce.encode <- x%*%main.parameters$beta[[join$beta[Y]]]
-    
+
     return(list(
       feature_x.dim_reduce.encode = feature_x.dim_reduce.encode,
       sample_x.dim_reduce.encode = sample_x.dim_reduce.encode
-    ))
+      ))
   })
-  
+
   runtime.end <- Sys.time()
-  
-  
+
+
   if (config$verbose){
     print(paste("Done! Total runtime of   ", runtime.end - runtime.start ,sep=""))
   }
-  
+
   return(list(
-    
+
     main.parameters = main.parameters,
-    
+
     main.code = main.code,
-    
+
     recover =  recover,
-    
+
     dimension_reduction = dimension_reduction,
-    
+
     meta.parameters = list(
       config = config,
       join = join,
@@ -177,12 +179,12 @@ gcproc <- function(data_list,
         runtime_total = runtime.end - runtime.start
       )
     ),
-    
+
     convergence.parameters = convergence.parameters
-    
-    
+
+
   ))
-  
+
 }
 
 
@@ -190,45 +192,20 @@ update_set <- function(x,
                        main.parameters,
                        main.code,
                        pivots,
-                       fix,
-                       method){
+                       fix){
   
-  sample_component_assignment <- do.call('c',lapply(c(1:dim(main.parameters$alpha)[2]),function(X){
-    which(main.parameters$alpha[,X]==max(main.parameters$alpha[,X]))
-  }))
+  main.code$encode[pivots$alpha,pivots$beta] <- (main.parameters$alpha[pivots$alpha,]%*%(x)%*%(main.parameters$beta[,pivots$beta]))
+  main.code$code[pivots$alpha,pivots$beta] <- pinv(t(main.parameters$alpha[pivots$alpha,]))%*%(main.code$encode[pivots$alpha,pivots$beta])%*%pinv(main.parameters$beta[,pivots$beta])
   
-  feature_component_assignment <- do.call('c',lapply(c(1:dim(main.parameters$beta)[1]),function(X){
-    which(main.parameters$beta[X,]==max(main.parameters$beta[X,]))
-  }))
+  main.parameters$alpha[pivots$alpha,] <- (t((x)%*%t((main.code$code[pivots$alpha,pivots$beta])%*%t(main.parameters$beta[,pivots$beta]))%*%pinv(t((main.code$code[pivots$alpha,pivots$beta])%*%t(main.parameters$beta[,pivots$beta])))))
+  main.parameters$beta[,pivots$beta] <- (t(pinv(((t(main.parameters$alpha[pivots$alpha,])%*%(main.code$code[pivots$alpha,pivots$beta]))))%*%t(t(main.parameters$alpha[pivots$alpha,])%*%(main.code$code[pivots$alpha,pivots$beta]))%*%(x)))
   
   
-  for (f_comp in 1:length(unique(feature_component_assignment))){
-    
-    for (s_comp in 1:length(unique(sample_component_assignment))){
-      
-      alpha_ids <- which(sample_component_assignment==unique(sample_component_assignment)[s_comp])
-      beta_ids <- which(feature_component_assignment==unique(feature_component_assignment)[f_comp])
-      
-      main.code$encode[pivots$alpha,pivots$beta] <- (main.parameters$alpha[pivots$alpha,alpha_ids,drop=F]%*%(x[alpha_ids,beta_ids,drop=F])%*%(main.parameters$beta[beta_ids,pivots$beta,drop=F]))
-      
-      if (method == "svd"){
-        main.code$code[pivots$alpha,pivots$beta] <- main.code$encode[pivots$alpha,pivots$beta]
-      }
-      if (method == "gcproc"){
-        main.code$code[pivots$alpha,pivots$beta] <- pinv(t(main.parameters$alpha[pivots$alpha,alpha_ids,drop=F]))%*%(main.code$encode[pivots$alpha,pivots$beta])%*%pinv(main.parameters$beta[beta_ids,pivots$beta,drop=F])
-      }
-      
-      main.parameters$alpha[pivots$alpha,alpha_ids] <- (t((x[alpha_ids,beta_ids,drop=F])%*%t((main.code$code[pivots$alpha,pivots$beta])%*%t(main.parameters$beta[beta_ids,pivots$beta,drop=F]))%*%pinv(t((main.code$code[pivots$alpha,pivots$beta])%*%t(main.parameters$beta[beta_ids,pivots$beta,drop=F])))))
-      main.parameters$beta[beta_ids,pivots$beta] <- (t(pinv(((t(main.parameters$alpha[pivots$alpha,alpha_ids,drop=F])%*%(main.code$code[pivots$alpha,pivots$beta]))))%*%t(t(main.parameters$alpha[pivots$alpha,alpha_ids,drop=F])%*%(main.code$code[pivots$alpha,pivots$beta]))%*%(x[alpha_ids,beta_ids,drop=F])))
-      
-    }
-    
-  }
-
+  
   return(list(main.parameters = main.parameters,
               main.code = main.code
-  ))
-  
+              ))
+
 }
 
 
@@ -246,4 +223,6 @@ chunk <- function(x,n){
     split(x, cut(seq_along(x), n, labels = FALSE))
   }
 }
+
+
 
