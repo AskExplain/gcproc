@@ -32,7 +32,7 @@ recover_points <- function(data_list,
           main.data <- data_list[[i]]
           
           pred.encode <- 0
-          for (iter.id in (1:length(data_list))[-i]){
+          for (iter.id in (1:length(data_list))){
             pred.encode <- pred.encode + transform.data(t(main.parameters$alpha[[join$alpha[i]]])%*%main.code$code%*%t(main.parameters$beta[[join$beta[iter.id]]])%*%(main.parameters$beta[[join$beta[iter.id]]]))
           }
           
