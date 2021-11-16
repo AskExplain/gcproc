@@ -32,7 +32,7 @@ recover_points <- function(data_list,
           main.data <- data_list[[i]]
           
           pred.encode <- 0
-          for (iter.id in 1:length(data_list)){
+          for (iter.id in (1:length(data_list))[-i]){
             pred.encode <- pred.encode + transform.data(t(main.parameters$alpha[[join$alpha[i]]])%*%main.code$code%*%t(main.parameters$beta[[join$beta[iter.id]]])%*%(main.parameters$beta[[join$beta[iter.id]]]))
           }
           
@@ -40,14 +40,13 @@ recover_points <- function(data_list,
           
           if (recover$method == "internal"){
             
-            print(length(row_with_missing_points)==dim(pred.encode)[1])
             if (length(row_with_missing_points)==dim(pred.encode)[1]){
               pred <- pred.encode%*%(MASS::ginv(t(pred.encode)%*%pred.encode)%*%t(pred.encode)%*%main.data) 
             } else {
               pred <- pred.encode%*%(MASS::ginv(t(pred.encode[-row_with_missing_points,,drop=F])%*%pred.encode[-row_with_missing_points,,drop=F])%*%t(pred.encode[-row_with_missing_points,,drop=F])%*%main.data[-row_with_missing_points,,drop=F]) 
             }
             
-            main.data[row_with_missing_points,column_with_missing_points]  <- pred[row_with_missing_points,column_with_missing_points]
+            main.data  <- pred
             data_list[[i]] <- recover$predict.list[[i]] <- transform.data(main.data, method= recover$link_function[2]) 
             
             
@@ -56,7 +55,7 @@ recover_points <- function(data_list,
             
             pred <- pred.encode%*%(MASS::ginv(t(pred.encode)%*%pred.encode)%*%t(pred.encode)%*%main.data) 
             
-            main.data[missing_points]  <- pred[missing_points]
+            main.data  <- pred
             data_list[[i]] <- recover$predict.list[[i]] <- transform.data(main.data, method= recover$link_function[2]) 
             
           }
