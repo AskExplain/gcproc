@@ -13,15 +13,14 @@
 extract_config <- function(verbose=T){
   config <- list(
     method = "gcproc",
-    init=c("random","svd"),
+    init=c("random","gcproc"),
     i_dim = 30,
     j_dim = 30,
     min_iter=2,
     max_iter=350,
-    n_batch = 10,
+    n_batch = 1,
     n_epochs = 1,
-    n_cores = 2,
-    n_decode = 30,
+    n_cores = 1,
     seed = 1,
     tol=1,
     verbose = T
