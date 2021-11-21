@@ -94,17 +94,19 @@ initialise.parameters <- function(x,config,transfer){
     set.seed(config$seed)
   }
   
+
   param.beta <-   if (!is.null(transfer$main.parameters$beta)){
     transfer$main.parameters$beta
   } else if (config$init[1]=="random"){
-    array(rnorm(dim(x)[2]*config$j_dim),dim=c(dim(x)[2],config$j_dim))
+    array(runif(dim(x)[2]*config$j_dim,-100,100),dim=c(dim(x)[2],config$j_dim))
   } 
   
   param.alpha <- if (!is.null(transfer$main.parameters$alpha)){
     transfer$main.parameters$alpha
   } else if (config$init[1]=="random") {
-    array(rnorm(config$i_dim*dim(x)[1]),dim=c(config$i_dim,dim(x)[1]))
+    array(runif(config$i_dim*dim(x)[1],-100,100),dim=c(config$i_dim,dim(x)[1]))
   }
+  
   
   pivots <- list(
     pivot_x.sample = as.matrix(param.alpha),
