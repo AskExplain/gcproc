@@ -98,13 +98,13 @@ initialise.parameters <- function(x,config,transfer){
   param.beta <-   if (!is.null(transfer$main.parameters$beta)){
     transfer$main.parameters$beta
   } else if (config$init[1]=="random"){
-    array(runif(dim(x)[2]*config$j_dim,-100,100),dim=c(dim(x)[2],config$j_dim))
+    array(rnorm(dim(x)[2]*config$j_dim),dim=c(dim(x)[2],config$j_dim))
   } 
   
   param.alpha <- if (!is.null(transfer$main.parameters$alpha)){
     transfer$main.parameters$alpha
   } else if (config$init[1]=="random") {
-    array(runif(config$i_dim*dim(x)[1],-100,100),dim=c(config$i_dim,dim(x)[1]))
+    array(rnorm(config$i_dim*dim(x)[1]),dim=c(config$i_dim,dim(x)[1]))
   }
   
   
