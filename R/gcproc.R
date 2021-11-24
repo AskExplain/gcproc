@@ -175,7 +175,6 @@ update_set <- function(x,
                        method){
   
   main.code$encode <- (main.parameters$alpha%*%(x)%*%(main.parameters$beta))
-  main.code$code <- pinv(t(main.parameters$alpha))%*%(main.code$encode)%*%pinv(main.parameters$beta)
   
   if (method == "svd"){
     main.code$code <- main.code$encode
