@@ -3,8 +3,8 @@ initialise.gcproc <- function(data_list,
                               config,
                               covariate,
                               transfer,
-                              join,
-                              pivots){
+                              join
+){
   
   if (config$verbose){
     print(paste("Initialising data with : ",config$init,sep=""))
@@ -15,31 +15,69 @@ initialise.gcproc <- function(data_list,
   
   for (i in 1:length(data_list)){
     
-    initial.param <-initialise.parameters(x = as.matrix(data_list[[i]]),transfer = transfer, i_dim=config$i_dim,j_dim=config$j_dim,init=config$init,verbose=config$verbose)
+    if ( !is.null(transfer$main.parameters$alpha[[1]]) & !is.null(transfer$main.parameters$beta[[1]]) ){
+      transfer.param <- list(main.parameters = list(
+        alpha = transfer$main.parameters$alpha[[join$alpha[i]]],
+        beta = transfer$main.parameters$beta[[join$beta[i]]]
+      )
+      )
+    } else {
+      transfer.param <- transfer$main.parameters
+    }
+    
+    initial.param <-initialise.parameters(
+      x = as.matrix(data_list[[i]]), 
+      config = config, 
+      transfer = transfer.param
+    )
     
     # Check anchoring parameters
-    alpha <- initial.param$pivot_x.sample
+    if (config$identify){
+      alpha <- diag(dim(data_list[[1]])[1])
+    } else{
+      alpha <- initial.param$pivot_x.sample
+    }
+    
     beta <- initial.param$pivot_x.feature
     
     main.parameters$alpha[[join$alpha[i]]] <- alpha
     main.parameters$beta[[join$beta[i]]] <- beta
     
-    if (is.null(transfer$code)){
+    if (is.null(transfer$main.code)){
       
-      # Find intercept in endecoded space
       encode <- (alpha%*%as.matrix(data_list[[i]])%*%(beta))
       code <- (pinv(t(alpha))%*%(encode)%*%pinv((beta)))
       
       main.code = list(
         encode = encode,
-        code = code,
-        intercept.code = code + rnorm(prod(dim(code)))
+        code = code
       )
       
     } else {    
-      main.code <- transfer$code
+      main.code <- transfer$main.code
     }
     
+  }
+  
+  for (iter in 1:3){
+    for (i in 1:length(data_list)){
+      
+      internal.parameters <- list(alpha=main.parameters$alpha[[join$alpha[i]]],
+                                  beta=main.parameters$beta[[join$beta[i]]])
+      
+      return_update <- update_set(x = as.matrix(data_list[[i]]),
+                                  main.parameters = internal.parameters,
+                                  main.code = main.code, 
+                                  method = config$init[2],
+                                  config = config
+                                  )
+      
+      main.parameters$alpha[[join$alpha[i]]] <- return_update$main.parameters$alpha
+      main.parameters$beta[[join$beta[i]]] <- return_update$main.parameters$beta
+      
+      main.code <- return_update$main.code
+      
+    }
   }
   
   return(
@@ -53,39 +91,48 @@ initialise.gcproc <- function(data_list,
 
 
 #' @export
-initialise.parameters <- function(x,transfer,i_dim,j_dim,init="random",verbose=F){
+initialise.parameters <- function(x,config,transfer){
   
-  x <- Matrix::Matrix(x,sparse=T)
-  
-  set.seed(1)
-  
-  if (init=="random"){
-    param.beta <- array(rnorm(dim(x)[2]*j_dim),dim=c(dim(x)[2],j_dim))
-    param.alpha = array(rnorm(i_dim*dim(x)[1]),dim=c(i_dim,dim(x)[1]))
-  } 
-  
-  if (init=="irlba"){
-    param.beta.svd <- irlba::irlba(
-      x,j_dim)
-    param.beta <- param.beta.svd$v
+  if (is.null(transfer$main.parameters$beta) | is.null(transfer$main.parameters$alpha) ){
+    x <- Matrix::Matrix(x,sparse=T)
     
-    param.alpha.svd <- irlba::irlba(
-      x,i_dim)
-    param.alpha = t(param.alpha.svd$u)
+    set.seed(config$seed)
   }
-  if (init=="svdr"){
-    param.beta.svd <- irlba::svdr(
-      x,j_dim)
-    param.beta <- param.beta.svd$v
-    
-    param.alpha.svd <- irlba::svdr(
-      x,i_dim)
-    param.alpha = t(param.alpha.svd$u)
+  
+  param.beta <-   if (!is.null(transfer$main.parameters$beta)){
+    transfer$main.parameters$beta
+  } else if (config$init[1]=="rnorm"){
+    array(rnorm(dim(x)[2]*config$j_dim),dim=c(dim(x)[2],config$j_dim))
+  } else if (config$init[1]=="runif"){
+    array(runif(dim(x)[2]*config$j_dim),dim=c(dim(x)[2],config$j_dim))
+  } else if (config$init[1]=="irlba") {
+    (irlba::irlba(as.matrix(x))$v)
+  } else if (config$init[1]=="rsvd") {
+    (rsvd::rsvd(as.matrix(x))$v)
+  } else if (config$init[1]=="svd") {
+    (svd(as.matrix(x))$v)
   }
-
+  
+  param.alpha <- if (!is.null(transfer$main.parameters$alpha)){
+    transfer$main.parameters$alpha
+  } else if (config$init[1]=="rnorm") {
+    array(rnorm(config$i_dim*dim(x)[1]),dim=c(config$i_dim,dim(x)[1]))
+  } else if (config$init[1]=="runif") {
+    array(runif(config$i_dim*dim(x)[1]),dim=c(config$i_dim,dim(x)[1]))
+  } else if (config$init[1]=="irlba") {
+    t(irlba::irlba(as.matrix(x))$u)
+  } else if (config$init[1]=="rsvd") {
+    t(rsvd::rsvd(as.matrix(x))$u)
+  } else if (config$init[1]=="svd") {
+    t(svd(as.matrix(x))$u)
+  }
+  
   pivots <- list(
     pivot_x.sample = as.matrix(param.alpha),
-    pivot_x.feature = as.matrix(param.beta)  )
+    pivot_x.feature = as.matrix(param.beta)  
+  )
+  
+  
   return(pivots)
   
 }

@@ -13,6 +13,8 @@
 recover_points <- function(data_list,
                            main.code,
                            main.parameters,
+                           main.index,
+                           main.proportion,
                            config,
                            join,
                            recover){
@@ -21,41 +23,136 @@ recover_points <- function(data_list,
     
     if ("regression" %in% task){
       
-      for (i in 1:length(data_list)){
+      for (method in recover$method){
         
-        if (!is.null(recover$design.list[[i]])){
+        for (i in 1:length(data_list)){
           
-          missing_points <- which(recover$design.list[[i]]>0,arr.ind = T)
-          row_with_missing_points <- unique(missing_points[,1])
-          column_with_missing_points <- unique(missing_points[,2])
-          
-          main.data <- transform.data(as.matrix(data_list[[i]]), method = recover$link_function[1])
-          
-          pred.encode <- 0
-          for (iter.id in c(1:length(data_list))){
-            code.projection <- (main.code$code)%*%t(main.parameters$beta[[join$beta[iter.id]]])%*%(main.parameters$beta[[join$beta[iter.id]]]) 
-            pred.encode <- pred.encode + scale(t(main.parameters$alpha[[join$alpha[i]]])%*%code.projection) / length(data_list)
+          if (!is.null(recover$design.list[[i]])){
+            
+            data_list_i <- data_list[[i]]
+            beta_i <- main.parameters$beta[[join$beta[i]]]
+            
+            if ("decode" %in% method){
+              
+              missing_points <- which(as.matrix(recover$design.list[[i]]==1),arr.ind = T)
+              row_with_missing_points <- unique(missing_points[,1])
+              column_with_missing_points <- unique(missing_points[,2])
+              
+              main.data <- data_list_i
+              pred <- t(main.parameters$alpha[[join$alpha[i]]])%*%main.code$code%*%t(beta_i)
+              
+              main.data[row_with_missing_points]  <- pred[row_with_missing_points]
+              data_list[[i]] <- recover$predict.list[[i]] <- transform.data(main.data, method= recover$link_function[2])
+              
+            }
+            
+            
+            if ("matrix.projection" %in% method){
+              
+              x <- as.matrix(data_list_i)%*%beta_i%*%MASS::ginv(t(beta_i)%*%beta_i)
+              
+              
+              encoded_covariate <- lapply(c(1:length(data_list)),function(X){
+                transformed.data <- as.matrix(data_list[[X]])%*%(main.parameters$beta[[join$beta[X]]])
+                return(transformed.data)
+              })
+              
+              
+              decoded_covariate <- cbind(1,
+                                         transform.data(Reduce('+',lapply(c(1:length(encoded_covariate))[-i],function(X){
+                                           t(main.parameters$alpha[[join$alpha[i]]])%*%(main.parameters$alpha[[join$alpha[X]]])%*%encoded_covariate[[X]]
+                                         })))              
+              )
+              
+              samples_with_missing_points <- which((rowSums(recover$design.list[[i]])>0)==T)
+              covariate_predictors <-  decoded_covariate
+
+              pred  <- (((covariate_predictors)%*%(MASS::ginv(t(covariate_predictors)%*%(covariate_predictors))%*%t(covariate_predictors)%*%(x))))
+              pred <- pred%*%t(beta_i)
+              
+              elements_with_missing_points <- which((recover$design.list[[i]]>0)[samples_with_missing_points,]==T,arr.ind = T)
+              data_list[[i]][samples_with_missing_points,][elements_with_missing_points]  <- (pred)[elements_with_missing_points]
+              
+              recover$predict.list[[i]] <- data_list[[i]]
+            }
+            
+            
+            if ("knn" %in% method){
+              
+              
+              x <- as.matrix(data_list_i)%*%beta_i%*%MASS::ginv(t(beta_i)%*%beta_i)
+              
+              
+              encoded_covariate <- lapply(c(1:length(data_list)),function(X){
+                transformed.data <- as.matrix(data_list[[X]])%*%(main.parameters$beta[[join$beta[X]]])
+                return(transformed.data)
+              })
+              
+              
+              decoded_covariate <- cbind(1,
+                                         transform.data(Reduce('+',lapply(c(1:length(encoded_covariate))[-i],function(X){
+                                           t(main.parameters$alpha[[join$alpha[i]]])%*%(main.parameters$alpha[[join$alpha[X]]])%*%encoded_covariate[[X]]
+                                         })))              
+              )
+              
+              samples_with_missing_points <- which((rowSums(recover$design.list[[i]])>0)==T)
+              covariate_predictors <-  decoded_covariate
+            
+              knn_ix <- FNN::get.knnx(
+                covariate_predictors,
+                test_predictors,
+                k = 5
+              )$nn.index
+              
+              pred <- (x[-samples_with_missing_points,,drop=F])[knn_ix[, 1], , drop = FALSE]
+              for (k in seq(2, 5)) {
+                pred <- pred + (x[-samples_with_missing_points,,drop=F])[knn_ix[, k], , drop = FALSE]
+              }
+              pred <- pred / 5
+              pred <- pred%*%t(beta_i)
+              
+              elements_with_missing_points <- which((recover$design.list[[i]]>0)[samples_with_missing_points,]==T,arr.ind = T)
+              data_list[[i]][samples_with_missing_points,][elements_with_missing_points]  <- (pred)[elements_with_missing_points]
+              
+              recover$predict.list[[i]] <- data_list[[i]]
+              
+            }
+            
+            
+            # if (!is.null(recover$fn)){
+            #   
+            #   x <- as.matrix(data_list[[i]])
+            #   
+            #   if (is.null(encoded_covariate)){
+            #     encoded_covariate <- lapply(c(1:length(data_list)),function(X){
+            #       transformed.data <- t(main.parameters$alpha[[join$alpha[i]]])%*%(main.parameters$alpha[[join$alpha[X]]])%*%as.matrix(data_list[[X]])%*%(main.parameters$beta[[join$beta[X]]])
+            #       return(transformed.data)
+            #     })
+            #   }
+            #   
+            #   
+            #   decoded_covariate <- cbind(1,
+            #                              transform.data(Reduce('+',lapply(c(1:length(encoded_covariate)),function(X){
+            #                                encoded_covariate[[X]]
+            #                              })))              )
+            #   
+            #   
+            #   samples_with_missing_points <- which((rowSums(recover$design.list[[i]])>0)==T)
+            #   covariate_predictors <-  decoded_covariate[-samples_with_missing_points,]
+            #   test_predictors <- decoded_covariate[samples_with_missing_points,]
+            #   
+            #   pred <- recover$fn(train = covariate_predictors, test = test_predictors, y = x[-samples_with_missing_points,], parameters = recover$param)
+            #   
+            #   elements_with_missing_points <- which((recover$design.list[[i]]>0)[samples_with_missing_points,]==T,arr.ind = T)
+            #   x[samples_with_missing_points,][elements_with_missing_points]  <- (pred)[elements_with_missing_points]
+            #   
+            #   data_list[[i]] <- recover$predict.list[[i]] <- x
+            # }
+            
+            
+            
           }
           
-          pred.encode <- cbind(1,pred.encode)
-          
-          if (recover$method == "internal"){
-            
-            pred <- pred.encode%*%(MASS::ginv(t(pred.encode[-row_with_missing_points,])%*%pred.encode[-row_with_missing_points,])%*%t(pred.encode[-row_with_missing_points,])%*%main.data[-row_with_missing_points,]) 
-            
-            main.data[row_with_missing_points,column_with_missing_points]  <- pred[row_with_missing_points,column_with_missing_points]
-            data_list[[i]] <- recover$predict.list[[i]] <- transform.data(main.data, method= recover$link_function[2]) 
-            
-            
-          } 
-          if (recover$method == "external"){
-            
-            pred <- pred.encode%*%(MASS::ginv(t(pred.encode)%*%pred.encode)%*%t(pred.encode)%*%main.data) 
-            
-            main.data[missing_points]  <- pred[missing_points]
-            data_list[[i]] <- recover$predict.list[[i]] <- transform.data(main.data, method= recover$link_function[2]) 
-            
-          }
           
         }
       }
@@ -65,28 +162,33 @@ recover_points <- function(data_list,
     if ("classification" %in% task){
       
       
+      label.projection <- c(recover$method=="label.projection")
       
-      for (j in which(recover$design.list==0)){
+      if (label.projection){
         
-        label_code <- Reduce('+',lapply(c(covariate$factor[j,]),function(X){
-          ((main.code$code+main.code$intercept.code))[[X]]
-        }))
-        
-        
-        
-        for (i in which(recover$design.list==1)){
+        for (j in which(recover$design.list==0)){
           
-          unlabel_code <- Reduce('+',lapply(c(covariate$factor[i,]),function(X){
-            ((main.code$code+main.code$intercept.code))[[X]]
+          label_code <- Reduce('+',lapply(c(covariate$factor[j,]),function(X){
+            main.code$code[[X]]
           }))
           
-          labels <- recover$labels
           
-          recover$predict.list[[j]][[i]] <- apply((unlabel.decoded_covariate)%*%t(label.decoded_covariate),1,function(X){names(sort(table(labels[order(X,decreasing = T)[1]]))[1])})
+          
+          for (i in which(recover$design.list==1)){
+            
+            unlabel_code <- Reduce('+',lapply(c(covariate$factor[i,]),function(X){
+              main.code$code[[X]]
+            }))
+            
+            labels <- recover$labels
+            
+            recover$predict.list[[j]][[i]] <- apply((unlabel.decoded_covariate)%*%t(label.decoded_covariate),1,function(X){names(sort(table(labels[order(X,decreasing = T)[1]]))[1])})
+            
+          }
           
         }
-        
       }
+      
       
       
     }
@@ -96,6 +198,8 @@ recover_points <- function(data_list,
   return(list(recover=recover,
               data_list=data_list))
 }
+
+
 
 
 transform.data <- function(x,method="scale"){
