@@ -1,0 +1,10 @@
+message: "If you use this software, please cite it as below."
+authors:
+  - family-names: Banh
+    given-names: David
+title: "My Research Software"
+date-released: 2022-04-03
+website: https://github.com/AskExplain/gcproc
+
+
+
