@@ -7,13 +7,21 @@
 extract_anchors_framework(verbose = T)
 }
 \arguments{
-\item{anchor_y.sample}{Equivalent to alpha.K}
+\item{anchor_y.sample}{Equivalent to alpha.L.K}
 
 \item{anchor_y.feature}{Equivalent to v.beta}
 
-\item{anchor_x.sample}{Equivalent to alpha.L}
+\item{anchor_x.sample}{Equivalent to alpha.L.J}
 
 \item{anchor_x.feature}{Equivalent to u.beta}
+
+\item{anchor_y.cov.sample}{Equivalent to y.gamma}
+
+\item{anchor_y.cov.feature}{Equivalent to y.delta}
+
+\item{anchor_x.cov.sample}{Equivalent to x.gamma}
+
+\item{anchor_x.cov.feature}{Equivalent to x.delta}
 }
 \value{
 Anchor framework for gcproc
